@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<title>VerifiCasa – În curând</title>
+<style>
+  @font-face{font-family:'Montserrat';font-weight:600;src:url(../fonts/montserrat-latin-ext-600-normal.woff2) format('woff2');unicode-range:U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+  @font-face{font-family:'Montserrat';font-weight:600;src:url(../fonts/montserrat-latin-600-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD,U+2192}
+  @font-face{font-family:'Montserrat';font-weight:900;src:url(../fonts/montserrat-latin-ext-900-normal.woff2) format('woff2');unicode-range:U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+  @font-face{font-family:'Montserrat';font-weight:900;src:url(../fonts/montserrat-latin-900-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD,U+2192}
+  @font-face{font-family:'Playfair Display';font-style:italic;font-weight:400;src:url(../fonts/playfair-display-latin-ext-400-italic.woff2) format('woff2');unicode-range:U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+  @font-face{font-family:'Playfair Display';font-style:italic;font-weight:400;src:url(../fonts/playfair-display-latin-400-italic.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1080px;height:1920px;overflow:hidden;background:#0A0D12}
+  body{font-family:'Montserrat',sans-serif;color:#F9FAFB;-webkit-font-smoothing:antialiased}
+  #stage{position:absolute;inset:0;overflow:hidden;background:#0A0D12}
+  .bg,.scene{position:absolute;inset:0}
+  .glow{position:absolute;left:0;top:0;width:1300px;height:1300px;border-radius:50%;background:radial-gradient(circle,rgba(46,204,113,.22) 0%,rgba(22,163,74,.08) 40%,rgba(22,163,74,0) 70%)}
+  .glow+.glow{width:900px;height:900px}
+  .scan{position:absolute;left:0;top:0;width:1080px;height:140px;background:linear-gradient(180deg,rgba(46,204,113,0),rgba(46,204,113,.07) 50%,rgba(46,204,113,0))}
+  .tx{position:absolute;left:70px;width:940px;text-align:center;white-space:nowrap;line-height:1.05}
+  .h1{font-weight:900;font-size:104px;letter-spacing:-.02em}
+  .h2{font-weight:900;font-size:100px;letter-spacing:-.02em}
+  .serif{font-family:'Playfair Display',serif;font-style:italic;font-weight:400;letter-spacing:0}
+  .tx.serif{font-size:104px}
+  .tx.serif.big{font-size:118px}
+  .acc{background:linear-gradient(90deg,#2ECC71,#16A34A);-webkit-background-clip:text;background-clip:text;color:transparent;padding:0 .06em}
+  .sub2{font-weight:600;font-size:52px;color:#9CA3AF}
+  .label{font-weight:900;font-size:76px;letter-spacing:.03em;text-transform:uppercase}
+  .label .arrow{background:linear-gradient(90deg,#2ECC71,#16A34A);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .wordmark{font-weight:900;font-size:124px;letter-spacing:-.02em}
+  .wordmark .acc{padding:0}
+  .url{font-weight:600;font-size:56px;letter-spacing:.01em}
+  .stores{font-weight:600;font-size:38px;color:#9CA3AF}
+  .card{position:absolute;background:rgba(17,24,33,.62);border:1px solid rgba(255,255,255,.10);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 40px 120px rgba(0,0,0,.45)}
+  .chip{position:absolute;left:0;top:0;padding:10px 22px;border-radius:999px;background:rgba(17,24,33,.75);border:1px solid rgba(255,255,255,.12);font-weight:600;font-size:30px;color:#F9FAFB}
+  .pill{position:absolute;left:0;top:0;display:flex;align-items:center;gap:20px;padding:26px 40px 26px 30px;border-radius:999px;background:rgba(17,24,33,.62);border:1px solid rgba(255,255,255,.10);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 20px 60px rgba(0,0,0,.35);font-weight:600;font-size:44px;white-space:nowrap}
+  .pill svg{width:46px;height:46px;fill:none;stroke:#2ECC71;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .lglow{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(46,204,113,.38) 0%,rgba(22,163,74,.12) 38%,rgba(22,163,74,0) 68%)}
+  .sub{position:absolute;left:70px;top:1425px;width:940px;height:140px}
+  .subl{position:absolute;left:0;top:0;width:940px;text-align:center;font-weight:600;font-size:50px;line-height:1.28;text-shadow:0 2px 18px rgba(0,0,0,.6)}
+  .subl span{display:inline-block;margin:0 .14em;transition:none}
+  .subl span.cur{background:linear-gradient(90deg,#2ECC71,#16A34A);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none}
+  .safe{position:absolute;left:0;width:1080px;background:rgba(255,0,0,.18);display:none}
+  body.guides .safe{display:block}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div class="safe" style="top:0;height:250px"></div><div class="safe" style="top:1570px;height:350px"></div>
+<script src="config.js"></script>
+<script src="engine.js"></script>
+<script src="scenes.js"></script>
+<script>
+  const q = new URLSearchParams(location.search);
+  if (q.get('guides')) document.body.classList.add('guides');
+  document.fonts.ready.then(() => render(+(q.get('t') || 0)));
+</script>
+</body>
+</html>
