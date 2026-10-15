@@ -1,6 +1,6 @@
 // Usage:
 //   node render.mjs stills            -> frames/scena_XX.png (one still per scene, for approval)
-//   node render.mjs frames <outDir>   -> every frame as JPEG for the final MP4
+//   node render.mjs frames <outDir> [fromFrame] -> every frame as JPEG for the final MP4
 //   node render.mjs times <outDir> 1.2,3.4 [guides]
 import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
 import { mkdirSync } from 'fs';
@@ -31,8 +31,8 @@ if (mode === 'stills') {
   }
 } else if (mode === 'frames') {
   const out = outArg; mkdirSync(out, { recursive: true });
-  const n = Math.round(TL.DURATION * 30);
-  for (let f = 0; f < n; f++) await shot(f / 30, path.join(out, String(f).padStart(5, '0') + '.jpg'), 'jpeg');
+  const n = Math.round(TL.DURATION * 30), from = +(timesArg || 0);
+  for (let f = from; f < n; f++) await shot(f / 30, path.join(out, String(f).padStart(5, '0') + '.jpg'), 'jpeg');
   console.log('frames', n, 'duration', TL.DURATION);
 } else if (mode === 'times') {
   mkdirSync(outArg, { recursive: true });

@@ -273,7 +273,7 @@ scene(9, root => {
         h += `<line x1="${540 + Math.cos(an) * r0}" y1="${820 + Math.sin(an) * r0}" x2="${540 + Math.cos(an) * r1}" y2="${820 + Math.sin(an) * r1}" stroke="${G}" stroke-width="2" stroke-opacity="${.5 * (1 - win(lt, .5, .4))}"/>`; }
       rays.innerHTML = h;
       logo.set(win(lt, .3, .45), win(lt, .62, .6), win(lt, 1.12, .45), .4 + .6 * eio(win(lt, 1.0, .8)) * (.9 + .1 * Math.sin(lt * 2.4)));
-      reveal(acc, lt, .75);
+      reveal(acc, lt, 1.18);
       reveal(url, lt, FINAL); reveal(st, lt, FINAL + .25);
     }
   };
