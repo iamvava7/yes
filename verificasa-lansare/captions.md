@@ -4,7 +4,23 @@ Obiectiv: awareness înainte de lansare + follow. Un singur CTA per variantă.
 Keyword principal (spus + pe ecran + în caption): „tururi virtuale 3D”.
 Respectă brief-ul: fără dată de lansare, fără „descarcă acum”, fără cifre, fără alte branduri.
 
-## Varianta A – recomandată (curiozitate → follow)
+## Varianta simplă, umană (recomandată)
+
+### Instagram
+Știm cum e să mergi la o vizionare și să nu recunoști casa din poze. 😅
+
+De-asta lucrăm la VerifiCasa: tururi virtuale 3D, planuri 3D, home staging virtual și o cameră foto smart pentru imobiliare.
+
+Mai e puțin. Ne vedem curând. 💚
+
+#VerifiCasa #imobiliare #chirii #turvirtual3D #apartamentdeinchiriat
+
+### TikTok
+pov: vezi casa în 3D înainte să mergi la vizionare 🏡 vine în curând
+
+#VerifiCasa #turvirtual3D #imobiliare #chirii #apartament
+
+## Varianta A (curiozitate → follow)
 
 ### Instagram Reels
 Vezi casa înainte să pui pasul pe ușă. 🏡
