@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<title>VerifiCasa – În curând</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1280px;height:720px;overflow:hidden;background:#f3f8f5;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}
+  #stage{position:absolute;inset:0;overflow:hidden;background:radial-gradient(ellipse 62% 58% at 50% 46%,#e1f2e8 0%,#eff7f2 55%,#f7faf8 100%)}
+  .abs{position:absolute;left:0;top:0;will-change:transform,opacity,filter}
+  .title{position:absolute;left:0;width:1280px;text-align:center;font-weight:300;font-size:48px;letter-spacing:-0.025em;color:#0d131c;white-space:nowrap;line-height:1}
+  .title span{display:inline-block;margin:0 .14em}
+  .key{background:linear-gradient(90deg,#1f7048,#46b37e);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:400}
+  .chip{position:absolute;left:0;top:0;padding:9px 16px;border-radius:999px;background:rgba(255,255,255,.78);box-shadow:0 8px 26px rgba(20,90,60,.13),inset 0 0 0 1px rgba(255,255,255,.95);font-size:14px;font-weight:400;color:#1a2420;white-space:nowrap}
+  .chip.tiny{font-size:9px;padding:5px 10px;color:#33413a}
+  .card{position:absolute;border-radius:24px;background:rgba(255,255,255,.62);box-shadow:0 30px 80px rgba(20,90,60,.16),inset 0 0 0 1px rgba(255,255,255,.95);overflow:hidden}
+  .orbWrap{position:absolute;left:0;top:0;width:100px;height:100px;margin:-50px 0 0 -50px}
+  .glow{position:absolute;inset:-60%;border-radius:50%;background:radial-gradient(circle,rgba(70,175,120,.55) 0%,rgba(110,200,150,.18) 45%,rgba(110,200,150,0) 70%)}
+  .sphere{position:absolute;inset:0;border-radius:50%;
+    background:radial-gradient(circle at 50% 18%,rgba(255,255,255,.95) 0%,rgba(255,255,255,0) 38%),linear-gradient(180deg,#effaf3 0%,#c3ead3 38%,#5ebf8d 72%,#1f7048 100%);
+    box-shadow:inset 0 -8px 22px rgba(15,80,50,.35),inset 0 6px 14px rgba(255,255,255,.85),0 14px 40px rgba(30,120,75,.35)}
+  .ring{position:absolute;left:0;top:0;border-radius:50%;border:1.5px solid rgba(40,140,90,.55)}
+  .dot{position:absolute;left:0;top:0;border-radius:50%;
+    background:radial-gradient(circle at 50% 22%,rgba(255,255,255,.95) 0%,rgba(255,255,255,0) 45%),linear-gradient(180deg,#eefaf2 0%,#8fd3ae 55%,#2f8a5d 100%);
+    box-shadow:0 6px 16px rgba(30,120,75,.3)}
+  .caption{position:absolute;left:640px;top:664px;transform:translateX(-50%);padding:8px 18px;border-radius:999px;background:rgba(13,19,28,.82);color:#fff;font-size:15px;font-weight:400;white-space:nowrap;letter-spacing:.005em}
+  .bubble{position:absolute;left:0;top:0;padding:11px 18px;border-radius:999px;background:#fff;box-shadow:0 10px 30px rgba(20,90,60,.14);font-size:15px;color:#0d131c;white-space:nowrap}
+  .bubble .tdots{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:5px}
+  .bubble .tdots i{width:6px;height:6px;border-radius:50%;background:#3fae78;display:block}
+  .badge{position:absolute;left:0;top:0;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:rgba(255,255,255,.92);box-shadow:0 10px 28px rgba(20,90,60,.2),inset 0 0 0 1px #fff;display:flex;align-items:center;justify-content:center}
+  .badge svg{width:24px;height:24px;stroke:#1f7048;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .darkpill{position:absolute;left:0;top:0;display:flex;align-items:center;gap:16px;padding:8px 8px 8px 24px;border-radius:999px;background:linear-gradient(90deg,#0d131c 0%,#13283a 55%,#1f7048 100%);color:#fff;font-size:17px;white-space:nowrap;box-shadow:0 14px 34px rgba(10,40,30,.35),inset 0 0 0 2px rgba(255,255,255,.25)}
+  .darkpill b{width:38px;height:38px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center}
+  svg text{font-family:'Inter',sans-serif}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<script>
+// ---------- helpers ----------
+const W=1280,H=720,stage=document.getElementById('stage');
+const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v));
+const lerp=(a,b,p)=>a+(b-a)*p;
+const win=(t,a,d)=>clamp((t-a)/d);
+const eOut=p=>1-Math.pow(1-p,3);
+const eInOut=p=>p<.5?4*p*p*p:1-Math.pow(-2*p+2,3)/2;
+const spring=p=>p<=0?0:p>=1?1:1-Math.exp(-6*p)*Math.cos(9*p);   // springy overshoot
+const back=p=>{const c=1.9;return 1+(c+1)*Math.pow(p-1,3)+c*Math.pow(p-1,2)};
+function el(tag,cls,parent,html){const e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;(parent||stage).appendChild(e);return e}
+function svgEl(tag,attrs,parent){const e=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e}
+function sceneA(t,s,e,fi=.45,fo=.4){return Math.min(win(t,s,fi),clamp((e-t)/fo))}
+function setT(e,x,y,sc=1,op=1,blur=0,extra=''){e.style.transform=`translate(${x}px,${y}px) scale(${sc}) ${extra}`;e.style.opacity=op;e.style.filter=blur>0.05?`blur(${blur}px)`:'none';e.style.display=op<=0.001?'none':'block'}
+
+// ---------- timeline ----------
+const S=[0,3.4,7.0,10.8,14.6,18.2,21.9,24.6,28.3,31.0,35];
+const CAPS=[
+ [0.6,2.2,'Imobiliarele se schimbă.'],
+ [3.8,6.6,'Iar VerifiCasa e aproape gata de lansare.'],
+ [7.4,10.4,'Cumpărătorii vor să vadă totul, înainte de vizionare.'],
+ [11.1,14.2,'De aceea, îmbunătățim tururile virtuale 3D.'],
+ [14.9,17.5,'Adăugăm planuri de etaj, și planuri 3D.'],
+ [18.5,21.6,'Home staging virtual, care mobilează orice cameră.'],
+ [22.2,23.9,'Randări video 3D.'],
+ [24.9,27.9,'Și o cameră foto smart, gândită pentru imobiliare.'],
+ [28.6,30.0,'Și multe altele.'],
+ [31.5,34.2,'VerifiCasa. În curând.'],
+];
+
+// ---------- icons ----------
+const IC={
+ cube:'M12 2.5l8.5 4.8v9.4L12 21.5l-8.5-4.8V7.3z M12 12l8.5-4.7 M12 12v9.5 M12 12L3.5 7.3',
+ plan:'M3.5 3.5h17v17h-17z M3.5 12h7 M10.5 3.5v5 M14.5 12h6 M10.5 15.5v5',
+ sofa:'M5 11V8.5A2.5 2.5 0 017.5 6h9A2.5 2.5 0 0119 8.5V11 M3 12.5a2 2 0 014 0V15h10v-2.5a2 2 0 014 0V18H3z M5.5 18v2 M18.5 18v2',
+ play:'M7 4.5l12 7.5-12 7.5z',
+ camera:'M3 7.5h4l2-3h6l2 3h4v12H3z M12 16.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7',
+ spark:'M12 3l2 6.5L20.5 12 14 14.5 12 21l-2-6.5L3.5 12 10 9.5z',
+ home:'M3 11.5L12 4l9 7.5 M5.5 9.5V20h13V9.5 M10 20v-5h4v5',
+};
+const icon=(k,c='')=>`<svg viewBox="0 0 24 24" ${c}><path d="${IC[k]}"/></svg>`;
+
+// ---------- background floating chips (parallax) ----------
+const bgChips=[];
+const BGTXT=['E luminos apartamentul?','Ce orientare are?','Are parcare?','Câți m² are?','Când pot vizita?','Ce etaj e?','Are balcon?','Anunțul e verificat?','Cât costă întreținerea?','Proprietarul e real?'];
+BGTXT.forEach((txt,i)=>{const c=el('div','chip tiny',stage,txt);const d=.4+((i*37)%10)/10*0.8;
+  bgChips.push({e:c,x:80+((i*263)%1100),y:70+((i*157)%560),d,sp:(i%2?1:-1)*(6+((i*13)%9))});});
+
+// ---------- orb ----------
+const trailDots=[];for(let i=0;i<18;i++)trailDots.push(el('div','dot'));
+const rings=[];for(let i=0;i<6;i++)rings.push(el('div','ring'));
+const orb=el('div','orbWrap');const glow=el('div','glow',orb);const sphere=el('div','sphere',orb);
+const orbIcon=el('div','abs',orb,`<svg viewBox="0 0 24 24" width="100" height="100" style="position:absolute;left:0;top:0"><path d="M9.2 7.2l8 4.8-8 4.8z" fill="#fff" opacity=".95"/></svg>`);
+const orbHome=el('div','abs',orb,`<svg viewBox="0 0 24 24" width="100" height="100" style="position:absolute;left:0;top:0;fill:none;stroke:#fff;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"><path d="M6.5 12L12 7.3l5.5 4.7 M8.3 10.7v6h7.4v-6"/></svg>`);
+// keyframes: arrival time, x, y, size, move duration
+const KF=[
+ {t:0,x:640,y:-160,s:120,md:.01},
+ {t:1.0,x:640,y:270,s:122,md:1.0},
+ {t:3.95,x:640,y:200,s:56,md:.9},
+ {t:7.6,x:384,y:372,s:52,md:.95},
+ {t:11.25,x:985,y:228,s:62,md:.95},
+ {t:15.0,x:300,y:228,s:58,md:1.0},
+ {t:18.65,x:985,y:575,s:60,md:1.0},
+ {t:22.3,x:640,y:410,s:100,md:.9},
+ {t:23.35,x:968,y:238,s:52,md:.75},
+ {t:25.0,x:985,y:410,s:68,md:.9},
+ {t:28.75,x:640,y:320,s:140,md:1.0},
+ {t:31.4,x:640,y:285,s:112,md:.9},
+];
+function orbAt(t){
+  let i=KF.length-1;for(let k=1;k<KF.length;k++){if(t<KF[k].t){i=k;break}}
+  const a=KF[i-1],b=KF[i];const st=b.t-b.md;
+  if(t>=KF[KF.length-1].t){const L=KF[KF.length-1];return{x:L.x,y:L.y,s:L.s,p:1,seg:KF.length-1,arr:L.t}}
+  if(t<st)return{x:a.x,y:a.y,s:a.s,p:1,seg:i-1,arr:a.t};
+  const p=clamp((t-st)/b.md),e=spring(p),dist=Math.hypot(b.x-a.x,b.y-a.y);
+  const lift=Math.sin(Math.PI*p)*Math.min(130,dist*.35);
+  return{x:lerp(a.x,b.x,e),y:lerp(a.y,b.y,e)-lift,s:lerp(a.s,b.s,eOut(p)),p,seg:i,arr:b.t,moving:true};
+}
+function pathPt(i,u){const a=KF[i-1],b=KF[i];const dist=Math.hypot(b.x-a.x,b.y-a.y);
+  return{x:lerp(a.x,b.x,u),y:lerp(a.y,b.y,u)-Math.sin(Math.PI*u)*Math.min(130,dist*.35)}}
+function renderOrb(t){
+  const o=orbAt(t);
+  // squash on landing
+  let sx=1,sy=1;
+  for(let k=1;k<KF.length;k++){const dt=t-KF[k].t;if(dt>0&&dt<1){const q=.2*Math.exp(-dt*6)*Math.cos(dt*17);sx+=q;sy-=q}}
+  if(o.moving){const m=Math.sin(Math.PI*o.p);sx-=.1*m;sy+=.14*m}
+  const pulse=1+.035*Math.sin(t*Math.PI*2*.75);
+  const sc=o.s/100*pulse;
+  orb.style.transform=`translate(${o.x}px,${o.y+ (1-sy)*o.s*.5}px) scale(${sc*sx},${sc*sy})`;
+  glow.style.opacity=.75+.25*Math.sin(t*Math.PI*2*.75);
+  orbIcon.style.opacity=clamp(win(t,21.95,.3)-win(t,22.75,.2));
+  orbHome.style.opacity=win(t,31.9,.5);
+  // ripples
+  let r=0;rings.forEach(x=>x.style.display='none');
+  for(let k=1;k<KF.length&&r<rings.length;k++){for(let j=0;j<2;j++){const lt=t-KF[k].t-j*.28;if(lt>0&&lt<1.5&&r<rings.length){
+      const kk=KF[k],rad=kk.s*.55+lt*95,e=rings[r++];
+      e.style.display='block';e.style.width=e.style.height=rad*2+'px';
+      e.style.transform=`translate(${kk.x-rad}px,${kk.y-rad}px)`;e.style.opacity=.55*(1-lt/1.5)}}}
+  // dotted trail along the current/last path
+  const seg=o.seg;trailDots.forEach(d=>d.style.display='none');
+  if(seg>=2){const b=KF[seg];const st=b.t-b.md;const prog=clamp((t-st)/b.md);const fade=1-clamp((t-b.t)/1.1);
+    if(fade>0)trailDots.forEach((d,i)=>{const u=(i+1)/(trailDots.length+1);if(u>prog*1.05)return;
+      const pt=pathPt(seg,u);const sz=4+7*Math.sin(Math.PI*u);
+      d.style.display='block';d.style.width=d.style.height=sz+'px';
+      d.style.transform=`translate(${pt.x-sz/2}px,${pt.y-sz/2}px)`;d.style.opacity=.85*fade*clamp((prog*1.05-u)*6)})}
+}
+
+// ---------- titles (word-by-word, soft blur) ----------
+const titles=[];
+function title(html,y,s,e,size=48,stag=.13){const d=el('div','title',stage);d.style.top=y+'px';d.style.fontSize=size+'px';
+  d.innerHTML=html.split(' ').map(w=>w.startsWith('*')?`<span class="key">${w.slice(1)}</span>`:w.includes('*')?`<span>${w.replace(/\*(.*)/,'<b class="key">$1</b>')}</span>`:`<span>${w}</span>`).join('');
+  titles.push({d,s,e,stag,ws:[...d.children]});return d}
+function renderTitles(t){titles.forEach(T=>{
+  const out=win(t,T.e-.45,.45);const vis=t>=T.s-.01&&t<=T.e;T.d.style.display=vis?'block':'none';if(!vis)return;
+  T.ws.forEach((w,i)=>{const p=eOut(win(t,T.s+i*T.stag,.6));const blur=(1-p)*12+out*10;
+    w.style.opacity=p*(1-out);w.style.transform=`translateY(${(1-p)*18-out*8}px)`;w.style.filter=blur>.05?`blur(${blur}px)`:'none'})})}
+
+title('Imobiliarele se *schimbă.',440,0.7,S[1]+.1,52);
+title('Verifi*Casa vine în curând.',336,4.0,S[2]+.05,54);
+title('Cumpărătorii vor să vadă *totul.',180,7.3,S[3]+.05,44);
+title('Tururi virtuale *3D, mai bune.',112,11.1,S[4]+.05,42);
+title('Planuri de etaj și planuri *3D',112,14.9,S[5]+.05,42);
+title('Home staging *virtual',112,18.5,S[6]+.05,42);
+title('Randări *video 3D',112,22.2,S[7]+.05,42);
+title('Cameră foto *smart',112,24.9,S[8]+.05,42);
+title('și multe *altele',488,28.9,S[9]+.05,46);
+title('Verifi*Casa',372,31.7,35.2,76,.18);
+title('În curând.',462,32.3,35.2,30,.15);
+title('Chirii verificate online. Fără surprize.',518,32.8,35.2,19,.07);
+
+// ---------- caption ----------
+const cap=el('div','caption');
+function renderCap(t){let c=null;for(const k of CAPS)if(t>=k[0]-.1&&t<=k[1]+.15)c=k;
+  if(!c){cap.style.opacity=0;return}
+  if(cap.textContent!==c[2])cap.textContent=c[2];
+  const a=Math.min(win(t,c[0]-.1,.3),clamp((c[1]+.15-t)/.25));
+  cap.style.opacity=a;cap.style.transform=`translate(-50%,${(1-eOut(a))*8}px)`}
+
+// =================== SCENE 2: ring of orbs + launch chip ===================
+const ring2=[];for(let i=1;i<16;i++)ring2.push({e:el('div','dot'),i});
+const chip2=el('div','chip',stage,'<span style="color:#1f7048">●</span>&nbsp; verificasa.ro · lansare foarte curând');
+function scene2(t){const A=sceneA(t,S[1]+.2,S[2]+.15);const lt=t-S[1];
+  ring2.forEach(({e,i})=>{const th=-Math.PI/2+i*2*Math.PI/16+lt*.22;const p=spring(win(lt,.5+i*.05,.7));
+    const sz=(10+24*(Math.sin(th)+1)/2)*p;const x=640+Math.cos(th)*360,y=345+Math.sin(th)*185;
+    e.style.width=e.style.height=sz+'px';setT(e,x-sz/2,y-sz/2,1,A*clamp(p*1.4),Math.sin(th)<-.5?1.2:0)});
+  const p=spring(win(lt,1.3,.8));setT(chip2,640-150,420+(1-p)*24,.9+.1*p,A*clamp(p*1.5));}
+
+// =================== SCENE 3: search pill + chat bubbles ===================
+const pill=el('div','card');Object.assign(pill.style,{left:'340px',top:'334px',width:'600px',height:'76px',borderRadius:'999px'});
+const pillTxt=el('div','abs',pill);Object.assign(pillTxt.style,{left:'84px',top:'24px',fontSize:'24px',fontWeight:300,color:'#0d131c',whiteSpace:'nowrap'});
+const pillIco=el('div','abs',pill,`<svg viewBox="0 0 24 24" width="24" height="24" style="fill:none;stroke:#1a2420;stroke-width:1.8;stroke-linecap:round"><path d="M4 7h12 M4 12h9 M4 17h6 M18 13v6 M15 16h6"/></svg>`);Object.assign(pillIco.style,{left:'548px',top:'26px'});
+const Q='Cum arată, de fapt, casa?';
+const BUB=[['Există tur virtual 3D?',390,452,1.1],['Pot vedea planul casei?',712,470,1.5],['Cum ar arăta mobilată?',470,528,1.9],['Câți m² are livingul?',770,540,2.3]];
+const bubbles=BUB.map(([txt,x,y,s])=>{const b=el('div','bubble',stage,`<span class="tx">${txt}</span><div class="tdots"><i></i><i></i><i></i></div>`);return{b,x,y,s,tx:b.querySelector('.tx'),dots:b.querySelector('.tdots'),di:[...b.querySelectorAll('i')]}});
+function scene3(t){const A=sceneA(t,S[2]+.15,S[3]+.1);const lt=t-S[2];
+  const p=spring(win(lt,.15,.8));setT(pill,0,(1-p)*20,.94+.06*p,A*clamp(p*1.5));pill.style.left='340px';
+  const n=Math.floor(clamp((lt-.8)/1.1)*Q.length);const caret=(Math.floor(lt*2.5)%2&&n<Q.length+0)?'|':'';
+  pillTxt.textContent=Q.slice(0,n)+(lt<3.2?caret:'');
+  bubbles.forEach(B=>{const q=spring(win(lt,B.s,.7));const typing=clamp((lt-B.s-.15)/.1)*(1-clamp((lt-B.s-.6)/.15));
+    setT(B.b,B.x,B.y+(1-q)*28,.85+.15*q,A*clamp(q*1.6));
+    B.tx.style.opacity=clamp((lt-B.s-.6)/.25);B.tx.style.filter=`blur(${(1-clamp((lt-B.s-.6)/.3))*6}px)`;
+    B.dots.style.opacity=typing;B.di.forEach((d,i)=>d.style.transform=`translateY(${-3*Math.max(0,Math.sin(lt*10-i*.9))}px)`)})}
+
+// =================== 3D projection ===================
+function P(p,c){const x=p[0]-c.cx,y=p[1]-c.cy,z=p[2]||0;const cy=Math.cos(c.yaw),sy=Math.sin(c.yaw);
+  const x1=x*cy-y*sy,y1=x*sy+y*cy;const cp=Math.cos(c.pitch),sp=Math.sin(c.pitch);
+  const down=-(y1*cp+z*sp),depth=-y1*sp+z*cp;const f=c.D/(c.D-depth);
+  return[c.ox+x1*c.k*f,c.oy+down*c.k*f,depth]}
+const pstr=pts=>pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+function shade(n,base,c){ // n = face normal in world, light from top-left-front
+  const L=[-.4,-.6,.7],l=Math.hypot(...L);const d=Math.max(0,(n[0]*L[0]+n[1]*L[1]+n[2]*L[2])/l);
+  return `rgba(${Math.round(lerp(base[0]*.82,255,d*.55))},${Math.round(lerp(base[1]*.82,255,d*.55))},${Math.round(lerp(base[2]*.85,255,d*.5))},${c})`}
+function box(x0,y0,z0,x1,y1,z1,col,a=1){const v=[[x0,y0,z0],[x1,y0,z0],[x1,y1,z0],[x0,y1,z0],[x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]];
+  return[[[v[4],v[5],v[6],v[7]],[0,0,1]],[[v[0],v[1],v[5],v[4]],[0,-1,0]],[[v[1],v[2],v[6],v[5]],[1,0,0]],[[v[2],v[3],v[7],v[6]],[0,1,0]],[[v[3],v[0],v[4],v[7]],[-1,0,0]]].map(([pts,n])=>({pts,n,col,a}))}
+function drawFaces(g,faces,cam,stroke='rgba(20,100,65,.55)',sw=1){
+  const pr=faces.map(f=>{const q=f.pts.map(p=>P(p,cam));return{f,q,d:q.reduce((s,p)=>s+p[2],0)/q.length}}).sort((a,b)=>a.d-b.d);
+  let h='';for(const {f,q} of pr)h+=`<polygon points="${pstr(q)}" fill="${shade(f.n,f.col,f.a)}" stroke="${f.stroke||stroke}" stroke-width="${f.sw||sw}" stroke-linejoin="round"/>`;
+  g.innerHTML=h}
+
+// card shared rect
+const CR={x:320,y:212,w:640,h:388};
+function mkCard(){const c=el('div','card');Object.assign(c.style,{left:CR.x+'px',top:CR.y+'px',width:CR.w+'px',height:CR.h+'px'});
+  const s=svgEl('svg',{width:CR.w,height:CR.h,viewBox:`0 0 ${CR.w} ${CR.h}`});s.style.position='absolute';c.appendChild(s);return{c,s}}
+function cardIn(card,t,s,e){const A=sceneA(t,s,e,.5,.4);const p=spring(win(t,s,.8));
+  card.style.transform=`translateY(${(1-p)*30}px) scale(${.94+.06*p})`;card.style.opacity=A;card.style.display=A<=0?'none':'block';
+  const out=clamp((t-(e-.4))/.4);card.style.filter=out>0?`blur(${out*8}px)`:'none';return A}
+
+// =================== SCENE 4: dollhouse 3D tour ===================
+const C4=mkCard();const g4=svgEl('g',{},C4.s);const hot4=svgEl('g',{},C4.s);
+const chip4a=el('div','chip',C4.c,'Tur virtual 3D');Object.assign(chip4a.style,{left:'22px',top:'20px'});
+const chip4b=el('div','chip',C4.c,'360°');Object.assign(chip4b.style,{left:'22px',top:'332px'});
+const nav4=el('div','abs',C4.c,`<svg width="70" height="12"><circle cx="6" cy="6" r="4" fill="#0d131c"/><line x1="10" y1="6" x2="30" y2="6" stroke="#0d131c" stroke-width="1.5"/><circle cx="34" cy="6" r="4" fill="#0d131c"/><line x1="38" y1="6" x2="58" y2="6" stroke="#bbb" stroke-width="1.5"/><circle cx="62" cy="6" r="3.5" fill="none" stroke="#bbb" stroke-width="1.5"/></svg>`);Object.assign(nav4.style,{left:'285px',top:'26px'});
+const side4=[el('div','chip',stage,'📱 Scanezi cu telefonul'),el('div','chip',stage,'iOS & Android'),el('div','chip',stage,'<span style="color:#1f7048">🔗</span> verificasa.ro/3D/A7K29X')];
+const LAV=[196,230,210],WHITE=[250,248,255],DEEP=[70,160,115];
+function room4faces(){let f=[];
+  f.push({pts:[[0,0,0],[6,0,0],[6,5,0],[0,5,0]],n:[0,0,1],col:WHITE,a:.95});
+  f.push({pts:[[0,5,0],[6,5,0],[6,5,2.6],[0,5,2.6]],n:[0,-1,0],col:LAV,a:.55});
+  f.push({pts:[[0,0,0],[0,5,0],[0,5,2.6],[0,0,2.6]],n:[1,0,0],col:LAV,a:.45});
+  f.push({pts:[[6,0,0],[6,5,0],[6,5,2.6],[6,0,2.6]],n:[-1,0,0],col:LAV,a:.4});
+  f.push({pts:[[1.6,4.98,.9],[3.6,4.98,.9],[3.6,4.98,2.1],[1.6,4.98,2.1]],n:[0,-1,0],col:[235,245,255],a:.95,stroke:'rgba(20,100,65,.8)'});
+  f.push({pts:[[5.98,1.2,0],[5.98,2.2,0],[5.98,2.2,2.1],[5.98,1.2,2.1]],n:[-1,0,0],col:DEEP,a:.5});
+  f=f.concat(box(.6,3.6,0,3.2,4.6,.75,DEEP,.9),box(1.3,1.9,0,2.6,2.8,.42,LAV,.95),box(4.4,3.9,0,5.4,4.7,1.6,[150,205,175],.85));
+  return f}
+const R4=room4faces();
+function scene4(t){const A=cardIn(C4.c,t,S[3]+.1,S[4]+.1);if(A<=0){side4.forEach(c=>c.style.display='none');return}const lt=t-S[3];
+  const cam={cx:3,cy:2.5,yaw:-.55+eInOut(clamp(lt/3.8))*.9,pitch:.95,k:52,D:40,ox:320,oy:215};
+  drawFaces(g4,R4,cam);
+  let h='';[[1.5,1],[4.6,1.5],[3,3]].forEach(([x,y],i)=>{const p=P([x,y,0],cam);const r=7+3*Math.sin(lt*4+i);
+    h+=`<circle cx="${p[0]}" cy="${p[1]}" r="${r+7}" fill="rgba(31,112,72,.18)"/><circle cx="${p[0]}" cy="${p[1]}" r="6" fill="#fff" stroke="#2f8a5d" stroke-width="2"/>`});hot4.innerHTML=h;
+  side4.forEach((c,i)=>{const p=spring(win(lt,.9+i*.35,.8));const pos=[[120,300],[1000,430],[960,330]][i];
+    setT(c,pos[0]+Math.sin(lt*.8+i)*6+(1-p)*(i?40:-40),pos[1]+Math.cos(lt*.7+i)*5,1,A*clamp(p*1.5))})}
+
+// =================== SCENE 5: floor plan 2D -> 3D ===================
+const C5=mkCard();const g5f=svgEl('g',{},C5.s);const g5=svgEl('g',{},C5.s);const g5t=svgEl('g',{},C5.s);
+const chip5=el('div','chip',C5.c,'<span class="a">Plan 2D</span>');Object.assign(chip5.style,{left:'22px',top:'20px'});
+const chip5b=el('div','chip',C5.c,'Plan 3D');Object.assign(chip5b.style,{left:'22px',top:'20px'});
+const WALLS=[[0,0,10,0],[10,0,10,7],[10,7,0,7],[0,7,0,0],[6,0,6,2.4],[6,3.4,6,7],[6,3.6,10,3.6],[0,4.4,2.4,4.4],[3.4,4.4,6,4.4]];
+const ROOMS=[['Living',3,2.1,[[0,0],[6,0],[6,4.4],[0,4.4]],[226,242,232]],['Dormitor',8,1.8,[[6,0],[10,0],[10,3.6],[6,3.6]],[238,247,241]],['Bucătărie',3,5.75,[[0,4.4],[6,4.4],[6,7],[0,7]],[244,250,246]],['Baie',8,5.3,[[6,3.6],[10,3.6],[10,7],[6,7]],[232,240,255]]];
+function scene5(t){const A=cardIn(C5.c,t,S[4]+.1,S[5]+.1);if(A<=0)return;const lt=t-S[4];
+  const tilt=eInOut(win(lt,1.55,1.4));const h=2.4*eOut(win(lt,1.7,1.3));
+  const cam={cx:5,cy:3.5,yaw:-.55*tilt,pitch:1.0*tilt,k:lerp(40,34,tilt),D:60,ox:320,oy:lerp(205,225,tilt)};
+  let fh='';ROOMS.forEach(([n,lx,ly,poly,col],i)=>{const q=win(lt,.4+i*.12,.5);fh+=`<polygon points="${pstr(poly.map(p=>P([p[0],p[1],0],cam)))}" fill="rgba(${col},${.9*q})"/>`});g5f.innerHTML=fh;
+  if(h<.02){let s='';WALLS.forEach((w,i)=>{const p=eOut(win(lt,.2+i*.07,.5));if(p<=0)return;const a=P([w[0],w[1],0],cam),b=P([lerp(w[0],w[2],p),lerp(w[1],w[3],p),0],cam);
+      s+=`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#0d131c" stroke-width="${i<4?5:3.5}" stroke-linecap="round"/>`});g5.innerHTML=s}
+  else{const faces=[];WALLS.forEach((w,i)=>{const dx=w[2]-w[0],dy=w[3]-w[1];const n=[dy,-dx,0].map(v=>v/Math.hypot(dx,dy));
+      faces.push({pts:[[w[0],w[1],0],[w[2],w[3],0],[w[2],w[3],h],[w[0],w[1],h]],n:[Math.abs(n[0]),-Math.abs(n[1]),.2],col:[190,228,205],a:.78,stroke:'rgba(13,60,38,.75)',sw:1.3})});
+    drawFaces(g5,faces,cam)}
+  let tx='';ROOMS.forEach(([n,lx,ly])=>{const p=P([lx,ly,0],cam);tx+=`<text x="${p[0]}" y="${p[1]}" text-anchor="middle" font-size="13" fill="#3c4a42" opacity="${win(lt,.9,.4)*(1-tilt*.6)}">${n}</text>`});g5t.innerHTML=tx;
+  chip5.style.opacity=1-win(lt,1.7,.3);chip5b.style.opacity=win(lt,1.8,.3)}
+
+// =================== SCENE 6: virtual staging ===================
+const C6=mkCard();
+C6.s.innerHTML=`<rect x="0" y="0" width="640" height="250" fill="#eef6f1"/><polygon points="0,250 640,250 640,388 0,388" fill="#e2efe6"/>
+ <line x1="0" y1="250" x2="640" y2="250" stroke="#bcdcc8" stroke-width="2"/>
+ <rect x="410" y="64" width="150" height="120" rx="6" fill="#fbfaff" stroke="#b6d9c3" stroke-width="3"/><line x1="485" y1="64" x2="485" y2="184" stroke="#b6d9c3" stroke-width="3"/><g id="furn"></g>`;
+const furn=C6.s.querySelector('#furn');
+const FURN=[ // [svg, originX, originY]
+ [`<ellipse cx="300" cy="330" rx="200" ry="34" fill="#bfe3cd" opacity=".7"/>`,300,330],
+ [`<rect x="150" y="215" width="250" height="70" rx="22" fill="#2f8a5d"/><rect x="132" y="250" width="290" height="62" rx="20" fill="#1f7048"/><rect x="160" y="252" width="110" height="34" rx="12" fill="#5ebf8d"/><rect x="282" y="252" width="110" height="34" rx="12" fill="#5ebf8d"/><rect x="146" y="312" width="10" height="16" rx="3" fill="#0f3d27"/><rect x="398" y="312" width="10" height="16" rx="3" fill="#0f3d27"/>`,277,320],
+ [`<rect x="230" y="318" width="120" height="14" rx="7" fill="#fff" stroke="#a6d4b9"/><rect x="246" y="332" width="6" height="22" fill="#a6d4b9"/><rect x="328" y="332" width="6" height="22" fill="#a6d4b9"/><circle cx="270" cy="312" r="7" fill="#e3f5ea"/>`,290,354],
+ [`<rect x="482" y="200" width="4" height="130" fill="#0d131c"/><path d="M462 200 L506 200 L496 168 L472 168 Z" fill="#f1faf4" stroke="#a6d4b9" stroke-width="2"/><ellipse cx="484" cy="332" rx="22" ry="5" fill="#0d131c"/>`,484,334],
+ [`<rect x="560" y="296" width="44" height="40" rx="6" fill="#fff" stroke="#a6d4b9" stroke-width="2"/><path d="M582 296 C 560 270, 548 250, 566 232 C 576 250, 580 262, 582 296 C 584 262, 590 240, 604 228 C 612 252, 600 276, 582 296" fill="#8fd1a8"/>`,582,336],
+ [`<rect x="170" y="80" width="150" height="96" rx="4" fill="#fff" stroke="#a6d4b9" stroke-width="3"/><path d="M182 164 L222 118 L250 146 L270 128 L308 164 Z" fill="#9fd8b8"/><circle cx="286" cy="106" r="10" fill="#e3f5ea"/>`,245,128],
+];
+FURN.forEach(f=>{f.g=svgEl('g',{},furn);f.g.innerHTML=f[0]});
+const tog=el('div','chip',C6.c,'<span id="tg0">Gol</span><span style="display:inline-block;width:46px;height:22px;border-radius:999px;background:#e3f1e8;vertical-align:middle;margin:0 10px;position:relative"><i id="knob" style="position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:linear-gradient(180deg,#c3ead3,#1f7048);display:block"></i></span><span id="tg1">Mobilat</span>');
+Object.assign(tog.style,{left:'22px',top:'20px'});const knob=tog.querySelector('#knob'),tg0=tog.querySelector('#tg0'),tg1=tog.querySelector('#tg1');
+function scene6(t){const A=cardIn(C6.c,t,S[5]+.1,S[6]+.1);if(A<=0)return;const lt=t-S[5];
+  const k=spring(win(lt,.75,.6));knob.style.left=(3+24*k)+'px';tg0.style.opacity=1-.6*k;tg1.style.opacity=.4+.6*k;tg1.style.color=k>.5?'#1f7048':'#1a2420';
+  FURN.forEach((f,i)=>{const p=spring(win(lt,1.0+i*.24,.75));f.g.setAttribute('transform',`translate(${f[1]},${f[2]}) scale(${Math.max(0,p)}) translate(${-f[1]},${-f[2]})`);f.g.setAttribute('opacity',clamp(p*2))})}
+
+// =================== SCENE 7: 3D video render ===================
+const C7=mkCard();C7.c.style.background='linear-gradient(180deg,#e3f2e9 0%,#f8fcf9 70%)';
+const g7=svgEl('g',{},C7.s);const ui7=svgEl('g',{},C7.s);
+const chip7a=el('div','chip',C7.c,'Randare 3D');Object.assign(chip7a.style,{left:'22px',top:'20px'});
+const chip7b=el('div','chip',C7.c,'<b style="font-weight:600">4K</b>');Object.assign(chip7b.style,{left:'560px',top:'20px'});
+function house(){let f=[];const W2=[246,242,255],R=[31,112,72];
+  f.push({pts:[[-3,-3,0],[7,-3,0],[7,6,0],[-3,6,0]],n:[0,0,1],col:[214,236,222],a:.9,stroke:'none'});
+  f=f.concat(box(0,0,0,4,3,2,W2,1));
+  f.push({pts:[[0,0,2],[4,0,2],[4,1.5,3.3],[0,1.5,3.3]],n:[0,-.7,.7],col:R,a:1});
+  f.push({pts:[[0,3,2],[4,3,2],[4,1.5,3.3],[0,1.5,3.3]],n:[0,.7,.7],col:R,a:1});
+  f.push({pts:[[0,0,2],[0,3,2],[0,1.5,3.3]],n:[-1,0,0],col:W2,a:1});f.push({pts:[[4,0,2],[4,3,2],[4,1.5,3.3]],n:[1,0,0],col:W2,a:1});
+  f.push({pts:[[1.6,-.02,0],[2.4,-.02,0],[2.4,-.02,1.3],[1.6,-.02,1.3]],n:[0,-1,0],col:[13,19,28],a:1});
+  f.push({pts:[[.4,-.02,.9],[1.2,-.02,.9],[1.2,-.02,1.6],[.4,-.02,1.6]],n:[0,-1,0],col:[220,235,255],a:1});
+  f.push({pts:[[2.8,-.02,.9],[3.6,-.02,.9],[3.6,-.02,1.6],[2.8,-.02,1.6]],n:[0,-1,0],col:[220,235,255],a:1});
+  f.push({pts:[[4.02,.7,.9],[4.02,2.3,.9],[4.02,2.3,1.6],[4.02,.7,1.6]],n:[1,0,0],col:[220,235,255],a:1});
+  f=f.concat(box(5.2,.6,0,5.8,1.2,.9,[143,209,168],1),box(-1.8,2,0,-1.2,2.6,1.2,[143,209,168],1));
+  return f}
+const HOUSE=house();
+function scene7(t){const A=cardIn(C7.c,t,S[6]+.1,S[7]+.1);if(A<=0)return;const lt=t-S[6];
+  const cam={cx:2,cy:1.5,yaw:-.9+lt*.42,pitch:1.12-lt*.04,k:44+lt*3,D:30,ox:320,oy:232};
+  // faces: ground drawn first
+  const ground=HOUSE[0];const pts=ground.pts.map(p=>P(p,cam));
+  drawFaces(g7,HOUSE.slice(1),cam,'rgba(15,80,50,.35)');
+  g7.insertAdjacentHTML('afterbegin',`<polygon points="${pstr(pts)}" fill="rgba(210,234,219,.8)"/>`);
+  const prog=clamp((lt-.75)/2.0);
+  ui7.innerHTML=`<rect x="40" y="350" width="560" height="4" rx="2" fill="rgba(13,40,30,.15)"/><rect x="40" y="350" width="${560*prog}" height="4" rx="2" fill="#1f7048"/><circle cx="${40+560*prog}" cy="352" r="7" fill="#fff" stroke="#1f7048" stroke-width="2"/>
+   <text x="40" y="338" font-size="12" fill="#3c4a42">00:${String(Math.floor(prog*12)).padStart(2,'0')}</text><text x="600" y="338" font-size="12" fill="#3c4a42" text-anchor="end">00:12</text>`}
+
+// =================== SCENE 8: smart camera ===================
+const C8=mkCard();C8.c.style.background='#0e1a16';
+C8.s.innerHTML=`<g id="scene8"><rect x="-100" y="-100" width="840" height="400" fill="#dfe7ff"/><rect x="-100" y="270" width="840" height="300" fill="#cfe6d7"/>
+ <polygon points="200,160 320,80 440,160" fill="#1f7048"/><rect x="215" y="158" width="210" height="130" fill="#fbfaff"/><rect x="300" y="215" width="40" height="73" fill="#0d131c"/>
+ <rect x="236" y="185" width="44" height="40" fill="#cfe0ff" stroke="#a6d4b9" stroke-width="3"/><rect x="360" y="185" width="44" height="40" fill="#cfe0ff" stroke="#a6d4b9" stroke-width="3"/>
+ <circle cx="520" cy="80" r="26" fill="#fff6d8"/><ellipse cx="120" cy="240" rx="40" ry="50" fill="#8fd1a8"/><ellipse cx="520" cy="250" rx="34" ry="40" fill="#8fd1a8"/></g>
+ <g stroke="rgba(255,255,255,.45)" stroke-width="1"><line x1="213" y1="0" x2="213" y2="388"/><line x1="427" y1="0" x2="427" y2="388"/><line x1="0" y1="129" x2="640" y2="129"/><line x1="0" y1="259" x2="640" y2="259"/></g>
+ <g stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"><path d="M24 54V24h30"/><path d="M586 24h30v30"/><path d="M616 334v30h-30"/><path d="M54 364H24v-30"/></g>
+ <rect id="focus" x="270" y="144" width="100" height="100" fill="none" stroke="#fff" stroke-width="2"/>
+ <g id="level"><line x1="250" y1="194" x2="300" y2="194" stroke-width="2.5"/><line x1="340" y1="194" x2="390" y2="194" stroke-width="2.5"/></g>
+ <rect id="flash" x="0" y="0" width="640" height="388" fill="#fff" opacity="0"/>`;
+const sc8=C8.s.querySelector('#scene8'),focus8=C8.s.querySelector('#focus'),level8=C8.s.querySelector('#level'),flash8=C8.s.querySelector('#flash');
+const pill8=el('div','darkpill',stage,'Fotografie perfectă <b><svg viewBox="0 0 24 24" width="20" height="20" style="fill:none;stroke:#0d131c;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></b>');
+const side8=[el('div','chip',stage,'☀︎ HDR automat'),el('div','chip',stage,'⟂ Nivelare automată'),el('div','chip',stage,'✦ Lumină optimă')];
+function scene8(t){const A=cardIn(C8.c,t,S[7]+.1,S[8]+.1);const lt=t-S[7];
+  if(A>0){const lev=1-eInOut(win(lt,.6,1.0));const ang=6.5*lev;sc8.setAttribute('transform',`rotate(${ang} 320 194) scale(1.08) translate(-24 -14)`);
+    level8.setAttribute('transform',`rotate(${-ang} 320 194)`);level8.setAttribute('stroke',lev<.05?'#5ee0a0':'#fff');
+    const f=eOut(win(lt,1.2,.5));const fs=lerp(110,80,f);focus8.setAttribute('x',320-fs/2);focus8.setAttribute('y',194-fs/2);focus8.setAttribute('width',fs);focus8.setAttribute('height',fs);focus8.setAttribute('stroke',f>.95?'#5ee0a0':'#fff');
+    const fl=lt>1.95?Math.exp(-(lt-1.95)*6)*clamp((lt-1.95)/.04):0;flash8.setAttribute('opacity',fl*.9)}
+  const p=spring(win(lt,2.15,.7));setT(pill8,640-115,530+(1-p)*24,.9+.1*p,Math.min(A,clamp(p*1.6)));
+  side8.forEach((c,i)=>{const q=spring(win(lt,.5+i*.3,.75));setT(c,150+Math.sin(lt+i)*4-(1-q)*60,292+i*62,1,Math.min(A,clamp(q*1.5)))})}
+
+// =================== SCENE 9: orbiting badges ===================
+const BADGES=['cube','plan','sofa','play','camera','spark'].map(k=>el('div','badge',stage,icon(k)));
+const LBL9=['Tururi 3D','Planuri 2D','Planuri 3D','Home staging','Randări video','Cameră smart','Boost-uri'];
+const chips9=LBL9.map((txt,i)=>({e:el('div','chip',stage,txt),i}));
+function scene9(t){const A=sceneA(t,S[8]+.2,S[9]+.25);const lt=t-S[8];
+  BADGES.forEach((b,i)=>{const th=i*Math.PI*2/6+lt*.75;const p=spring(win(lt,.35+i*.08,.8));const r=lerp(40,1,p);
+    const x=640+Math.cos(th)*250*p,y=322+Math.sin(th)*105*p;const front=Math.sin(th);
+    b.style.zIndex=front>0?5:1;setT(b,x,y,(.78+.22*(front+1)/2)*p,A*clamp(p*1.5),front<-.3?1.5*(-front):0)});
+  orb.style.zIndex=3;
+  chips9.forEach(({e,i})=>{const p=win(lt,.6+i*.1,.6);const x=[150,1010,230,960,110,1060,560][i],y=[160,150,560,575,380,380,600][i];
+    setT(e,x+Math.sin(lt*.6+i)*10+(i%2?-1:1)*lt*6,y+Math.cos(lt*.5+i)*6,1,A*eOut(p)*.95,i===6?1.5:0)})}
+
+// end fade
+const endFade=el('div','abs');Object.assign(endFade.style,{width:W+'px',height:H+'px',background:'#f7faf8'});
+
+// =================== master render ===================
+window.render=function(t){
+  // parallax bg chips (visible during scene 3 mostly, faint elsewhere)
+  const bgA=sceneA(t,S[2]+.3,S[3]+.1)*.9;
+  bgChips.forEach((c,i)=>{const x=((c.x+c.sp*t*c.d)%1240+1240)%1240-20;setT(c.e,x,c.y+Math.sin(t*.5+i)*6,.8+.4*c.d,bgA*(.35+.5*c.d),(1.4-c.d)*2.2)});
+  scene2(t);scene3(t);scene4(t);scene5(t);scene6(t);scene7(t);scene8(t);scene9(t);
+  if(!(t>S[8]&&t<S[9]+.3))orb.style.zIndex=4;
+  renderOrb(t);renderTitles(t);renderCap(t);
+  endFade.style.opacity=clamp((t-34.3)/.7);endFade.style.zIndex=50;
+};
+render(+(new URLSearchParams(location.search).get('t')||0));
+</script>
+</body>
+</html>
