@@ -68,7 +68,7 @@ export class PlanEditor {
     this.canvas.style.width = `${p.clientWidth}px`;
     this.canvas.style.height = `${p.clientHeight}px`;
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    if (!this.userMoved) this.fit(); // keep it framed until the user pans or zooms
+    if (!this.userMoved && !this.drag) this.fit(); // keep it framed until the user pans or zooms
     this.draw();
   }
 

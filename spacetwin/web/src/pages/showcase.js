@@ -20,5 +20,12 @@ export async function renderShowcase(app, id) {
     h('div', h('strong', space.name), h('span', `${space.stats.roomCount} rooms · ${fmtArea(space.stats.totalArea)}`)),
   ));
   chrome.update(space);
+  if (!space.scans.length) {
+    root.append(h('div.showcase-empty',
+      h('h2', 'Nothing to tour yet'),
+      h('p', 'This space has no panoramas. Add some in the editor to build the tour.'),
+      h('a.button.primary', { href: `#/space/${id}` }, 'Open editor'),
+    ));
+  }
   return () => chrome.dispose();
 }

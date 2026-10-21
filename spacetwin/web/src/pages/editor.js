@@ -107,6 +107,8 @@ export async function renderEditor(app, id) {
     onToolDone: () => setPlanTool('select'),
   });
 
+  planCanvas.plan = plan; // handle for end-to-end tests and debugging
+
   function setPlanTool(tool) {
     plan.setTool(tool);
     for (const b of planTools.querySelectorAll('[data-tool]')) b.setAttribute('aria-pressed', b.dataset.tool === tool);
