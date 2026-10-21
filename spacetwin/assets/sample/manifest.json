@@ -1,0 +1,71 @@
+{
+  "name": "Sample apartment",
+  "scans": [
+    {
+      "file": "scan-1.jpg",
+      "name": "Living room",
+      "position": {
+        "x": 2.0,
+        "z": 2.2
+      },
+      "cameraHeight": 1.5,
+      "heading": 0
+    },
+    {
+      "file": "scan-2.jpg",
+      "name": "Bedroom",
+      "position": {
+        "x": 6.8,
+        "z": 1.8
+      },
+      "cameraHeight": 1.5,
+      "heading": 0
+    }
+  ],
+  "rooms": [
+    {
+      "name": "Living room",
+      "height": 2.7,
+      "points": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          5.0,
+          0.0
+        ],
+        [
+          5.0,
+          4.0
+        ],
+        [
+          0.0,
+          4.0
+        ]
+      ]
+    },
+    {
+      "name": "Bedroom",
+      "height": 2.7,
+      "points": [
+        [
+          5.0,
+          0.0
+        ],
+        [
+          8.5,
+          0.0
+        ],
+        [
+          8.5,
+          4.0
+        ],
+        [
+          5.0,
+          4.0
+        ]
+      ]
+    }
+  ]
+}
