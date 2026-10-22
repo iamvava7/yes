@@ -136,11 +136,35 @@ export class PlanEditor {
 
   // ------------------------------------------------------------ input
 
+  /** Finish a drag: save whatever it changed. */
+  endDrag() {
+    const d = this.drag;
+    this.drag = null;
+    if (!d?.moved) return;
+    if (d.kind === 'scan') this.cb.onScanCommit?.(d.scan, { position: d.scan.position });
+    if (d.kind === 'heading') this.cb.onScanCommit?.(d.scan, { heading: d.scan.heading });
+    if (d.kind === 'vertex' || d.kind === 'room') this.commitRooms();
+  }
+
   bind() {
     const c = this.canvas;
+    const pointers = new Map(); // active touches, for pinch-zoom and two-finger pan
+    let pinch = null;
+    const pair = () => {
+      const [a, b] = [...pointers.values()];
+      return { dist: Math.hypot(a[0] - b[0], a[1] - b[1]), mid: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] };
+    };
     c.addEventListener('pointerdown', (e) => {
-      c.setPointerCapture(e.pointerId);
+      capture(c, e.pointerId);
       const [sx, sy] = this.eventPos(e);
+      pointers.set(e.pointerId, [sx, sy]);
+      if (pointers.size === 2) {
+        this.endDrag();
+        const p = pair();
+        pinch = { ...p, scale: this.scale, world: this.toWorld(...p.mid) };
+        return;
+      }
+      if (pointers.size > 2) return;
       if (e.button === 1 || e.button === 2) {
         this.drag = { kind: 'pan', sx, sy, offset: { ...this.offset } };
         return;
@@ -166,6 +190,16 @@ export class PlanEditor {
     });
     c.addEventListener('pointermove', (e) => {
       const [sx, sy] = this.eventPos(e);
+      if (pointers.has(e.pointerId)) pointers.set(e.pointerId, [sx, sy]);
+      if (pinch && pointers.size === 2) {
+        // keep the world point that started under the fingers under their midpoint
+        const p = pair();
+        this.userMoved = true;
+        this.scale = Math.min(400, Math.max(8, pinch.scale * (p.dist / Math.max(pinch.dist, 1))));
+        this.offset = { x: p.mid[0] - pinch.world[0] * this.scale, y: p.mid[1] - pinch.world[1] * this.scale };
+        this.draw();
+        return;
+      }
       this.hover = this.toWorld(sx, sy);
       const d = this.drag;
       if (!d) {
@@ -200,13 +234,21 @@ export class PlanEditor {
       }
       this.draw();
     });
-    c.addEventListener('pointerup', () => {
-      const d = this.drag;
-      this.drag = null;
-      if (!d?.moved) return;
-      if (d.kind === 'scan') this.cb.onScanCommit?.(d.scan, { position: d.scan.position });
-      if (d.kind === 'heading') this.cb.onScanCommit?.(d.scan, { heading: d.scan.heading });
-      if (d.kind === 'vertex' || d.kind === 'room') this.commitRooms();
+    const release = (e) => {
+      pointers.delete(e.pointerId);
+      if (pinch) {
+        if (pointers.size < 2) pinch = null;
+        return true;
+      }
+      return false;
+    };
+    c.addEventListener('pointerup', (e) => {
+      if (release(e)) return;
+      this.endDrag();
+    });
+    c.addEventListener('pointercancel', (e) => {
+      release(e);
+      this.endDrag();
     });
     c.addEventListener('wheel', (e) => {
       e.preventDefault();
@@ -419,6 +461,15 @@ export class PlanEditor {
     ctx.font = '11px system-ui, sans-serif';
     ctx.textAlign = 'left';
     ctx.fillText(`${bar} m`, 16, h - 32);
+  }
+}
+
+/** Pointer capture is best-effort: it can throw for pointers the browser no longer tracks. */
+function capture(el, id) {
+  try {
+    el.setPointerCapture(id);
+  } catch {
+    // keep handling the gesture without capture
   }
 }
 

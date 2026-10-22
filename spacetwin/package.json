@@ -11,7 +11,8 @@
     "test": "node --test \"test/*.test.js\"",
     "test:e2e": "node test-e2e/smoke.js",
     "sample:assets": "python3 scripts/make_sample.py assets/sample",
-    "test:capture": "node test-e2e/capture.js"
+    "test:capture": "node test-e2e/capture.js",
+    "phone": "PHONE=1 node scripts/dev.js"
   },
   "dependencies": {
     "express": "^5.1.0",
@@ -19,6 +20,7 @@
     "multer": "^2.0.2"
   },
   "devDependencies": {
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
     "playwright-core": "^1.55.0",
     "three": "^0.180.0",
     "vite": "^7.1.0"

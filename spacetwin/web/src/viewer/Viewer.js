@@ -444,11 +444,35 @@ export class Viewer {
   bindInput() {
     const el = this.renderer.domElement;
     let down = null;
+    const pointers = new Map(); // active touches, for pinch-to-zoom
+    let pinch = null;
+    const spread = () => {
+      const [a, b] = [...pointers.values()];
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    };
     el.addEventListener('pointerdown', (e) => {
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pointers.size === 2 && this.mode === 'inside') {
+        pinch = { dist: spread(), fov: this.camera.fov };
+        down = null; // a pinch is neither a drag nor a click
+        return;
+      }
       down = { x: e.clientX, y: e.clientY, yaw: this.yaw, pitch: this.pitch, dragging: false };
-      if (this.mode === 'inside') el.setPointerCapture(e.pointerId);
+      if (this.mode === 'inside') {
+        try {
+          el.setPointerCapture(e.pointerId);
+        } catch {
+          // best-effort: keep handling the drag without capture
+        }
+      }
     });
     el.addEventListener('pointermove', (e) => {
+      if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pinch && pointers.size === 2) {
+        this.camera.fov = THREE.MathUtils.clamp(pinch.fov * (pinch.dist / Math.max(spread(), 1)), 30, 95);
+        this.camera.updateProjectionMatrix();
+        return;
+      }
       if (down && this.mode === 'inside' && !this.transitioning) {
         const dx = e.clientX - down.x, dy = e.clientY - down.y;
         if (Math.hypot(dx, dy) > CLICK_SLOP) down.dragging = true;
@@ -460,13 +484,25 @@ export class Viewer {
           return;
         }
       }
-      this.onHover(e);
+      if (e.pointerType === 'mouse') this.onHover(e);
     });
+    const release = (e) => {
+      pointers.delete(e.pointerId);
+      if (pointers.size < 2) pinch = null;
+    };
     el.addEventListener('pointerup', (e) => {
+      release(e);
       if (!down) return;
       const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
       down = null;
-      if (moved <= CLICK_SLOP) this.onClick(e);
+      if (moved <= CLICK_SLOP) {
+        if (e.pointerType !== 'mouse') this.onHover(e); // touch has no hover: update measure/trace previews first
+        this.onClick(e);
+      }
+    });
+    el.addEventListener('pointercancel', (e) => {
+      release(e);
+      down = null;
     });
     el.addEventListener('pointerleave', () => { this.cursor.visible = false; });
     el.addEventListener('wheel', (e) => {
