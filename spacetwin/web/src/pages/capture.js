@@ -1,8 +1,11 @@
+import { Vector3 } from 'three';
 import { api } from '../api.js';
 import {
   angleBetween, captureTargets, deviceQuaternion, forwardOf, headingCorrection, intrinsics, projectToFrame, yawPitchOf,
 } from '../capture/geometry.js';
+import { sharpnessOf } from '../capture/sharpness.js';
 import { stitchPanorama } from '../capture/stitch.js';
+import { sfx, unlock } from '../sound.js';
 import { h, icon, toast } from '../ui.js';
 
 const DEG = Math.PI / 180;
@@ -11,6 +14,9 @@ const STEADY_MS = 350; // hold still this long before a shot
 const STEADY_MAX = 0.7 * DEG; // max wobble while holding still
 const GUIDE_VFOV = 65; // typical iPhone main camera in portrait; the stitcher calibrates the real value
 const MAX_PHOTO_SIDE = 1440;
+const BURST = 5; // frames grabbed per dot; the sharpest is kept (all 5 blurred is rare)
+const FAST_TURN = 30 * DEG; // per second; faster than this smears the photo
+const MAX_TILT = 10 * DEG; // sideways roll before we ask for an upright phone
 
 /**
  * Guided 360° capture with the phone's camera: aim at each dot, hold still,
@@ -67,7 +73,10 @@ export async function renderCapture(app, spaceId) {
       problems.length ? h('div.capture-problem', problems.map((p) => h('p', p))) : null,
       h('button.primary.big', {
         disabled: problems.length > 0,
-        onclick: () => start({ name: name.value.trim() || `Spot ${n}`, cameraHeight: height }),
+        onclick: () => {
+          unlock(); // iOS only allows audio to start from a tap
+          start({ name: name.value.trim() || `Spot ${n}`, cameraHeight: height });
+        },
       }, icon('walk'), 'Start capture'),
       h('p.dim', 'Have a 360° camera instead? ', h('a', { href: `#/space/${spaceId}` }, 'Upload its photos in the editor'), '.'),
     ));
@@ -136,6 +145,7 @@ export async function renderCapture(app, spaceId) {
           await api.updateScan(spaceId, scan.id, { cameraHeight: opts.cameraHeight });
           space = await api.getSpace(spaceId);
           URL.revokeObjectURL(url);
+          sfx.success();
           saved(scan);
         } catch (err) {
           toast(err.message, 'error');
@@ -169,6 +179,14 @@ export async function renderCapture(app, spaceId) {
       ),
     ));
   }
+}
+
+/** Resolve on the next decoded video frame (falls back to two animation frames). */
+function nextVideoFrame(video) {
+  return new Promise((resolve) => {
+    if (video.requestVideoFrameCallback) video.requestVideoFrameCallback(() => resolve());
+    else requestAnimationFrame(() => requestAnimationFrame(resolve));
+  });
 }
 
 /** Live camera view with aiming dots; collects one photo per target. */
@@ -260,20 +278,51 @@ class CaptureSession {
     }
   }
 
+  /**
+   * Grab a short burst while the phone is steady on the dot and keep the
+   * sharpest frame (variance of the Laplacian), which removes most handshake
+   * and rolling-shutter blur without asking the user to do anything.
+   */
   async shoot(target) {
-    const q = this.q.clone();
     const vw = this.video.videoWidth, vh = this.video.videoHeight;
     const scale = Math.min(1, MAX_PHOTO_SIDE / Math.max(vw, vh));
-    const canvas = h('canvas', { width: Math.round(vw * scale), height: Math.round(vh * scale) });
-    canvas.getContext('2d').drawImage(this.video, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.92));
+    this.scoreCtx ??= document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+    let best = null;
+    for (let k = 0; k < BURST; k++) {
+      if (k) await nextVideoFrame(this.video);
+      const q = this.q.clone();
+      if (angleBetween(target.dir, forwardOf(q)) > AIM_TOLERANCE * 1.5) break; // drifted off the dot
+      const score = sharpnessOf(this.video, vw, vh, this.scoreCtx);
+      if (best && score <= best.score) continue;
+      const canvas = best?.canvas ?? h('canvas', { width: Math.round(vw * scale), height: Math.round(vh * scale) });
+      canvas.getContext('2d').drawImage(this.video, 0, 0, canvas.width, canvas.height);
+      best = { score, q, canvas };
+    }
+    if (!best) return;
+    const blob = await new Promise((r) => best.canvas.toBlob(r, 'image/jpeg', 0.92));
     target.done = true;
-    this.frames.push({ blob, q, width: canvas.width, height: canvas.height, targetId: target.id });
+    this.frames.push({ blob, q: best.q, width: best.canvas.width, height: best.canvas.height, targetId: target.id, sharpness: best.score });
     this.lastShot = performance.now();
+    sfx.shutter();
+    // chime when a whole ring is done: horizon (12), upper (20), lower (28)
+    if ([12, 20, 28].includes(this.frames.length)) setTimeout(() => sfx.ding(), 120);
     this.flash.classList.remove('on');
     void this.flash.offsetWidth;
     this.flash.classList.add('on');
     if (this.frames.length >= 12) this.finishBtn.hidden = false;
+  }
+
+  /** Degrees per second the view is turning, from the recent orientation history. */
+  turnRate() {
+    if (this.history.length < 2) return 0;
+    const a = this.history[0], b = this.history.at(-1);
+    return b.t > a.t ? angleBetween(a.f, b.f) / ((b.t - a.t) / 1000) : 0;
+  }
+
+  /** Sideways tilt of the phone (roll), radians; 0 when held upright. */
+  roll() {
+    const right = new Vector3(1, 0, 0).applyQuaternion(this.q);
+    return Math.asin(Math.max(-1, Math.min(1, right.y)));
   }
 
   finish() {
@@ -343,6 +392,19 @@ class CaptureSession {
       ctx.stroke();
     }
 
+    // spirit level: a short horizon line that turns green when the phone is upright
+    const tiltNow = this.roll();
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(-tiltNow);
+    ctx.strokeStyle = Math.abs(tiltNow) < MAX_TILT ? 'rgba(80,220,140,0.9)' : 'rgba(255,190,60,0.95)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-70, 0); ctx.lineTo(-36, 0);
+    ctx.moveTo(36, 0); ctx.lineTo(70, 0);
+    ctx.stroke();
+    ctx.restore();
+
     if (!active) return;
     // arrow + words when the dot is off screen or far away
     const p = projectToFrame(active.dir, qInv, intr);
@@ -355,7 +417,11 @@ class CaptureSession {
     const dpitch = tp.pitch - cp.pitch;
     const vertical = Math.abs(active.pitch) > 80 * DEG;
     let text;
-    if (onTarget) text = this.steady() ? 'Hold still…' : 'Steady…';
+    const tilt = this.roll();
+    const nearDot = off < 15 * DEG;
+    if (!vertical && Math.abs(tilt) > MAX_TILT) text = `Hold the phone upright (tilted ${Math.round(Math.abs(tilt) / DEG)}°)`;
+    else if (nearDot && this.turnRate() > FAST_TURN) text = 'Slow down: fast turns blur photos';
+    else if (onTarget) text = this.steady() ? 'Hold still…' : 'Steady…';
     else if (vertical) text = active.pitch > 0 ? 'Point the phone straight up' : 'Point the phone straight down';
     else if (Math.abs(dpitch) > 10 * DEG && Math.abs(dyaw) < 25 * DEG) text = dpitch > 0 ? 'Tilt up' : 'Tilt down';
     else text = dyaw < 0 ? 'Turn right' : 'Turn left';

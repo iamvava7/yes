@@ -149,10 +149,28 @@ export function alignmentError(thumbs, qs, intr) {
   return n ? Math.sqrt(total / n) : Infinity;
 }
 
+/**
+ * Pick the field of view under which overlapping photos agree best. Pairs
+ * that stop overlapping under a candidate count as a bad match rather than
+ * being skipped; otherwise a too-narrow lens would look good simply by
+ * comparing less.
+ */
 function calibrateFov(thumbs, qs, aspect, candidates) {
+  const pairs = neighbours(qs, 75 * DEG);
+  const LOST_PAIR = { error: 40 * 40, n: GRID * GRID * 0.15 };
+  const score = (vfov) => {
+    const intr = intrinsics(vfov, aspect);
+    let total = 0, n = 0;
+    for (const [i, j] of pairs) {
+      const r = pairError(thumbs[i], thumbs[j], qs[i], qs[j], intr) ?? LOST_PAIR;
+      total += r.error * r.n;
+      n += r.n;
+    }
+    return total / n;
+  };
   let best = { vfov: candidates[Math.floor(candidates.length / 2)], error: Infinity };
   for (const vfov of candidates) {
-    const e = alignmentError(thumbs, qs, intrinsics(vfov, aspect));
+    const e = score(vfov);
     if (e < best.error) best = { vfov, error: e };
   }
   return best.vfov;

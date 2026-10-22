@@ -4,7 +4,9 @@
 //     panorama (the sample living room), with a field of view (62°) that the
 //     app does not know (it assumes 65° and must calibrate),
 //   - the "gyroscope" reports each orientation with up to ±1.5° of error,
-//   - every photo gets a different exposure.
+//   - every photo gets a different exposure,
+//   - every other video frame is smeared with motion blur, so the capture
+//     burst must pick a sharp one.
 // The device-orientation maths here is written independently from the W3C
 // spec (R = Rz(alpha)·Rx(beta)·Ry(gamma)), so it also checks the app's.
 // We then compare the stitched panorama with the original.
@@ -31,7 +33,7 @@ const NOISE_DEG = Number(process.env.NOISE_DEG ?? 1.5);
 // Runs in the page before the app: fake camera + gyroscope.
 function simulator({ vfov, panoUrl }) {
   const W = 360, H = 480; // portrait frames
-  const sim = (window.__sim = { alpha: 0, beta: 90, gamma: 0, noise: { alpha: 0, beta: 0, gamma: 0 }, exposure: 1, ready: false });
+  const sim = (window.__sim = { alpha: 0, beta: 90, gamma: 0, noise: { alpha: 0, beta: 0, gamma: 0 }, exposure: 1, ready: false, motionBlur: true, frameNo: 0 });
   const img = new Image();
   img.src = panoUrl;
   img.onload = () => {
@@ -84,6 +86,26 @@ function simulator({ vfov, panoUrl }) {
         out.data[d + 2] = Math.min(255, data[s + 2] * sim.exposure);
         out.data[d + 3] = 255;
       }
+    }
+    const blurred = sim.motionBlur && Math.random() < 0.5;
+    if (blurred) {
+      // horizontal smear, like turning during the exposure
+      const d = out.data, tmp = new Uint8ClampedArray(d);
+      const R = 6;
+      for (let j = 0; j < H; j++) {
+        for (let i = 0; i < W; i++) {
+          for (let c = 0; c < 3; c++) {
+            let acc = 0;
+            for (let k = -R; k <= R; k++) acc += tmp[(j * W + Math.min(W - 1, Math.max(0, i + k))) * 4 + c];
+            d[(j * W + i) * 4 + c] = acc / (2 * R + 1);
+          }
+        }
+      }
+    }
+    // corner marker so the test can tell which frames the app kept: red = blurred
+    for (let j = 0; j < 6; j++) for (let i = 0; i < 6; i++) {
+      const d = (j * W + i) * 4;
+      out.data[d] = blurred ? 255 : 0; out.data[d + 1] = blurred ? 0 : 255; out.data[d + 2] = 0;
     }
     fctx.putImageData(out, 0, 0);
   }
@@ -171,6 +193,19 @@ try {
   }, window_truths);
   const stats = (a) => `max ${Math.max(...a).toFixed(2)}, mean ${(a.reduce((s, x) => s + x, 0) / a.length).toFixed(2)}`;
   console.log(`  gyro orientation error before alignment (deg): ${stats(orient.raw)}`);
+  const blurredKept = await page.evaluate(async () => {
+    let n = 0;
+    const which = [];
+    for (const f of window.__spacetwinLastStitch.frames) {
+      const bmp = await createImageBitmap(f.blob);
+      const c = new OffscreenCanvas(4, 4);
+      c.getContext('2d').drawImage(bmp, 0, 0, 4, 4, 0, 0, 4, 4);
+      const [r, g] = c.getContext('2d').getImageData(1, 1, 1, 1).data;
+      if (r > g) { n++; which.push(`#${f.targetId} (sharpness ${f.sharpness.toFixed(0)})`); }
+    }
+    return { n, which };
+  });
+  console.log(`  blurred photos kept: ${blurredKept.n} of 30 (half of all video frames are blurred) ${blurredKept.which.join(', ')}`);
   console.log(`  orientation error after alignment (deg):        ${stats(orient.refined)}`);
   console.log(`  worst photos: ${orient.refined.map((e, i) => [i, e]).sort((x, y) => y[1] - x[1]).slice(0, 5).map(([i, e]) => `#${i} ${e.toFixed(2)}°`).join(', ')}`);
   console.log(`  ${facts.replace(/\s+/g, ' ')}`);
@@ -199,6 +234,7 @@ try {
   assert.ok(Math.abs(vfov - TRUE_VFOV) <= 1, `calibrated vfov ${vfov}, truth ${TRUE_VFOV}`);
   // with a perfect gyroscope this pipeline scores ~6.2 (resampling + JPEG)
   assert.ok(metrics.meanAbsError < 7.5, `stitched panorama differs from the truth by ${metrics.meanAbsError.toFixed(1)}/255`);
+  assert.ok(blurredKept.n <= 4, `${blurredKept.n} blurred photos were kept`);
   const mean = (a) => a.reduce((s, x) => s + x, 0) / a.length;
   if (NOISE_DEG > 0) assert.ok(mean(orient.refined) < mean(orient.raw), 'alignment should reduce orientation error');
 
