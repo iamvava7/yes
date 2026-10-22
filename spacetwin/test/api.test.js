@@ -80,6 +80,19 @@ test('space lifecycle: create, upload, position, rooms, tags, exports, delete', 
   assert.equal((await fetch(`${base}/spaces/${id}`)).status, 404);
 });
 
+test('listing details are saved, merged and validated', async () => {
+  const { id } = await (await json('POST', '/spaces', { name: 'Listing' })).json();
+  let res = await json('PATCH', `/spaces/${id}`, { listing: { address: '12 Elm St', price: 650000, currency: 'EUR', beds: 3, baths: 2, status: 'For sale' } });
+  assert.equal(res.status, 200);
+  res = await json('PATCH', `/spaces/${id}`, { listing: { description: 'Bright corner flat.', price: null } });
+  const { listing } = await res.json();
+  assert.deepEqual(listing, { address: '12 Elm St', price: null, currency: 'EUR', beds: 3, baths: 2, status: 'For sale', description: 'Bright corner flat.' });
+  for (const bad of [{ status: 'Haunted' }, { currency: 'euro' }, { beds: -1 }, { contactEmail: 'nope' }, ['x']]) {
+    res = await json('PATCH', `/spaces/${id}`, { listing: bad });
+    assert.equal(res.status, 400, JSON.stringify(bad));
+  }
+});
+
 test('rejects non-panoramic images and bad geometry', async () => {
   const { id } = await (await json('POST', '/spaces', { name: 'Validation' })).json();
 

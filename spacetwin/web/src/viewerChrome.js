@@ -1,4 +1,6 @@
+import { centroid, normalizePolygon, pointInPolygon, polygonArea } from '../../shared/geometry.js';
 import { panoUrl } from './api.js';
+import { isMuted, onMuteChange, setMuted, sfx, unlock } from './sound.js';
 import { h, icon } from './ui.js';
 import { Viewer } from './viewer/Viewer.js';
 
@@ -15,55 +17,297 @@ const TOOLS = {
   trace: ['trace', 'Trace room'],
 };
 
+const TOUR_PAN_MS = 6500; // time spent turning at each spot during the guided tour
+const TOUR_PAN_DEG = 110;
+const SQFT_PER_M2 = 10.7639;
+
 /**
- * Wraps a Viewer with its on-screen controls. `tools` picks which tools show;
- * editing hooks (onTagCreate, onTagDelete, onRoomTraced) are optional, which is
- * how the read-only showcase reuses this.
+ * Wraps a Viewer with its on-screen controls. `tools` picks which tools show
+ * and `actions` which extras (guided tour, snapshot, share, sound); editing
+ * hooks (onTagCreate, onTagDelete, onRoomTraced) are optional, which is how
+ * the read-only tour page reuses this.
  */
-export function createViewerChrome(container, spaceId, { tools = ['navigate', 'measure'], onTagCreate, onTagDelete, onRoomTraced, onScanChange } = {}) {
+export function createViewerChrome(container, spaceId, {
+  tools = ['measure'], actions = ['play', 'snapshot', 'share', 'sound'],
+  onTagCreate, onTagDelete, onRoomTraced, onScanChange, spaceName = 'tour',
+} = {}) {
   const stage = h('div.viewer-stage');
   const modeBar = h('div.mode-bar', { role: 'tablist', 'aria-label': 'View mode' });
   const toolBar = h('div.tool-bar', { role: 'toolbar', 'aria-label': 'Tools' });
-  const banner = h('div.banner', { hidden: true });
-  const strip = h('div.scan-strip', { 'aria-label': 'Capture points' });
+  const actionBar = h('div.action-bar', { role: 'toolbar', 'aria-label': 'Tour actions' });
+  const banner = h('div.banner', { hidden: true, role: 'status' });
+  const strip = h('div.scan-strip', { 'aria-label': 'Spots' });
   const popover = h('div.popover', { hidden: true });
-  container.append(h('div.viewer-wrap', stage, h('div.viewer-top', modeBar, toolBar), banner, strip, popover));
+  const sign = h('div.room-sign', { 'aria-live': 'polite' }, h('span.room-sign-name'), h('span.room-sign-area'));
+  const minimap = h('canvas.minimap', { 'aria-label': 'Floor plan map: tap to move there', role: 'img' });
+  container.append(h('div.viewer-wrap',
+    stage, sign, minimap,
+    h('div.viewer-dock', modeBar, toolBar, actionBar),
+    banner, strip, popover,
+  ));
 
   let space = null;
+  let lastRoomId = null;
+  let signTimer = null;
   const viewer = new Viewer(stage, {
     panoUrl: panoUrl(spaceId),
     onModeChange: (mode) => {
       for (const b of modeBar.children) b.setAttribute('aria-selected', b.dataset.mode === mode);
+      minimap.hidden = mode !== 'inside' || !space?.rooms.length;
       updateBanner();
     },
     onScanChange: (id) => {
       for (const b of strip.children) b.classList.toggle('current', b.dataset.scan === id);
+      showRoomSign(id);
       onScanChange?.(id);
     },
     onTraceProgress: () => updateBanner(),
     onTraceComplete: (room) => {
       setTool('navigate');
+      sfx.ding();
       onRoomTraced?.(room);
     },
     onTagPlace: (position, e) => openTagForm(position, e),
-    onTagOpen: (tag, el) => openTag(tag, el),
-    onMeasure: () => updateBanner(),
+    onTagOpen: (tag, el) => { sfx.tap(); openTag(tag, el); },
+    onMeasure: () => { sfx.ding(); updateBanner(); },
   });
   stage.viewer = viewer; // handle for end-to-end tests and debugging
 
   for (const [mode, ic, label] of MODES) {
     modeBar.append(h('button.mode', {
       role: 'tab', dataset: { mode }, title: label, 'aria-selected': mode === 'inside',
-      onclick: () => viewer.setMode(mode),
+      onclick: () => { unlock(); stopTour(); viewer.setMode(mode); },
     }, icon(ic), h('span', label)));
   }
   for (const t of tools) {
     const [ic, label] = TOOLS[t];
-    toolBar.append(h('button.tool', { dataset: { tool: t }, title: label, 'aria-pressed': t === 'navigate', onclick: () => setTool(t) }, icon(ic), h('span', label)));
+    // tapping an active tool again turns it off (back to navigating)
+    toolBar.append(h('button.tool', { dataset: { tool: t }, title: label, 'aria-pressed': t === 'navigate', onclick: () => { unlock(); setTool(viewer.tool === t && t !== 'navigate' ? 'navigate' : t); } }, icon(ic), h('span', label)));
   }
+  toolBar.hidden = !tools.length;
+
+  // ---------------------------------------------------------------- actions
+
+  const playBtn = h('button.action', { title: 'Play guided tour', 'aria-label': 'Play guided tour', 'aria-pressed': false, onclick: () => (touring ? stopTour() : playTour()) }, icon('play'), h('span', 'Tour'));
+  const soundBtn = h('button.action', { onclick: () => { unlock(); setMuted(!isMuted()); if (!isMuted()) sfx.tap(); } });
+  const renderSound = () => {
+    soundBtn.replaceChildren(icon(isMuted() ? 'mute' : 'sound'), h('span', isMuted() ? 'Sound off' : 'Sound on'));
+    soundBtn.title = isMuted() ? 'Turn sound on' : 'Turn sound off';
+    soundBtn.setAttribute('aria-label', soundBtn.title);
+    soundBtn.setAttribute('aria-pressed', !isMuted());
+  };
+  renderSound();
+  const offMute = onMuteChange(renderSound);
+  const available = {
+    play: playBtn,
+    snapshot: h('button.action', { title: 'Save this view as a photo', 'aria-label': 'Save this view as a photo', onclick: snapshot }, icon('camera'), h('span', 'Snapshot')),
+    share: h('button.action', { title: 'Share or embed this tour', 'aria-label': 'Share or embed this tour', onclick: openShare }, icon('share'), h('span', 'Share')),
+    sound: soundBtn,
+  };
+  for (const a of actions) actionBar.append(available[a]);
+  actionBar.hidden = !actions.length;
+
+  function snapshot() {
+    unlock();
+    sfx.shutter();
+    stage.classList.remove('flash');
+    void stage.offsetWidth;
+    stage.classList.add('flash');
+    const a = h('a', { href: viewer.screenshot(), download: `${spaceName.replace(/[^\w-]+/g, '-').toLowerCase()}-snapshot.jpg` });
+    document.body.append(a);
+    a.click();
+    a.remove();
+  }
+
+  function openShare(e) {
+    unlock();
+    sfx.tap();
+    const link = `${location.origin}${location.pathname}#/view/${spaceId}`;
+    const embed = `<iframe src="${link}" width="100%" height="560" style="border:0" allow="fullscreen; accelerometer; gyroscope" loading="lazy"></iframe>`;
+    const copyRow = (label, value) => {
+      const field = h('input', { value, readOnly: true, 'aria-label': label, onfocus: (ev) => ev.target.select() });
+      const btn = h('button.secondary.small', {
+        onclick: async () => {
+          try {
+            await navigator.clipboard.writeText(value);
+            btn.textContent = 'Copied';
+          } catch {
+            field.focus();
+            field.select();
+            btn.textContent = 'Press ⌘C';
+          }
+          setTimeout(() => { btn.textContent = 'Copy'; }, 1800);
+        },
+      }, 'Copy');
+      return h('label.field', h('span', label), h('div.input-row', field, btn));
+    };
+    popover.replaceChildren(h('div.share',
+      h('div.row.spread', h('strong', 'Share this tour'), h('button.icon-btn', { title: 'Close', onclick: closePopover }, icon('x'))),
+      copyRow('Link', link),
+      copyRow('Embed on a website', embed),
+      navigator.share ? h('button.primary.small', { onclick: () => navigator.share({ title: spaceName, url: link }).catch(() => {}) }, 'Share…') : null,
+    ));
+    const r = e.currentTarget.getBoundingClientRect();
+    placePopover(r.left + r.width / 2, r.top - 8, 'above');
+  }
+
+  // ---------------------------------------------------------------- guided tour
+
+  let touring = false;
+  let tourToken = 0;
+  async function playTour() {
+    if (!space?.scans.length) return;
+    unlock();
+    touring = true;
+    const token = ++tourToken;
+    playBtn.setAttribute('aria-pressed', true);
+    playBtn.title = 'Pause guided tour';
+    playBtn.setAttribute('aria-label', playBtn.title);
+    playBtn.replaceChildren(icon('pause'), h('span', 'Pause'));
+    setTool('navigate');
+    if (viewer.mode !== 'inside') {
+      viewer.setMode('inside');
+      await viewer.settled();
+    }
+    let i = Math.max(0, space.scans.findIndex((s) => s.id === viewer.currentScanId));
+    while (touring && token === tourToken) {
+      const scan = space.scans[i];
+      if (scan.id !== viewer.currentScanId) {
+        await viewer.goToScan(scan.id);
+        await viewer.settled();
+      }
+      // slow look around the room
+      const start = performance.now(), yaw0 = viewer.yaw;
+      await new Promise((resolve) => {
+        const step = (now) => {
+          if (!touring || token !== tourToken) return resolve();
+          const t = Math.min(1, (now - start) / TOUR_PAN_MS);
+          const k = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+          viewer.setLook(yaw0 + (k * TOUR_PAN_DEG * Math.PI) / 180, -0.08);
+          if (t < 1) requestAnimationFrame(step);
+          else resolve();
+        };
+        requestAnimationFrame(step);
+      });
+      i = (i + 1) % space.scans.length;
+    }
+  }
+  function stopTour() {
+    if (!touring) return;
+    touring = false;
+    tourToken++;
+    playBtn.setAttribute('aria-pressed', false);
+    playBtn.title = 'Play guided tour';
+    playBtn.setAttribute('aria-label', playBtn.title);
+    playBtn.replaceChildren(icon('play'), h('span', 'Tour'));
+  }
+  // any direct interaction with the view takes over from the guided tour
+  stage.addEventListener('pointerdown', stopTour);
+  stage.addEventListener('wheel', stopTour, { passive: true });
+
+  // ---------------------------------------------------------------- room sign
+
+  function roomAt(scan) {
+    return scan && space?.rooms.find((r) => pointInPolygon([scan.position.x, scan.position.z], r.points));
+  }
+
+  function showRoomSign(scanId) {
+    const room = roomAt(space?.scans.find((s) => s.id === scanId));
+    if (!room || room.id === lastRoomId) return;
+    lastRoomId = room.id;
+    const area = polygonArea(room.points);
+    sign.querySelector('.room-sign-name').textContent = room.name;
+    sign.querySelector('.room-sign-area').textContent = `${area.toFixed(1)} m² · ${Math.round(area * SQFT_PER_M2)} ft²`;
+    sign.classList.remove('show');
+    void sign.offsetWidth;
+    sign.classList.add('show');
+    clearTimeout(signTimer);
+    signTimer = setTimeout(() => sign.classList.remove('show'), 3200);
+  }
+
+  // ---------------------------------------------------------------- minimap
+
+  let mapRaf = 0;
+  let mapFit = null;
+  function fitMinimap() {
+    const pts = [...space.rooms.flatMap((r) => r.points), ...space.scans.map((s) => [s.position.x, s.position.z])];
+    if (!pts.length) return null;
+    const xs = pts.map((p) => p[0]), zs = pts.map((p) => p[1]);
+    return { minX: Math.min(...xs), maxX: Math.max(...xs), minZ: Math.min(...zs), maxZ: Math.max(...zs) };
+  }
+  function mapTransform() {
+    const w = minimap.clientWidth, hgt = minimap.clientHeight, pad = 12;
+    const b = mapFit;
+    const scale = Math.min((w - 2 * pad) / Math.max(b.maxX - b.minX, 1), (hgt - 2 * pad) / Math.max(b.maxZ - b.minZ, 1));
+    const ox = (w - (b.maxX - b.minX) * scale) / 2 - b.minX * scale, oz = (hgt - (b.maxZ - b.minZ) * scale) / 2 - b.minZ * scale;
+    return { scale, toPx: (x, z) => [ox + x * scale, oz + z * scale], toWorld: (px, py) => [(px - ox) / scale, (py - oz) / scale] };
+  }
+  function drawMinimap() {
+    mapRaf = requestAnimationFrame(drawMinimap);
+    if (minimap.hidden || !space || !mapFit) return;
+    const dpr = window.devicePixelRatio || 1;
+    const w = minimap.clientWidth, hgt = minimap.clientHeight;
+    if (minimap.width !== Math.round(w * dpr)) { minimap.width = Math.round(w * dpr); minimap.height = Math.round(hgt * dpr); }
+    const ctx = minimap.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, hgt);
+    const { scale, toPx } = mapTransform();
+    const css = getComputedStyle(minimap);
+    const room = css.getPropertyValue('--map-room').trim(), wall = css.getPropertyValue('--map-wall').trim(), brass = css.getPropertyValue('--map-cone').trim();
+    for (const r of space.rooms) {
+      ctx.beginPath();
+      normalizePolygon(r.points).forEach(([x, z], i) => { const [px, py] = toPx(x, z); i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); });
+      ctx.closePath();
+      ctx.fillStyle = room;
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = wall;
+      ctx.stroke();
+    }
+    for (const s of space.scans) {
+      const [px, py] = toPx(s.position.x, s.position.z);
+      ctx.beginPath();
+      ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = wall;
+      ctx.fill();
+    }
+    // you are here, with a cone showing where you're looking
+    const cam = viewer.camera;
+    const [px, py] = toPx(cam.position.x, cam.position.z);
+    const hfov = 2 * Math.atan(Math.tan((cam.fov * Math.PI) / 360) * cam.aspect);
+    const dir = Math.atan2(-Math.cos(viewer.yaw), -Math.sin(viewer.yaw)); // world (-sin yaw, -cos yaw) on screen (x, z)
+    const len = Math.max(26, scale * 1.6);
+    const grad = ctx.createRadialGradient(px, py, 0, px, py, len);
+    grad.addColorStop(0, brass);
+    grad.addColorStop(1, 'transparent');
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+    ctx.arc(px, py, len, dir - hfov / 2, dir + hfov / 2);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(px, py, 4.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = brass;
+    ctx.stroke();
+  }
+  mapRaf = requestAnimationFrame(drawMinimap);
+  minimap.addEventListener('click', (e) => {
+    if (!mapFit) return;
+    const r = minimap.getBoundingClientRect();
+    const [x, z] = mapTransform().toWorld(e.clientX - r.left, e.clientY - r.top);
+    const near = viewer.nearestScan({ x, z });
+    if (near) { stopTour(); viewer.goToScan(near.scan.id); }
+  });
+
+  // ---------------------------------------------------------------- tools
 
   function setTool(tool) {
     if (tool === 'trace' && !viewer.currentScanId) return;
+    if (tool !== 'navigate') stopTour();
     viewer.setTool(tool);
     for (const b of toolBar.children) b.setAttribute('aria-pressed', b.dataset.tool === tool);
     closePopover();
@@ -78,38 +322,41 @@ export function createViewerChrome(container, spaceId, { tools = ['navigate', 'm
       if (t.stage === 'floor') {
         content = [
           h('span', t.points.length < 3
-            ? `Click each corner where the walls meet the floor, going around the room (${t.points.length} so far).`
-            : 'Keep adding corners, then click the red first corner or press Enter to close the outline.'),
+            ? `Tap each corner where the walls meet the floor, going around the room (${t.points.length} so far).`
+            : 'Keep adding corners, then tap the red first corner or press Enter to close the outline.'),
           h('button.secondary.small', { disabled: t.points.length < 3, onclick: () => viewer.closeTrace() }, 'Close outline'),
           h('button.ghost.small', { onclick: () => setTool('navigate') }, 'Cancel'),
         ];
       } else {
         content = [
-          h('span', 'Now click where the ceiling meets the wall, directly above the red corner, to set the room height.'),
-          h('button.secondary.small', { onclick: () => viewer.finishTrace(2.6) }, 'Skip (2.6 m)'),
+          h('span', 'Now tap where the ceiling meets the wall, directly above the red corner, to set the room height.'),
+          h('button.secondary.small', { onclick: () => viewer.finishTrace(2.6) }, 'Use 2.6 m'),
           h('button.ghost.small', { onclick: () => setTool('navigate') }, 'Cancel'),
         ];
       }
     } else if (viewer.tool === 'measure') {
       content = [
-        h('span', viewer.pendingMeasure ? 'Click the second point.' : 'Click two points on any surface to measure between them.'),
+        h('span', viewer.pendingMeasure ? 'Tap the second point.' : 'Tap two points on any surface to measure between them.'),
         viewer.measurements.length ? h('button.ghost.small', { onclick: () => { viewer.clearMeasurements(); updateBanner(); } }, 'Clear') : null,
       ];
     } else if (viewer.tool === 'tag') {
-      content = [h('span', 'Click a surface to pin a tag there.')];
+      content = [h('span', 'Tap a surface to pin a note there.')];
     }
     banner.hidden = !content;
     if (content) banner.append(...content.filter(Boolean));
   }
-  // measurement clicks don't emit a callback for the first point; keep text in sync
+  // measurement taps don't emit a callback for the first point; keep text in sync
   stage.addEventListener('pointerup', () => queueMicrotask(updateBanner));
 
-  function placePopover(x, y) {
+  // ---------------------------------------------------------------- popovers
+
+  function placePopover(x, y, where = 'below') {
     const r = container.getBoundingClientRect();
     popover.hidden = false;
     const pw = popover.offsetWidth, ph = popover.offsetHeight;
+    const top = where === 'above' ? y - r.top - ph : y - r.top + 14;
     popover.style.left = `${Math.min(Math.max(8, x - r.left - pw / 2), r.width - pw - 8)}px`;
-    popover.style.top = `${Math.min(Math.max(8, y - r.top + 14), r.height - ph - 8)}px`;
+    popover.style.top = `${Math.min(Math.max(8, top), r.height - ph - 8)}px`;
   }
 
   function closePopover() {
@@ -125,6 +372,7 @@ export function createViewerChrome(container, spaceId, { tools = ['navigate', 'm
         ev.preventDefault();
         if (!label.value.trim()) return;
         await onTagCreate?.({ label: label.value.trim(), description: desc.value, position });
+        sfx.ding();
         closePopover();
       },
     }, label, desc, h('div.row', h('button.ghost.small', { type: 'button', onclick: closePopover }, 'Cancel'), h('button.primary.small', { type: 'submit' }, 'Save tag')));
@@ -146,13 +394,16 @@ export function createViewerChrome(container, spaceId, { tools = ['navigate', 'm
   }
 
   function renderStrip() {
-    strip.replaceChildren(...space.scans.map((s, i) => h('button.scan-thumb', {
-      dataset: { scan: s.id },
-      title: s.name,
-      className: `scan-thumb${s.id === viewer.currentScanId ? ' current' : ''}`,
-      onclick: () => viewer.goToScan(s.id),
-    }, h('img', { src: panoUrl(spaceId)(s), alt: '', loading: 'lazy', draggable: false }), h('span', `${i + 1}. ${s.name}`))));
-    strip.hidden = space.scans.length < 1;
+    strip.replaceChildren(...space.scans.map((s) => {
+      const room = roomAt(s);
+      return h('button.scan-thumb', {
+        dataset: { scan: s.id },
+        title: room ? `${s.name} · ${room.name}` : s.name,
+        className: `scan-thumb${s.id === viewer.currentScanId ? ' current' : ''}`,
+        onclick: () => { unlock(); stopTour(); viewer.goToScan(s.id); },
+      }, h('img', { src: panoUrl(spaceId)(s), alt: '', loading: 'lazy', draggable: false }), h('span', room?.name ?? s.name));
+    }));
+    strip.hidden = space.scans.length < 2;
   }
 
   return {
@@ -160,16 +411,25 @@ export function createViewerChrome(container, spaceId, { tools = ['navigate', 'm
     setTool,
     update(next) {
       space = next;
+      mapFit = fitMinimap();
       viewer.setSpace(next);
       renderStrip();
+      minimap.hidden = viewer.mode !== 'inside' || !next.rooms.length;
       for (const b of modeBar.children) b.disabled = b.dataset.mode === 'inside' && !next.scans.length;
       const trace = toolBar.querySelector('[data-tool="trace"]');
       if (trace) trace.disabled = !next.scans.length;
+      playBtn.disabled = !next.scans.length;
     },
     preview(next) {
+      space = next;
+      mapFit = fitMinimap();
       viewer.setSpace(next);
     },
     dispose() {
+      stopTour();
+      cancelAnimationFrame(mapRaf);
+      clearTimeout(signTimer);
+      offMute();
       viewer.dispose();
     },
   };

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { bestScanForRoom, bounds, centroid, normalizePolygon, polygonArea, roomMesh } from '../../../shared/geometry.js';
+import { bestScanForRoom, bounds, centroid, normalizePolygon, pointInPolygon, polygonArea, roomMesh } from '../../../shared/geometry.js';
+import { sfx } from '../sound.js';
 import { configurePanoTexture, createProjectionMaterial, setProjection } from './projectionMaterial.js';
 
 const DEG = Math.PI / 180;
@@ -45,7 +46,7 @@ export class Viewer {
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x1d1f24);
-    this.camera = new THREE.PerspectiveCamera(75, 1, 0.05, 500);
+    this.camera = new THREE.PerspectiveCamera(80, 1, 0.05, 500);
     this.ortho = new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 500);
 
     this.orbit = new OrbitControls(this.camera, this.renderer.domElement);
@@ -118,6 +119,7 @@ export class Viewer {
     this.buildTags();
     this.refreshProjections();
     if (first) {
+      this.yaw = this.openingYaw();
       if (!this.currentScanId && space.rooms.length) this.setMode('dollhouse', { animate: false });
       else this.placeInsideCamera();
       this.fitPlan();
@@ -125,6 +127,20 @@ export class Viewer {
       this.placeInsideCamera();
     }
     this.cb.onScanChange?.(this.currentScanId);
+  }
+
+  /**
+   * First view: look toward the farthest corner of the room you start in, so
+   * the tour opens onto the depth of the room rather than the nearest wall.
+   */
+  openingYaw() {
+    const scan = this.scanById(this.currentScanId);
+    if (!scan) return 0;
+    const p = [scan.position.x, scan.position.z];
+    const room = this.space.rooms.find((r) => pointInPolygon(p, r.points)) ?? this.space.rooms[0];
+    if (!room) return 0;
+    const far = room.points.reduce((a, b) => (Math.hypot(b[0] - p[0], b[1] - p[1]) > Math.hypot(a[0] - p[0], a[1] - p[1]) ? b : a));
+    return Math.atan2(-(far[0] - p[0]), -(far[1] - p[1]));
   }
 
   scanById(id) {
@@ -252,6 +268,21 @@ export class Viewer {
     return new THREE.Vector3(-Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch));
   }
 
+  /** Point the inside view (used by the guided tour). */
+  setLook(yaw, pitch = this.pitch) {
+    this.yaw = yaw;
+    this.pitch = THREE.MathUtils.clamp(pitch, -85 * DEG, 85 * DEG);
+    if (this.mode === 'inside' && !this.transitioning) this.placeInsideCamera();
+  }
+
+  /** Resolves once any walk or fly animation has finished. */
+  settled() {
+    return new Promise((resolve) => {
+      const check = () => (this.transitioning ? requestAnimationFrame(check) : resolve());
+      check();
+    });
+  }
+
   placeInsideCamera() {
     const scan = this.scanById(this.currentScanId);
     if (!scan) return;
@@ -305,6 +336,7 @@ export class Viewer {
     this.updateMarkerVisibility();
     this.refreshProjections();
     this.overlay.classList.toggle('show-room-labels', mode !== 'inside');
+    if (animate) sfx.swoop();
 
     if (mode === 'dollhouse') {
       const pose = this.dollhousePose();
@@ -371,6 +403,7 @@ export class Viewer {
     const from = this.projectionOf(fromScan), to = this.projectionOf(target);
     const fromEye = this.eyeOf(fromScan), toEye = this.eyeOf(target);
     this.transitioning = true;
+    sfx.whoosh();
     this.cancelTrace();
     this.tween(WALK_MS, (t) => {
       const k = ease(t);

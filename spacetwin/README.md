@@ -10,6 +10,7 @@ npm run build && npm start   # production: one server on :3000
 npm test             # geometry + API tests
 npm run build && npm run test:e2e   # headless browser walkthrough, screenshots in test-e2e/screenshots/
 npm run build && npm run test:capture   # simulated phone capture + stitching accuracy
+npm run build && npm run test:tour      # tour page: listing, minimap, guided tour, share, phone sheet
 ```
 
 ## Use it on your iPhone
@@ -55,6 +56,21 @@ What makes captures good (the same rules Matterport's app enforces):
 
 Have a 360° camera (Insta360, Ricoh Theta…)? Export equirectangular photos
 and use **Upload** instead; quality will be higher than phone capture.
+
+## What's in a tour
+
+- **Walk-through** with blended moves between spots, a floor-plan minimap with a view cone, and a room sign as you enter each room
+- **Dollhouse and floor plan** views, true measurements, notes pinned to surfaces
+- **Guided tour** that walks every spot and looks around on its own
+- **Listing** beside the tour, like a property site: price, beds/baths, area from the measured rooms, description, rooms, floor plan, contact. It becomes a slide-up sheet on phones
+- **Snapshots**, share link and embed code, quiet sound effects (can be muted)
+
+Capture quality (phone only, no 360° camera needed):
+
+- **No blur:** each dot grabs a 5-frame burst and keeps the sharpest (variance of the Laplacian); warns when turning too fast or holding the phone tilted
+- **Accurate stitching:** lens field of view calibrated from the overlaps; every photo's rotation refined against its neighbours, anchored to the gyroscope
+- **No visible seams:** exposure gain compensation, then two-band (multi-band) blending, the same techniques as OpenCV's stitcher
+- **Natural finish:** gentle levels, white balance from white surfaces only, light sharpening
 
 ## How it works
 

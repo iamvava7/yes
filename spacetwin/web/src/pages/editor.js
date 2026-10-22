@@ -1,6 +1,7 @@
 import { api, exportUrl } from '../api.js';
 import { PlanEditor } from '../editor/PlanEditor.js';
 import { perimeter, polygonArea } from '../../../shared/geometry.js';
+import { formatPrice, LISTING_STATUS } from '../listing.js';
 import { fmtArea, h, icon, toast } from '../ui.js';
 import { createViewerChrome } from '../viewerChrome.js';
 
@@ -62,6 +63,8 @@ export async function renderEditor(app, id) {
 
   const chrome = createViewerChrome(viewerPane, id, {
     tools: ['navigate', 'measure', 'tag', 'trace'],
+    actions: ['play', 'snapshot', 'sound'],
+    spaceName: space.name,
     onTagCreate: async (tag) => {
       try {
         await api.createTag(id, tag);
@@ -277,7 +280,62 @@ export async function renderEditor(app, id) {
       h('p.dim', space.rooms.length
         ? 'Select a scan or room on the plan to edit it.'
         : 'Next: stand in a room in the 3D view, pick “Trace room” and click the floor corners. Or draw rooms on this plan.'),
+      h('div.listing-summary',
+        h('div', h('strong', space.listing?.address || 'No listing details yet'),
+          h('span.dim', [space.listing?.status, formatPrice(space.listing)].filter(Boolean).join(' · ') || 'Add an address, price and contact to show beside the tour.')),
+        h('button.secondary.small', { onclick: openListing }, icon('info'), 'Listing details'),
+      ),
     );
+  }
+
+  /** Address, price, beds/baths and contact shown beside the shared tour. */
+  function openListing() {
+    const l = space.listing ?? {};
+    const input = (name, props = {}) => h('input', { name, value: l[name] ?? '', ...props });
+    const status = h('select', { name: 'status' },
+      h('option', { value: '' }, 'No status'),
+      LISTING_STATUS.map((s) => h('option', { value: s, selected: l.status === s }, s)));
+    const form = h('form.listing-form', { method: 'dialog' },
+      h('h2', 'Listing details'),
+      h('label.field', h('span', 'Address'), input('address', { placeholder: '12 Elm Street, Springfield', maxLength: 200 })),
+      h('div.form-grid',
+        h('label.field', h('span', 'Status'), status),
+        h('label.field', h('span', 'Price'), input('price', { type: 'number', min: 0, step: 1000, inputMode: 'numeric' })),
+        h('label.field', h('span', 'Currency'), input('currency', { placeholder: 'EUR', maxLength: 3, value: l.currency ?? 'EUR' })),
+        h('label.field', h('span', 'Bedrooms'), input('beds', { type: 'number', min: 0, step: 1 })),
+        h('label.field', h('span', 'Bathrooms'), input('baths', { type: 'number', min: 0, step: 0.5 })),
+        h('label.field', h('span', 'Year built'), input('yearBuilt', { type: 'number', min: 1000, max: 3000 })),
+      ),
+      h('label.field', h('span', 'Description'), h('textarea', { name: 'description', rows: 4, maxLength: 4000 }, l.description ?? '')),
+      h('div.form-grid',
+        h('label.field', h('span', 'Contact name'), input('contactName', { maxLength: 120 })),
+        h('label.field', h('span', 'Phone'), input('contactPhone', { type: 'tel', maxLength: 40 })),
+        h('label.field', h('span', 'Email'), input('contactEmail', { type: 'email', maxLength: 200 })),
+      ),
+      h('p.dim', `Floor area comes from your rooms: ${fmtArea(space.stats.totalArea)}.`),
+      h('div.row.end',
+        h('button.ghost', { value: 'cancel', formNoValidate: true }, 'Cancel'),
+        h('button.primary', { value: 'save' }, 'Save listing'),
+      ),
+    );
+    const dialog = h('dialog.modal', form);
+    document.body.append(dialog);
+    dialog.addEventListener('close', async () => {
+      const save = dialog.returnValue === 'save';
+      const data = Object.fromEntries(new FormData(form));
+      dialog.remove();
+      if (!save) return;
+      for (const k of ['price', 'beds', 'baths', 'yearBuilt']) data[k] = data[k] === '' ? null : Number(data[k]);
+      for (const k of Object.keys(data)) if (data[k] === '') data[k] = null;
+      if (data.currency) data.currency = data.currency.toUpperCase();
+      try {
+        apply(await api.updateListing(id, data));
+        toast('Listing saved');
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+    });
+    dialog.showModal();
   }
 
   apply(space);

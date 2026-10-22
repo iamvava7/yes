@@ -54,12 +54,13 @@ const waitTextures = () => page.waitForFunction(() => {
 try {
   step('home page, empty state');
   await page.goto(base);
-  await page.getByRole('heading', { name: 'No spaces yet' }).waitFor();
+  await page.getByRole('heading', { name: 'No properties yet' }).waitFor();
   await page.screenshot({ path: path.join(shots, '01-home-empty.png') });
 
   step('open the sample apartment');
-  await page.getByRole('button', { name: 'Open sample apartment' }).click();
-  await page.waitForURL(/#\/space\//);
+  await page.getByRole('button', { name: 'Open sample' }).first().click();
+  await page.waitForURL(/#\/view\//);
+  await page.goto(page.url().replace('#/view/', '#/space/'));
   await waitTextures();
   await settle(800);
   await page.screenshot({ path: path.join(shots, '02-editor-inside.png') });

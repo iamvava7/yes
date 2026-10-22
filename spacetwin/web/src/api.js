@@ -16,6 +16,7 @@ export const api = {
   createSample: () => request('POST', '/sample'),
   getSpace: (id) => request('GET', `/spaces/${id}`),
   renameSpace: (id, name) => request('PATCH', `/spaces/${id}`, { name }),
+  updateListing: (id, listing) => request('PATCH', `/spaces/${id}`, { listing }),
   deleteSpace: (id) => request('DELETE', `/spaces/${id}`),
   updateScan: (id, scanId, patch) => request('PATCH', `/spaces/${id}/scans/${scanId}`, patch),
   deleteScan: (id, scanId) => request('DELETE', `/spaces/${id}/scans/${scanId}`),

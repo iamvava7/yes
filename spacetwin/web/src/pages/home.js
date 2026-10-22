@@ -1,20 +1,21 @@
 import { api, panoUrl } from '../api.js';
-import { fmtArea, h, icon, toast } from '../ui.js';
+import { formatArea, formatPrice, plural } from '../listing.js';
+import { h, icon, toast } from '../ui.js';
 
 export async function renderHome(app) {
   document.title = 'SpaceTwin';
   const grid = h('div.space-grid');
   const page = h('main.home',
     h('header.home-header',
-      h('div.brand', h('span.brand-mark'), 'SpaceTwin'),
+      h('div.brand', h('span.brand-mark', { 'aria-hidden': true }), 'SpaceTwin'),
       h('div.home-actions',
-        h('button.secondary', { onclick: loadSample }, 'Load sample'),
-        h('button.primary', { onclick: create }, icon('plus'), 'New space'),
+        h('button.secondary', { onclick: loadSample }, 'Open sample'),
+        h('button.primary', { onclick: create }, icon('plus'), 'New property'),
       ),
     ),
     h('section.home-intro',
-      h('h1', 'Your spaces'),
-      h('p', 'Upload 360° panoramas, trace each room, then share a walkable 3D tour with measurements and a floor plan.'),
+      h('h1', 'Walk any home from anywhere'),
+      h('p', 'Capture each room with your phone, and SpaceTwin builds a 3D tour with a floor plan and true measurements, ready to share with buyers.'),
     ),
     grid,
   );
@@ -22,7 +23,7 @@ export async function renderHome(app) {
 
   async function create() {
     try {
-      const space = await api.createSpace('Untitled space');
+      const space = await api.createSpace('New property');
       location.hash = `#/space/${space.id}`;
     } catch (err) {
       toast(err.message, 'error');
@@ -32,7 +33,7 @@ export async function renderHome(app) {
   async function loadSample() {
     try {
       const space = await api.createSample();
-      location.hash = `#/space/${space.id}`;
+      location.hash = `#/view/${space.id}`;
     } catch (err) {
       toast(err.message, 'error');
     }
@@ -42,27 +43,37 @@ export async function renderHome(app) {
   try {
     spaces = await api.listSpaces();
   } catch (err) {
-    grid.append(h('p.empty', `Couldn't load spaces: ${err.message}`));
+    grid.append(h('p.empty', `Couldn’t load your properties: ${err.message}`));
     return;
   }
   if (!spaces.length) {
     grid.append(h('div.empty-card',
-      h('h2', 'No spaces yet'),
-      h('p', 'Create a space and upload equirectangular (2:1) panoramas from any 360° camera, or open the sample apartment to look around first.'),
-      h('div.row', h('button.secondary', { onclick: loadSample }, 'Open sample apartment'), h('button.primary', { onclick: create }, 'New space')),
+      h('h2', 'No properties yet'),
+      h('p', 'Start a property and capture your first room with your phone, or open the sample flat to see what a finished tour looks like.'),
+      h('div.row', h('button.secondary', { onclick: loadSample }, 'Open sample'), h('button.primary', { onclick: create }, 'New property')),
     ));
     return;
   }
   for (const s of spaces) {
     const cover = s.coverScanId
       ? h('img', { src: panoUrl(s.id)({ id: s.coverScanId, file: '' }), alt: '', loading: 'lazy' })
-      : h('div.cover-empty', 'No scans yet');
-    grid.append(h('a.space-card', { href: `#/space/${s.id}` },
-      h('div.cover', cover),
+      : h('div.cover-empty', 'No 360° spots yet');
+    const price = formatPrice(s.listing);
+    const area = s.stats.totalArea > 0 ? formatArea(s.stats.totalArea).m2 : null;
+    grid.append(h('article.space-card',
+      h('a', { href: `#/view/${s.id}`, 'aria-label': `Open the tour of ${s.listing?.address || s.name}` }, h('div.cover', cover)),
       h('div.card-body',
-        h('h3', s.name),
-        h('p.meta', `${s.stats.scanCount} scan${s.stats.scanCount === 1 ? '' : 's'} · ${s.stats.roomCount} room${s.stats.roomCount === 1 ? '' : 's'} · ${fmtArea(s.stats.totalArea)}`),
-        h('p.meta.dim', `Updated ${new Date(s.updatedAt).toLocaleString()}`),
+        price ? h('p.meta.price', price) : null,
+        h('h3', s.listing?.address || s.name),
+        h('p.meta', [
+          s.listing?.beds != null ? plural(s.listing.beds, 'bed') : null,
+          area,
+          plural(s.stats.scanCount, 'spot'),
+        ].filter(Boolean).join(' · ')),
+        h('div.card-actions',
+          h('a.button.secondary.small', { href: `#/view/${s.id}` }, 'View tour'),
+          h('a.button.ghost.small', { href: `#/space/${s.id}` }, icon('edit'), 'Edit'),
+        ),
       ),
     ));
   }

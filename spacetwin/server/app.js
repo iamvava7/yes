@@ -49,6 +49,42 @@ function validateRoom(input, i) {
   };
 }
 
+const LISTING_STATUS = ['For sale', 'For rent', 'Under offer', 'Sold', 'Off market'];
+
+/** Property details shown beside the tour. Every field is optional; null clears one. */
+function parseListing(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) throw bad('listing must be an object');
+  const out = {};
+  const text = (key, max) => {
+    if (input[key] === undefined) return;
+    if (input[key] === null || input[key] === '') { out[key] = null; return; }
+    if (typeof input[key] !== 'string' || input[key].length > max) throw bad(`listing.${key} must be text of at most ${max} characters`);
+    out[key] = input[key].trim();
+  };
+  const count = (key, max) => {
+    if (input[key] === undefined) return;
+    if (input[key] === null || input[key] === '') { out[key] = null; return; }
+    out[key] = num(input[key], `listing.${key}`, { min: 0, max });
+  };
+  text('address', 200);
+  text('description', 4000);
+  text('contactName', 120);
+  text('contactPhone', 40);
+  text('contactEmail', 200);
+  text('currency', 3);
+  count('price', 1e12);
+  count('beds', 100);
+  count('baths', 100);
+  count('yearBuilt', 3000);
+  if (input.status !== undefined) {
+    if (input.status !== null && !LISTING_STATUS.includes(input.status)) throw bad(`listing.status must be one of ${LISTING_STATUS.join(', ')}`);
+    out.status = input.status;
+  }
+  if (out.currency && !/^[A-Z]{3}$/.test(out.currency)) throw bad('listing.currency must be a 3-letter code like EUR');
+  if (out.contactEmail && !/^[^@\s]+@[^@\s]+$/.test(out.contactEmail)) throw bad('listing.contactEmail is not an email address');
+  return out;
+}
+
 function withStats(space) {
   return { ...space, stats: spaceStats(space) };
 }
@@ -77,7 +113,7 @@ export async function createApp({ dataDir, sampleDir, webDist } = {}) {
     const spaces = await store.list();
     res.json(spaces.map((s) => ({
       id: s.id, name: s.name, updatedAt: s.updatedAt,
-      coverScanId: s.scans[0]?.id ?? null, stats: spaceStats(s),
+      coverScanId: s.scans[0]?.id ?? null, stats: spaceStats(s), listing: s.listing ?? null,
     })));
   }));
 
@@ -91,8 +127,10 @@ export async function createApp({ dataDir, sampleDir, webDist } = {}) {
   }));
 
   api.patch('/spaces/:id', wrap(async (req, res) => {
+    const listing = req.body?.listing === undefined ? undefined : parseListing(req.body.listing);
     const space = await store.update(req.params.id, (s) => {
       if (req.body?.name !== undefined) s.name = str(req.body.name, 'name');
+      if (listing) s.listing = { ...(s.listing ?? {}), ...listing };
     });
     res.json(withStats(space));
   }));
@@ -333,6 +371,11 @@ export async function createApp({ dataDir, sampleDir, webDist } = {}) {
       }
       s.rooms = manifest.rooms.map(validateRoom);
       s.tags.push({ id: newId(), label: 'Window', description: 'South-facing, double glazed.', position: [2.4, 1.6, 0.01] });
+      s.listing = {
+        address: 'Unit 4B, sample building', status: 'For sale', price: 285000, currency: 'EUR', beds: 1, baths: 1,
+        description: 'A demonstration flat rendered by SpaceTwin: bright living room with a south-facing window, and a quiet bedroom with built-in wardrobe.',
+        contactName: 'SpaceTwin demo',
+      };
     });
     res.status(201).json(withStats(space));
   }));
