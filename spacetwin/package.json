@@ -3,14 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Capture 360° panoramas, trace rooms, and share walkable 3D digital twins.",
+  "description": "Capture 360\u00b0 panoramas, trace rooms, and share walkable 3D digital twins.",
   "scripts": {
     "dev": "node scripts/dev.js",
     "build": "vite build --config web/vite.config.js",
     "start": "node server/index.js",
     "test": "node --test \"test/*.test.js\"",
     "test:e2e": "node test-e2e/smoke.js",
-    "sample:assets": "python3 scripts/make_sample.py assets/sample"
+    "sample:assets": "python3 scripts/make_sample.py assets/sample",
+    "test:capture": "node test-e2e/capture.js"
   },
   "dependencies": {
     "express": "^5.1.0",

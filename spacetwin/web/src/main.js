@@ -1,4 +1,5 @@
 import './styles.css';
+import { renderCapture } from './pages/capture.js';
 import { renderEditor } from './pages/editor.js';
 import { renderHome } from './pages/home.js';
 import { renderShowcase } from './pages/showcase.js';
@@ -14,6 +15,7 @@ async function route() {
   let m;
   if ((m = hash.match(/^\/space\/([a-z0-9]+)$/))) cleanup = await renderEditor(app, m[1]);
   else if ((m = hash.match(/^\/view\/([a-z0-9]+)$/))) cleanup = await renderShowcase(app, m[1]);
+  else if ((m = hash.match(/^\/capture\/([a-z0-9]+)$/))) cleanup = await renderCapture(app, m[1]);
   else cleanup = await renderHome(app);
 }
 

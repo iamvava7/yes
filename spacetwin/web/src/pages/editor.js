@@ -37,8 +37,8 @@ export async function renderEditor(app, id) {
   const viewerPane = h('section.viewer-pane');
   const dropzone = h('div.dropzone', { hidden: true },
     h('div', icon('upload'), h('h2', 'Add your first panoramas'),
-      h('p', 'Drop equirectangular 360° photos (2:1 JPEG, PNG or WebP) here, one per capture point.'),
-      h('button.primary', { onclick: () => fileInput.click() }, 'Choose files')),
+      h('p', 'Capture spots with your phone’s camera, or drop 360° photos from a 360° camera (2:1 JPEG, PNG or WebP), one per spot.'),
+      h('div.row.center', h('a.button.primary', { href: `#/capture/${id}` }, icon('camera'), 'Capture with camera'), h('button.secondary', { onclick: () => fileInput.click() }, 'Choose files'))),
   );
 
   app.append(h('div.editor',
@@ -47,6 +47,7 @@ export async function renderEditor(app, id) {
       nameInput, stats,
       h('div.spacer'),
       progress,
+      h('a.button.secondary', { href: `#/capture/${id}`, title: 'Capture a 360° spot with this phone’s camera' }, icon('camera'), h('span', 'Capture')),
       h('button.secondary', { onclick: () => fileInput.click() }, icon('upload'), h('span', 'Upload')),
       h('div.menu-wrap', exportBtn, exportMenu),
       h('a.button.primary', { href: `#/view/${id}`, title: 'Open the shareable tour' }, icon('share'), h('span', 'View tour')),

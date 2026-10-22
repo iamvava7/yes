@@ -318,3 +318,46 @@ body.dragging-files .viewer-pane::after {
   background: rgba(20, 21, 26, 0.85); color: #fff; backdrop-filter: blur(8px);
 }
 .showcase-empty p { color: #c9cad0; margin: 8px 0 16px; }
+
+/* ---------- camera capture (phone) */
+.row.center { justify-content: center; }
+.big { padding: 12px 18px; font-size: 16px; border-radius: 12px; justify-content: center; }
+.capture { position: fixed; inset: 0; background: var(--bg); overflow: auto; }
+.capture-intro, .capture-processing, .capture-review {
+  max-width: 520px; margin: 0 auto; padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 14px;
+}
+.capture-intro h1 { font-size: 24px; letter-spacing: -0.02em; margin-top: 4px; }
+.tips { margin: 0; padding-left: 20px; display: grid; gap: 8px; color: var(--dim); }
+.tips strong { color: var(--text); }
+.segmented { display: inline-flex; padding: 3px; border-radius: 9px; background: var(--surface-2); flex: none; }
+.segmented button { padding: 5px 12px; border-radius: 7px; font-size: 13px; }
+.segmented button[aria-checked="true"] { background: var(--surface); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15); font-weight: 600; }
+.capture-problem { padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); }
+.capture-problem p { margin: 0; }
+.capture-processing { min-height: 100%; justify-content: center; text-align: center; }
+.capture-processing .row { justify-content: center; }
+.progress { height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.progress > div { height: 100%; width: 0; background: var(--accent); transition: width 0.25s; }
+.processing-step { font-weight: 600; margin: 0; }
+.pano-preview { width: 100%; aspect-ratio: 2 / 1; object-fit: cover; border-radius: 10px; background: var(--surface-2); }
+.capture-review .row > * { flex: 1; }
+
+.capture-live { position: fixed; inset: 0; background: #000; overflow: hidden; touch-action: none; }
+.capture-live video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.capture-overlay { position: absolute; inset: 0; width: 100%; height: 100%; }
+.capture-top {
+  position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: max(10px, env(safe-area-inset-top)) 12px 10px; background: linear-gradient(rgba(0, 0, 0, 0.55), transparent); color: #fff;
+}
+.capture-cancel { color: #fff; }
+.capture-counter { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 17px; text-shadow: 0 1px 4px #000; }
+.capture-finish { font-size: 13px; }
+.capture-hint {
+  position: absolute; left: 50%; bottom: max(28px, env(safe-area-inset-bottom)); transform: translateX(-50%);
+  padding: 10px 16px; border-radius: 12px; background: rgba(0, 0, 0, 0.6); color: #fff; font-weight: 600; font-size: 16px;
+  white-space: nowrap; max-width: calc(100% - 32px); overflow: hidden; text-overflow: ellipsis; backdrop-filter: blur(6px);
+}
+.capture-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+.capture-flash.on { animation: flash 0.25s ease-out; }
+@keyframes flash { from { opacity: 0.55; } to { opacity: 0; } }
