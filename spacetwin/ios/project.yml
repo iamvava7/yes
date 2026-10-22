@@ -1,0 +1,31 @@
+# Generate the Xcode project with XcodeGen:  brew install xcodegen && xcodegen
+name: SpaceTwin
+options:
+  bundleIdPrefix: com.example.spacetwin
+  deploymentTarget:
+    iOS: "17.0"
+targets:
+  SpaceTwin:
+    type: application
+    platform: iOS
+    sources: [SpaceTwin]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.spacetwin.capture
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "5.9"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_CFBundleDisplayName: SpaceTwin
+        INFOPLIST_KEY_NSCameraUsageDescription: SpaceTwin uses the camera to capture 360° spots and scan rooms.
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: SpaceTwin uploads captures to your SpaceTwin server on this network.
+    info:
+      path: SpaceTwin/Info.plist
+      properties:
+        UIRequiredDeviceCapabilities: [arkit]
+        # The SpaceTwin server usually runs on a computer on your Wi-Fi over plain HTTP.
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true

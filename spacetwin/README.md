@@ -78,11 +78,13 @@ Layout:
 
 Coordinates are metres with y up. Rooms are `[x, z]` polygons. Panorama u=0.5 looks toward −z, rotated by the scan's `heading`.
 
-## Phase 2: iOS capture app
+## Native iPhone app
 
-The API is shaped so a native app can feed it:
+`ios/` contains a SwiftUI app that captures with ARKit, so spots place
+themselves on the plan, and scans rooms with Apple RoomPlan on LiDAR iPhones.
+It talks to these server endpoints:
 
-1. **Capture (Swift, ARKit + RoomPlan, LiDAR iPhones/iPads).** `RoomCaptureSession` produces a `CapturedRoom` with walls, doors, windows and objects in metres. At each spot the app also captures a 360° panorama (either a stitched ARKit frame sweep or a connected Insta360/Ricoh camera) together with the ARKit camera pose. That gives position and heading automatically, with no manual placement.
-2. **Upload.** `POST /api/spaces/:id/scans` with the panorama, then `PATCH` the scan with the pose from ARKit.
-3. **Geometry.** A new `POST /api/spaces/:id/roomplan` endpoint converts `CapturedRoom` walls (dimensions plus 4×4 transforms) into room polygons and heights, and stores doors and windows for the plan.
-4. Everything downstream (viewer, dollhouse, exports) works unchanged.
+- `POST /api/spaces/:id/roomplan`: a RoomPlan `CapturedRoom` (JSON), converted to rooms
+- `POST /api/spaces/:id/captures`: photos with ARKit poses, stitched on the server into a placed scan
+
+See [ios/README.md](ios/README.md) to build it (needs a Mac with Xcode).
