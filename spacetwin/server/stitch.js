@@ -2,13 +2,16 @@
 // from the native iOS app, where ARKit tracks the camera to well under a
 // degree and reports the lens intrinsics. With poses that good no alignment
 // search is needed: we balance exposure between photos, then blend them into
-// an equirectangular panorama with the same weighting the browser stitcher
-// uses (web/src/capture/stitch.js).
+// an equirectangular panorama with the same two-band blending and finish the
+// browser stitcher uses (web/src/capture/stitch.js).
 //
 // ARKit conventions (all matrices column-major, as simd encodes them):
 //   transform   camera → world, camera looks down -z, x right, y up
 //   intrinsics  3×3 [fx 0 0, 0 fy 0, cx cy 1]; pixel v grows downward
 import jpeg from 'jpeg-js';
+import { toneCurve } from '../shared/tone.js';
+
+const BASE_SCALE = 16; // base layer = photo averaged over 16×16 blocks (as the GPU stitcher's mip level 4)
 
 /** Decode a JPEG and check its pose. */
 export function prepareFrame(buffer, { transform, intrinsics }) {
@@ -22,7 +25,38 @@ export function prepareFrame(buffer, { transform, intrinsics }) {
   const { width: w, height: h } = img;
   const forward = [-m[8], -m[9], -m[10]];
   const halfDiag = Math.atan(Math.hypot(Math.max(cx, w - cx) / fx, Math.max(cy, h - cy) / fy));
-  return { data: img.data, w, h, rt, fx, fy, cx, cy, forward, cosCull: Math.cos(Math.min(halfDiag, Math.PI / 2 - 1e-3)), position: [m[12], m[13], m[14]] };
+  return { data: img.data, base: downsample(img.data, w, h), w, h, rt, fx, fy, cx, cy, forward, cosCull: Math.cos(Math.min(halfDiag, Math.PI / 2 - 1e-3)), position: [m[12], m[13], m[14]] };
+}
+
+/** Block-average an RGBA image by BASE_SCALE: the blurred base layer for two-band blending. */
+function downsample(data, w, h) {
+  const bw = Math.ceil(w / BASE_SCALE), bh = Math.ceil(h / BASE_SCALE);
+  const out = new Float32Array(bw * bh * 3);
+  const count = new Float32Array(bw * bh);
+  for (let y = 0; y < h; y++) {
+    const by = Math.floor(y / BASE_SCALE);
+    for (let x = 0; x < w; x++) {
+      const b = by * bw + Math.floor(x / BASE_SCALE), s = (y * w + x) * 4;
+      out[b * 3] += data[s]; out[b * 3 + 1] += data[s + 1]; out[b * 3 + 2] += data[s + 2];
+      count[b]++;
+    }
+  }
+  for (let b = 0; b < bw * bh; b++) for (let c = 0; c < 3; c++) out[b * 3 + c] /= count[b];
+  return { data: out, w: bw, h: bh };
+}
+
+/** Bilinear sample of the base layer at full-resolution pixel coordinates. */
+function sampleBase(f, u, v, out) {
+  const b = f.base;
+  const x = Math.min(b.w - 1, Math.max(0, u / BASE_SCALE - 0.5)), y = Math.min(b.h - 1, Math.max(0, v / BASE_SCALE - 0.5));
+  const x0 = Math.floor(x), y0 = Math.floor(y), x1 = Math.min(x0 + 1, b.w - 1), y1 = Math.min(y0 + 1, b.h - 1);
+  const ax = x - x0, ay = y - y0;
+  for (let c = 0; c < 3; c++) {
+    const p00 = b.data[(y0 * b.w + x0) * 3 + c], p10 = b.data[(y0 * b.w + x1) * 3 + c];
+    const p01 = b.data[(y1 * b.w + x0) * 3 + c], p11 = b.data[(y1 * b.w + x1) * 3 + c];
+    out[c] = (p00 * (1 - ax) + p10 * ax) * (1 - ay) + (p01 * (1 - ax) + p11 * ax) * ay;
+  }
+  return out;
 }
 
 function flatten(v, n, name) {
@@ -123,33 +157,57 @@ export function stitchPosed(frames, { width = 4096, quality = 90 } = {}) {
   const height = width / 2;
   const gains = estimateGains(frames);
   const out = Buffer.alloc(width * height * 4);
-  const px = [0, 0, 0];
+  const px = [0, 0, 0], base = [0, 0, 0];
+  const color = new Float32Array(width * height * 3);
   for (let y = 0; y < height; y++) {
     const lat = (0.5 - (y + 0.5) / height) * Math.PI;
     const cl = Math.cos(lat), sl = Math.sin(lat);
     for (let x = 0; x < width; x++) {
       const lon = ((x + 0.5) / width - 0.5) * 2 * Math.PI;
       const dx = cl * Math.sin(lon), dy = sl, dz = -cl * Math.cos(lon);
-      let r = 0, g = 0, b = 0, wsum = 0;
+      // two bands: soft-blended base, sharply handed-over detail
+      let br = 0, bg = 0, bb = 0, bw = 0, dr = 0, dg = 0, db = 0, dw = 0;
       for (let i = 0; i < frames.length; i++) {
         const f = frames[i];
         if (f.forward[0] * dx + f.forward[1] * dy + f.forward[2] * dz < f.cosCull) continue;
         const p = project(f, dx, dy, dz);
         if (!p) continue;
         const ex = Math.min(p[0], f.w - 1 - p[0]) / ((f.w - 1) / 2), ey = Math.min(p[1], f.h - 1 - p[1]) / ((f.h - 1) / 2);
-        const w = Math.max((ex * ey) ** 8, 1e-3);
+        const edge = ex * ey;
+        if (edge <= 0) continue;
+        const g = gains[i], wd = edge ** 4;
         bilinear(f, p[0], p[1], px);
-        r += px[0] * gains[i] * w; g += px[1] * gains[i] * w; b += px[2] * gains[i] * w;
-        wsum += w;
+        sampleBase(f, p[0], p[1], base);
+        br += base[0] * g * edge; bg += base[1] * g * edge; bb += base[2] * g * edge; bw += edge;
+        dr += (px[0] - base[0]) * g * wd; dg += (px[1] - base[1]) * g * wd; db += (px[2] - base[2]) * g * wd; dw += wd;
       }
-      const o = (y * width + x) * 4;
-      if (wsum > 0) {
-        out[o] = Math.min(255, r / wsum); out[o + 1] = Math.min(255, g / wsum); out[o + 2] = Math.min(255, b / wsum);
+      const o = (y * width + x) * 3;
+      if (bw > 0) {
+        color[o] = br / bw + (dw > 0 ? dr / dw : 0);
+        color[o + 1] = bg / bw + (dw > 0 ? dg / dw : 0);
+        color[o + 2] = bb / bw + (dw > 0 ? db / dw : 0);
       } else {
-        out[o] = out[o + 1] = out[o + 2] = 128; // never seen (usually straight down, under the phone)
+        color[o] = color[o + 1] = color[o + 2] = 128; // never seen (usually straight down, under the phone)
       }
-      out[o + 3] = 255;
     }
+  }
+  // light unsharp mask (wrapping horizontally), then the shared tone finish
+  const sharpen = 0.35;
+  for (let y = 0; y < height; y++) {
+    const up = Math.max(0, y - 1), down = Math.min(height - 1, y + 1);
+    for (let x = 0; x < width; x++) {
+      const l = (x + width - 1) % width, r = (x + 1) % width;
+      for (let c = 0; c < 3; c++) {
+        const v = color[(y * width + x) * 3 + c];
+        const blur = (color[(y * width + l) * 3 + c] + color[(y * width + r) * 3 + c] + color[(up * width + x) * 3 + c] + color[(down * width + x) * 3 + c]) / 4;
+        out[(y * width + x) * 4 + c] = Math.min(255, Math.max(0, v + sharpen * (v - blur)));
+      }
+      out[(y * width + x) * 4 + 3] = 255;
+    }
+  }
+  const lut = toneCurve(out);
+  for (let i = 0; i < out.length; i += 4) {
+    out[i] = lut[0][out[i]]; out[i + 1] = lut[1][out[i + 1]]; out[i + 2] = lut[2][out[i + 2]];
   }
   return { jpeg: jpeg.encode({ data: out, width, height }, quality).data, width, height, gains };
 }

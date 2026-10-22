@@ -217,23 +217,35 @@ try {
     const W = 1024, H = 512;
     const pix = (im) => { const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.drawImage(im, 0, 0, W, H); return x.getImageData(0, 0, W, H).data; };
     const pa = pix(a), pb = pix(b);
-    // skip the bottom 8% (nadir: where the photographer/tripod would be)
-    let sum = 0, n = 0;
-    for (let y = 0; y < H * 0.92; y++) for (let x = 0; x < W; x++) {
-      const i = (y * W + x) * 4;
-      sum += Math.abs(pa[i] - pb[i]) + Math.abs(pa[i + 1] - pb[i + 1]) + Math.abs(pa[i + 2] - pb[i + 2]);
-      n += 3;
+    // Finishing (white balance, levels) deliberately changes global tone, so
+    // first fit each channel of the result to the original (truth ≈ a·x + b),
+    // then measure what's left: blending, alignment and sharpness errors.
+    // The bottom 8% (nadir, where the photographer would be) is skipped.
+    const rows = Math.floor(H * 0.92);
+    const fit = [0, 1, 2].map((c) => {
+      let sx = 0, sy = 0, sxx = 0, sxy = 0, n = 0;
+      for (let i = 0; i < rows * W; i++) { const x = pa[i * 4 + c], y = pb[i * 4 + c]; sx += x; sy += y; sxx += x * x; sxy += x * y; n++; }
+      const a = (n * sxy - sx * sy) / (n * sxx - sx * sx);
+      return { a, b: (sy - a * sx) / n };
+    });
+    let sum = 0, raw = 0, n = 0;
+    for (let i = 0; i < rows * W; i++) {
+      for (let c = 0; c < 3; c++) {
+        sum += Math.abs(fit[c].a * pa[i * 4 + c] + fit[c].b - pb[i * 4 + c]);
+        raw += Math.abs(pa[i * 4 + c] - pb[i * 4 + c]);
+        n++;
+      }
     }
     const blob = await (await fetch(document.querySelector('.pano-preview').src)).blob();
-    return { meanAbsError: sum / n, width: a.naturalWidth, height: a.naturalHeight, bytes: blob.size, dataUrl: await new Promise((r) => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(blob); }) };
+    return { meanAbsError: sum / n, rawError: raw / n, fit, width: a.naturalWidth, height: a.naturalHeight, bytes: blob.size, dataUrl: await new Promise((r) => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(blob); }) };
   }, panoUrl);
   await fs.writeFile(path.join(shots, 'c5-stitched.jpg'), Buffer.from(metrics.dataUrl.split(',')[1], 'base64'));
-  console.log(`  stitched ${metrics.width}×${metrics.height}, mean abs error vs truth ${metrics.meanAbsError.toFixed(2)}/255`);
+  console.log(`  stitched ${metrics.width}×${metrics.height}, mean abs error vs truth ${metrics.meanAbsError.toFixed(2)}/255 after tone fit (${metrics.rawError.toFixed(2)} before; per-channel gain ${metrics.fit.map((f) => f.a.toFixed(3)).join('/')})`);
   assert.equal(metrics.width, 2 * metrics.height);
   const vfov = Number(facts.match(/([\d.]+)° vertical/)[1]);
   assert.ok(Math.abs(vfov - TRUE_VFOV) <= 1, `calibrated vfov ${vfov}, truth ${TRUE_VFOV}`);
-  // with a perfect gyroscope this pipeline scores ~6.2 (resampling + JPEG)
-  assert.ok(metrics.meanAbsError < 7.5, `stitched panorama differs from the truth by ${metrics.meanAbsError.toFixed(1)}/255`);
+  // after the tone fit, multi-band blending scores ~3.9 with ±1.5° gyro error
+  assert.ok(metrics.meanAbsError < 5, `stitched panorama differs from the truth by ${metrics.meanAbsError.toFixed(1)}/255`);
   assert.ok(blurredKept.n <= 4, `${blurredKept.n} blurred photos were kept`);
   const mean = (a) => a.reduce((s, x) => s + x, 0) / a.length;
   if (NOISE_DEG > 0) assert.ok(mean(orient.refined) < mean(orient.raw), 'alignment should reduce orientation error');

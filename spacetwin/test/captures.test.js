@@ -89,17 +89,27 @@ test('posed photos are stitched into a scan placed where they were taken', async
   assert.equal(scan.width, 1024);
 
   const stitched = jpeg.decode(Buffer.from(await (await fetch(`${base}/spaces/${id}/scans/${scan.id}/pano`)).arrayBuffer()), { useTArray: true });
-  let sum = 0, n = 0;
+  // compare structure after fitting out global tone (the finish changes it on purpose)
+  const pairs = [];
   for (let y = 0; y < 512 * 0.92; y++) {
     for (let x = 0; x < 1024; x++) {
       const lat = (0.5 - (y + 0.5) / 512) * Math.PI, lon = ((x + 0.5) / 1024 - 0.5) * 2 * Math.PI;
       const s = samplePano(Math.cos(lat) * Math.sin(lon), Math.sin(lat), -Math.cos(lat) * Math.cos(lon));
       const o = (y * 1024 + x) * 4;
-      for (let c = 0; c < 3; c++) { sum += Math.abs(stitched.data[o + c] - pano.data[s + c]); n++; }
+      for (let c = 0; c < 3; c++) pairs.push([c, stitched.data[o + c], pano.data[s + c]]);
     }
   }
+  const fit = [0, 1, 2].map((c) => {
+    let sx = 0, sy = 0, sxx = 0, sxy = 0, k = 0;
+    for (const [ch, x, y] of pairs) if (ch === c) { sx += x; sy += y; sxx += x * x; sxy += x * y; k++; }
+    const a = (k * sxy - sx * sy) / (k * sxx - sx * sx);
+    return { a, b: (sy - a * sx) / k };
+  });
+  let sum = 0, n = 0;
+  for (const [c, x, y] of pairs) { sum += Math.abs(fit[c].a * x + fit[c].b - y); n++; }
   const err = sum / n;
-  assert.ok(err < 8, `stitched panorama differs from the original by ${err.toFixed(2)}/255`);
+  assert.ok(err < 6, `stitched panorama differs from the original by ${err.toFixed(2)}/255 after tone fit`);
+  assert.ok(fit.every((f) => f.a > 0.75 && f.a < 1.25), 'tone finish should stay gentle');
 });
 
 test('bad capture uploads are rejected with a reason', async () => {

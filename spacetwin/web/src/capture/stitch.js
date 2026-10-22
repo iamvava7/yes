@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { toneCurve } from '../../../shared/tone.js';
 import { forwardOf, intrinsics, projectToFrame, rayFromFrame } from './geometry.js';
 
 // Turns ~30 phone photos plus the gyroscope orientation of each into one
@@ -262,64 +263,106 @@ function solve(A, b) {
 }
 
 // ------------------------------------------------------------------ GPU blend
+//
+// Two-band blending (Burt & Adelson; the "multiband" blender in OpenCV's
+// stitcher): each photo is split into a blurred base layer and a detail layer.
+// Base layers are cross-faded over wide areas, which hides exposure and
+// vignetting seams; detail layers switch sharply between photos, which keeps
+// edges crisp and avoids ghosting where photos are slightly misaligned.
 
-const accumulateShader = {
-  vertexShader: /* glsl */ `
-    varying vec2 vUv;
-    void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
-  `,
-  fragmentShader: /* glsl */ `
-    uniform sampler2D photo;
-    uniform mat3 worldToCam;
-    uniform vec2 tanHalf;
-    uniform float gain;
-    varying vec2 vUv;
-    const float PI = 3.141592653589793;
-    void main() {
-      float lon = (vUv.x - 0.5) * 2.0 * PI;
-      float lat = (vUv.y - 0.5) * PI;
-      vec3 d = vec3(cos(lat) * sin(lon), sin(lat), -cos(lat) * cos(lon));
-      vec3 c = worldToCam * d;
-      if (c.z >= -1e-4) discard;
-      vec2 p = c.xy / -c.z;
-      vec2 uv = vec2(0.5 + p.x / (2.0 * tanHalf.x), 0.5 + p.y / (2.0 * tanHalf.y));
-      if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) discard;
-      // Each pixel is dominated by the photo it sits most centrally in, with a
-      // narrow cross-fade where two photos are about equally central. A wide
-      // fade would show any residual misalignment as a double image.
-      vec2 e = min(uv, 1.0 - uv) * 2.0;
-      // floor keeps weights representable in the half-float accumulator (min normal ~6e-5)
-      float w = max(pow(e.x * e.y, 8.0), 1e-3);
-      vec3 rgb = texture2D(photo, vec2(uv.x, 1.0 - uv.y)).rgb * gain;
-      gl_FragColor = vec4(rgb * w, w);
-    }
-  `,
-};
+const BASE_LOD = 4; // mip level for the base layer: 1/16 resolution, a few degrees of blur
 
-const normalizeShader = {
-  vertexShader: accumulateShader.vertexShader,
-  fragmentShader: /* glsl */ `
-    uniform sampler2D accum;
-    varying vec2 vUv;
-    void main() {
-      vec4 a = texture2D(accum, vUv);
-      gl_FragColor = a.a > 0.0 ? vec4(a.rgb / a.a, 1.0) : vec4(0.5, 0.5, 0.5, 1.0);
-    }
-  `,
-};
+const projectPhoto = /* glsl */ `
+  uniform sampler2D photo;
+  uniform mat3 worldToCam;
+  uniform vec2 tanHalf;
+  uniform float gain;
+  varying vec2 vUv;
+  const float PI = 3.141592653589793;
+  // Where this panorama pixel falls in the photo; false if it doesn't.
+  bool photoUv(out vec2 uv, out float edge) {
+    float lon = (vUv.x - 0.5) * 2.0 * PI;
+    float lat = (vUv.y - 0.5) * PI;
+    vec3 d = vec3(cos(lat) * sin(lon), sin(lat), -cos(lat) * cos(lon));
+    vec3 c = worldToCam * d;
+    if (c.z >= -1e-4) return false;
+    vec2 p = c.xy / -c.z;
+    uv = vec2(0.5 + p.x / (2.0 * tanHalf.x), 0.5 + p.y / (2.0 * tanHalf.y));
+    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return false;
+    vec2 e = min(uv, 1.0 - uv) * 2.0;
+    edge = e.x * e.y; // 1 at the photo's centre, 0 at its border
+    uv.y = 1.0 - uv.y; // photos are uploaded top row first
+    return true;
+  }
+`;
+
+const vertexShader = /* glsl */ `
+  varying vec2 vUv;
+  void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
+`;
+
+const baseShader = /* glsl */ `
+  ${projectPhoto}
+  void main() {
+    vec2 uv; float edge;
+    if (!photoUv(uv, edge)) discard;
+    float w = edge; // wide, soft cross-fade
+    if (w <= 0.0) discard;
+    vec3 base = textureLod(photo, uv, ${BASE_LOD.toFixed(1)}).rgb * gain;
+    gl_FragColor = vec4(base * w, w);
+  }
+`;
+
+const detailShader = /* glsl */ `
+  ${projectPhoto}
+  void main() {
+    vec2 uv; float edge;
+    if (!photoUv(uv, edge)) discard;
+    // sharp hand-over between photos, fading to zero at each photo's border
+    float w = pow(edge, 4.0);
+    if (w <= 0.0) discard;
+    vec3 detail = (texture2D(photo, uv).rgb - textureLod(photo, uv, ${BASE_LOD.toFixed(1)}).rgb) * gain;
+    gl_FragColor = vec4(detail * w, w);
+  }
+`;
+
+const finishShader = /* glsl */ `
+  uniform sampler2D baseAcc;
+  uniform sampler2D detailAcc;
+  uniform vec2 texel;
+  uniform float sharpen;
+  varying vec2 vUv;
+  vec3 colorAt(vec2 uv) {
+    vec4 b = texture2D(baseAcc, uv), d = texture2D(detailAcc, uv);
+    if (b.a <= 0.0) return vec3(0.5); // never photographed
+    return b.rgb / b.a + (d.a > 0.0 ? d.rgb / d.a : vec3(0.0));
+  }
+  void main() {
+    vec3 c = colorAt(vUv);
+    // light unsharp mask restores crispness lost to resampling
+    vec3 blur = (colorAt(vUv + vec2(texel.x, 0.0)) + colorAt(vUv - vec2(texel.x, 0.0)) +
+                 colorAt(vUv + vec2(0.0, texel.y)) + colorAt(vUv - vec2(0.0, texel.y))) * 0.25;
+    gl_FragColor = vec4(clamp(c + sharpen * (c - blur), 0.0, 1.0), 1.0);
+  }
+`;
 
 async function renderEquirect(frames, qs, gains, intr, width, onProgress) {
   const height = width / 2;
   const renderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: false });
   renderer.setPixelRatio(1);
   renderer.setSize(16, 16, false);
-  renderer.autoClear = false; // photos accumulate; we clear once below
+  renderer.autoClear = false; // photos accumulate; targets are cleared once below
   const maxSize = renderer.capabilities.maxTextureSize;
   if (width > maxSize) {
     renderer.dispose();
     return renderEquirect(frames, qs, gains, intr, maxSize, onProgress);
   }
-  const accum = new THREE.WebGLRenderTarget(width, height, { type: THREE.HalfFloatType, depthBuffer: false });
+  const target = () => {
+    const rt = new THREE.WebGLRenderTarget(width, height, { type: THREE.HalfFloatType, depthBuffer: false });
+    rt.texture.wrapS = THREE.RepeatWrapping; // the panorama wraps around horizontally
+    return rt;
+  };
+  const baseAcc = target(), detailAcc = target();
   const output = new THREE.WebGLRenderTarget(width, height, { type: THREE.UnsignedByteType, depthBuffer: false });
   const scene = new THREE.Scene();
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -327,35 +370,37 @@ async function renderEquirect(frames, qs, gains, intr, width, onProgress) {
   quad.frustumCulled = false;
   scene.add(quad);
 
-  const accMat = new THREE.ShaderMaterial({
-    ...accumulateShader,
-    uniforms: { photo: { value: null }, worldToCam: { value: new THREE.Matrix3() }, tanHalf: { value: new THREE.Vector2(intr.tx, intr.ty) }, gain: { value: 1 } },
-    blending: THREE.CustomBlending,
-    blendEquation: THREE.AddEquation,
-    blendSrc: THREE.OneFactor,
-    blendDst: THREE.OneFactor,
-    blendSrcAlpha: THREE.OneFactor,
-    blendDstAlpha: THREE.OneFactor,
-    depthTest: false,
-    depthWrite: false,
-  });
-  quad.material = accMat;
-  renderer.setRenderTarget(accum);
+  const additive = {
+    blending: THREE.CustomBlending, blendEquation: THREE.AddEquation,
+    blendSrc: THREE.OneFactor, blendDst: THREE.OneFactor, blendSrcAlpha: THREE.OneFactor, blendDstAlpha: THREE.OneFactor,
+    depthTest: false, depthWrite: false,
+  };
+  const uniforms = { photo: { value: null }, worldToCam: { value: new THREE.Matrix3() }, tanHalf: { value: new THREE.Vector2(intr.tx, intr.ty) }, gain: { value: 1 } };
+  const baseMat = new THREE.ShaderMaterial({ vertexShader, fragmentShader: baseShader, uniforms, ...additive });
+  const detailMat = new THREE.ShaderMaterial({ vertexShader, fragmentShader: detailShader, uniforms, ...additive });
+
   renderer.setClearColor(0x000000, 0);
-  renderer.clear();
+  for (const rt of [baseAcc, detailAcc]) {
+    renderer.setRenderTarget(rt);
+    renderer.clear();
+  }
 
   for (let i = 0; i < frames.length; i++) {
     const bmp = await createImageBitmap(frames[i].blob);
     const tex = new THREE.Texture(bmp);
     tex.flipY = false;
     tex.colorSpace = THREE.NoColorSpace;
-    tex.minFilter = THREE.LinearFilter;
-    tex.generateMipmaps = false;
+    tex.generateMipmaps = true; // the base layer reads a coarse mip level
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
     tex.needsUpdate = true;
-    accMat.uniforms.photo.value = tex;
-    accMat.uniforms.worldToCam.value.setFromMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(qs[i].clone().invert()));
-    accMat.uniforms.gain.value = gains[i];
-    // the shader samples with v flipped, so photos are uploaded top-row-first (flipY = false)
+    uniforms.photo.value = tex;
+    uniforms.worldToCam.value.setFromMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(qs[i].clone().invert()));
+    uniforms.gain.value = gains[i];
+    quad.material = baseMat;
+    renderer.setRenderTarget(baseAcc);
+    renderer.render(scene, camera);
+    quad.material = detailMat;
+    renderer.setRenderTarget(detailAcc);
     renderer.render(scene, camera);
     tex.dispose();
     bmp.close?.();
@@ -363,24 +408,35 @@ async function renderEquirect(frames, qs, gains, intr, width, onProgress) {
     await new Promise((r) => setTimeout(r, 0)); // let the progress UI paint
   }
 
-  quad.material = new THREE.ShaderMaterial({ ...normalizeShader, uniforms: { accum: { value: accum.texture } }, depthTest: false, depthWrite: false });
+  quad.material = new THREE.ShaderMaterial({
+    vertexShader, fragmentShader: finishShader, depthTest: false, depthWrite: false,
+    uniforms: { baseAcc: { value: baseAcc.texture }, detailAcc: { value: detailAcc.texture }, texel: { value: new THREE.Vector2(1 / width, 1 / height) }, sharpen: { value: 0.35 } },
+  });
   renderer.setRenderTarget(output);
   renderer.render(scene, camera);
   const pixels = new Uint8Array(width * height * 4);
   renderer.readRenderTargetPixels(output, 0, 0, width, height, pixels);
   renderer.setRenderTarget(null);
-  accum.dispose();
-  output.dispose();
+  for (const rt of [baseAcc, detailAcc, output]) rt.dispose();
   renderer.dispose();
 
-  // WebGL rows run bottom-up; images run top-down.
+  // WebGL rows run bottom-up; images run top-down. Tone correction is applied on the way.
+  const lut = toneCurve(pixels);
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');
   const img = ctx.createImageData(width, height);
   const row = width * 4;
-  for (let y = 0; y < height; y++) img.data.set(pixels.subarray((height - 1 - y) * row, (height - y) * row), y * row);
+  for (let y = 0; y < height; y++) {
+    const src = (height - 1 - y) * row, dst = y * row;
+    for (let x = 0; x < row; x += 4) {
+      img.data[dst + x] = lut[0][pixels[src + x]];
+      img.data[dst + x + 1] = lut[1][pixels[src + x + 1]];
+      img.data[dst + x + 2] = lut[2][pixels[src + x + 2]];
+      img.data[dst + x + 3] = 255;
+    }
+  }
   ctx.putImageData(img, 0, 0);
   return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('could not encode panorama'))), 'image/jpeg', 0.9));
 }
