@@ -5,7 +5,9 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { isSimplePolygon, normalizePolygon, spaceStats } from '../shared/geometry.js';
+import { Worker } from 'node:worker_threads';
 import { toFloorPlanSvg, toObj } from './exporters.js';
+import { capturedRoomToRooms } from './roomplan.js';
 import { newId, NotFoundError, Store } from './store.js';
 
 const PANO_TYPES = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp' };
@@ -61,7 +63,12 @@ export async function createApp({ dataDir, sampleDir, webDist } = {}) {
 
   const app = express();
   app.disable('x-powered-by');
-  app.use(express.json({ limit: '2mb' }));
+  app.use(express.json({ limit: '25mb' })); // RoomPlan scans with many objects can be large
+
+  const captureUpload = multer({
+    dest: path.join(os.tmpdir(), 'spacetwin-uploads'),
+    limits: { fileSize: 15 * 1024 * 1024, files: 80, fieldSize: 2 * 1024 * 1024 },
+  });
 
   const api = express.Router();
   const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res)).catch(next);
@@ -231,6 +238,68 @@ export async function createApp({ dataDir, sampleDir, webDist } = {}) {
     res.status(204).end();
   }));
 
+  // Native app: rooms measured by Apple RoomPlan (LiDAR), in ARKit world space.
+  api.post('/spaces/:id/roomplan', wrap(async (req, res) => {
+    const b = req.body ?? {};
+    let converted;
+    try {
+      converted = capturedRoomToRooms(b.capturedRoom, { name: typeof b.name === 'string' && b.name.trim() ? b.name.trim().slice(0, 100) : 'Scanned room' });
+    } catch (err) {
+      throw bad(`capturedRoom: ${err.message}`);
+    }
+    const space = await store.update(req.params.id, (s) => {
+      const base = b.replace ? [] : s.rooms;
+      s.rooms = [...base, ...converted].map(validateRoom);
+    });
+    res.status(201).json(withStats(space));
+  }));
+
+  // Native app: posed photos (ARKit camera transform + intrinsics) stitched here into a scan.
+  api.post('/spaces/:id/captures', captureUpload.array('frames'), wrap(async (req, res) => {
+    const files = req.files ?? [];
+    try {
+      await store.get(req.params.id);
+      let meta;
+      try {
+        meta = JSON.parse(req.body?.meta ?? '');
+      } catch {
+        throw bad('meta must be a JSON string field');
+      }
+      if (!Array.isArray(meta.frames) || meta.frames.length !== files.length || files.length < 2) {
+        throw bad('send at least two "frames" files and one meta.frames entry (transform, intrinsics) per file, in the same order');
+      }
+      const width = meta.width === undefined ? 4096 : num(meta.width, 'width', { min: 512, max: 8192 });
+      if (width % 2) throw bad('width must be even');
+      const frames = await Promise.all(files.map(async (f, i) => ({ buffer: await fs.readFile(f.path), pose: meta.frames[i] })));
+      const result = await new Promise((resolve, reject) => {
+        const worker = new Worker(new URL('./stitch-worker.js', import.meta.url), { workerData: { frames, width } });
+        worker.once('message', resolve);
+        worker.once('error', reject);
+      });
+      if (!result.ok) throw bad(`could not stitch: ${result.error}`);
+      const [x, y, z] = result.position;
+      const cameraHeight = meta.cameraHeight !== undefined
+        ? num(meta.cameraHeight, 'cameraHeight', { min: 0.2, max: 5 })
+        : meta.floorY !== undefined ? Math.min(5, Math.max(0.2, y - num(meta.floorY, 'floorY'))) : 1.5;
+      const space = await store.update(req.params.id, async (s) => {
+        const id = newId();
+        const file = `${id}.jpg`;
+        await fs.writeFile(store.panoPath(s.id, file), Buffer.from(result.jpeg));
+        s.scans.push({
+          id,
+          name: typeof meta.name === 'string' && meta.name.trim() ? meta.name.trim().slice(0, 120) : `Spot ${s.scans.length + 1}`,
+          file, width: result.width, height: result.height,
+          position: { x: round3(x), z: round3(z) },
+          cameraHeight: round3(cameraHeight),
+          heading: 0, // posed photos are stitched directly in world orientation
+        });
+      });
+      res.status(201).json(withStats(space));
+    } finally {
+      await Promise.all(files.map((f) => fs.rm(f.path, { force: true })));
+    }
+  }));
+
   // Exports.
   api.get('/spaces/:id/export/model.obj', wrap(async (req, res) => {
     const space = await store.get(req.params.id);
@@ -287,6 +356,10 @@ export async function createApp({ dataDir, sampleDir, webDist } = {}) {
   });
 
   return app;
+}
+
+function round3(n) {
+  return Math.round(n * 1000) / 1000;
 }
 
 function slug(s) {
