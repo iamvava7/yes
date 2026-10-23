@@ -61,7 +61,7 @@ try {
   await page.waitForFunction(() => document.querySelector('.tv').dataset.open === 'true');
   assert.equal(await page.locator('.tv-title h1').textContent(), 'Unit 4B, sample building');
   assert.match(await page.locator('.tv-sub').textContent(), /1 bed · 34\.0 m²/);
-  assert.match(await page.locator('.tv-captor').textContent(), /Captured by.*SpaceTwin demo/);
+  assert.match(await page.locator('.tv-captor').textContent(), /Captured by.*VerifiCasa demo/);
   assert.equal(await page.locator('.tv-map-count').textContent(), 'Room 2 of 2');
   await page.locator('.tv-map text', { hasText: 'Living room' }).click();
   await page.waitForFunction((id) => document.querySelector('.tv-stage').viewer.currentScanId === id && !document.querySelector('.tv-stage').viewer.transitioning, space.scans[0].id);
@@ -92,6 +92,23 @@ try {
   assert.equal(await page.getByRole('button', { name: 'Saved' }).getAttribute('aria-pressed'), 'true', 'saved is remembered');
   await page.keyboard.press('Escape');
   await page.waitForFunction(() => document.querySelector('.tv').dataset.open === 'false');
+
+  step('Maria answers about this property and walks the tour');
+  await page.getByRole('button', { name: 'Ask Maria, the VerifiCasa assistant' }).click();
+  const maria = page.getByRole('dialog', { name: 'Maria, the VerifiCasa assistant' });
+  await maria.waitFor();
+  await maria.getByRole('button', { name: 'About the price' }).click();
+  await page.waitForFunction(() => document.querySelectorAll('.maria-msg.bot').length >= 2);
+  assert.match(await page.locator('.maria-msg.bot').nth(1).textContent(), /285,000 EUR/);
+  await page.getByLabel('Your question for Maria').fill('Write me a poem about the sea');
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => document.querySelectorAll('.maria-msg.bot').length >= 3);
+  assert.match(await page.locator('.maria-msg.bot').nth(2).textContent(), /only help with this property/);
+  await page.getByLabel('Your question for Maria').fill('Take me to the bedroom');
+  await page.keyboard.press('Enter');
+  await page.waitForFunction((id) => document.querySelector('.tv-stage').viewer.currentScanId === id, space.scans[1].id, { timeout: 10000 });
+  await page.screenshot({ path: path.join(shots, 't4-maria.png') });
+  await maria.getByRole('button', { name: 'Close' }).click();
 
   step('phone: details card');
   const phone = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });

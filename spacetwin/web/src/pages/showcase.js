@@ -5,6 +5,7 @@ import { countLabel, lang, t } from '../i18n.js';
 import { formatArea } from '../listing.js';
 import { sfx, unlock } from '../sound.js';
 import { h, icon, toast } from '../ui.js';
+import { createMaria } from '../tour/maria.js';
 import { Viewer } from '../viewer/Viewer.js';
 
 // The tour buyers see: the "Web · 3D Tour viewer" design in the VerifiCasa App
@@ -146,6 +147,12 @@ export async function renderShowcase(app, id, { embed = false } = {}) {
     h('div.tv-hosted', h('img', { src: '/brand/verificasa-mark.svg', alt: '', draggable: false }), h('span.tv-hosted-by', t('3D tour hosted by')), wordmark(), h('span.tv-sep'), report));
 
   root.append(toggle, panel, rooms, bottom);
+  if (space.scans.length) {
+    createMaria(root, {
+      spaceId: id, title, viewer, listingUrl,
+      contact: { phone: listing.contactPhone ?? null, email: listing.contactEmail ?? null },
+    });
+  }
 
   if (!space.scans.length) {
     root.append(h('div.tv-empty', h('h2', t('Nothing to tour yet')),

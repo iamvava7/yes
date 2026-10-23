@@ -34,6 +34,22 @@ a ray-traced hand-held capture with real parallax:
 `python3 scripts/bench_frames.py /tmp/bench` (writes photos, poses and the true
 panorama).
 
+## Maria, the assistant on every tour
+
+Visitors open Maria from the orb button on the tour. She answers only about
+that property (price, rooms and sizes, ceiling height, location with a map,
+whether it was captured on site, how to reach the lister) and can walk the
+tour to a room. Two engines:
+
+- **Claude** when the server has `ANTHROPIC_API_KEY` set: natural answers in
+  Romanian or English, kept to the property's facts by the system prompt,
+  with tools for the map, walking to a room and the contact options
+  (`server/assistant.js`; model `claude-opus-5-5`, low effort; override with
+  `SPACETWIN_ASSISTANT_MODEL`). Keep the key in the server's environment, never
+  in the repository.
+- **Built-in answers** otherwise (and whenever Claude is unavailable): free,
+  offline, for the common questions.
+
 ## Put a tour on a VerifiCasa listing
 
 Open a tour, tap **Share** and copy **Link for a VerifiCasa listing**

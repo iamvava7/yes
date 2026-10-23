@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Capture 360\u00b0 panoramas, trace rooms, and share walkable 3D digital twins.",
+  "description": "Capture 360° panoramas, trace rooms, and share walkable 3D digital twins.",
   "scripts": {
     "dev": "node scripts/dev.js",
     "build": "vite build --config web/vite.config.js",
@@ -16,6 +16,7 @@
     "test:tour": "node test-e2e/tour.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.1.0",
     "express": "^5.1.0",
     "image-size": "^2.0.2",
     "jpeg-js": "^0.4.4",

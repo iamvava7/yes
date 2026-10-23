@@ -11,6 +11,7 @@ import { detectProStitch, proStitch } from './proStitch.js';
 import { capturedRoomToRooms } from './roomplan.js';
 import { validatePose } from './stitch.js';
 import { createVerificasaClient, distanceMeters } from './verificasa.js';
+import { createAssistant, parseChat } from './assistant.js';
 import { newId, NotFoundError, Store } from './store.js';
 
 const PANO_TYPES = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp' };
@@ -147,14 +148,14 @@ function fromVerificasa(l) {
       status: l.status === 'Activ' ? VC_STATUS[l.transaction] : null,
     },
     verificasa: {
-      propertyId: l.id, url: l.url, title: l.title, city: l.city, zone: l.zone, rooms: l.rooms, surface: l.surface,
+      propertyId: l.id, url: l.url, title: l.title, city: l.city, zone: l.zone, rooms: l.rooms, surface: l.surface, transaction: l.transaction,
       posterName: l.contactName, posterPlan: l.posterPlan, sellerRole: l.sellerRole, views: l.views,
       latitude: l.latitude, longitude: l.longitude, linkedAt: new Date().toISOString(),
     },
   };
 }
 
-export async function createApp({ dataDir, sampleDir, webDist, proStitch: allowPro = true, verificasa = createVerificasaClient() } = {}) {
+export async function createApp({ dataDir, sampleDir, webDist, proStitch: allowPro = true, verificasa = createVerificasaClient(), assistant = createAssistant() } = {}) {
   const store = new Store(dataDir);
   await store.init();
   const upload = multer({
@@ -186,6 +187,22 @@ export async function createApp({ dataDir, sampleDir, webDist, proStitch: allowP
       coverScanId: s.scans[0]?.id ?? null, stats: spaceStats(s), listing: s.listing ?? null,
       verificasa: s.verificasa ? { propertyId: s.verificasa.propertyId, url: s.verificasa.url } : null,
     })));
+  }));
+
+  // Maria: questions about this property only (Claude when configured, else built-in answers).
+  api.get('/assistant', wrap(async (_req, res) => {
+    res.json({ engine: assistant.engine });
+  }));
+
+  api.post('/spaces/:id/assistant', wrap(async (req, res) => {
+    const space = await store.get(req.params.id);
+    let chat;
+    try {
+      chat = parseChat(req.body);
+    } catch (err) {
+      throw bad(err.message);
+    }
+    res.json(await assistant.answer(space, chat));
   }));
 
   // VerifiCasa listings (read-only), so an agent can pick the listing a tour is for.
@@ -522,8 +539,8 @@ export async function createApp({ dataDir, sampleDir, webDist, proStitch: allowP
       s.tags.push({ id: newId(), label: 'Window', description: 'South-facing, double glazed.', position: [2.4, 1.6, 0.01] });
       s.listing = {
         address: 'Unit 4B, sample building', status: 'For sale', price: 285000, currency: 'EUR', beds: 1, baths: 1,
-        description: 'A demonstration flat rendered by SpaceTwin: bright living room with a south-facing window, and a quiet bedroom with built-in wardrobe.',
-        contactName: 'SpaceTwin demo',
+        description: 'A demonstration flat: bright living room with a south-facing window, and a quiet bedroom with built-in wardrobe.',
+        contactName: 'VerifiCasa demo',
       };
     });
     res.status(201).json(withStats(space));
