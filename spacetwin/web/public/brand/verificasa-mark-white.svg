@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="logo" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="58.3 102.9 345 230.2">
+  <!-- Generator: Adobe Illustrator 30.7.0, SVG Export Plug-In . SVG Version: 2.1.4 Build 114)  -->
+  <defs>
+    <style>
+      .st0, .st1, .st2, .st3 {
+        fill: #fff;
+      }
+
+      .st4 {
+        stroke-width: 15px;
+      }
+
+      .st4, .st1, .st5, .st3 {
+        stroke: #fff;
+      }
+
+      .st4, .st1, .st3 {
+        stroke-miterlimit: 10;
+      }
+
+      .st4, .st5 {
+        fill: none;
+      }
+
+      .st1 {
+        stroke-width: 6px;
+      }
+
+      .st2, .st5 {
+        display: none;
+      }
+
+      .st5 {
+        stroke-linecap: round;
+        stroke-width: 7px;
+      }
+
+      .st3 {
+        stroke-width: .75px;
+      }
+    </style>
+  </defs>
+  <path class="st0" d="M234.7,218.44c0-50.56,34.75-84.41,85.31-84.41,22.8,0,41.62,9.3,59.52,24.4.29.24.71.19.93-.09l17.75-22.94c.2-.25.17-.62-.06-.85-18.04-17.43-44.1-31.65-79.49-31.65-66.35,0-122.33,41.99-122.33,115.56,0,31.16,9.48,56.66,25.7,75.64l25-28.91c-7.92-12.87-12.33-28.68-12.33-46.76Z"/>
+  <path class="st0" d="M403.2,298.3l-15.98-23.31c-.21-.32-.65-.37-.94-.13-17.97,15.13-40.36,27.08-67.17,27.08-24.25,0-44.78-7.73-59.53-21.43l-14.69,33.38c19.7,12.55,44.25,19.19,71.51,19.19,32.31,0,62.39-12.49,86.69-33.93.25-.21.3-.58.11-.85Z"/>
+  <path class="st3" d="M222.03,294.1c.13.16.27.31.4.47"/>
+  <path class="st3" d="M247.03,265.2l-25,28.91"/>
+  <path class="st3" d="M244.89,313.89l14.69-33.38"/>
+  <path class="st0" d="M244.89,313.89"/>
+  <path class="st0" d="M222.43,294.57"/>
+  <line class="st5" x1="233.29" y1="264.41" x2="253.65" y2="252.8"/>
+  <rect class="st2" x="210.82" y="263.98" width="51.55" height="19.71" transform="translate(-124.34 247.5) rotate(-45)"/>
+  <polygon class="st1" points="236.45 255.36 197.61 288.06 94.81 103.23 58.31 110.52 194.87 320.07 244.56 266.91 236.45 255.36"/>
+  <g>
+    <g>
+      <rect class="st0" x="289.55" y="208.24" width="26.71" height="24.43"/>
+      <rect class="st0" x="320.75" y="208.24" width="26.71" height="24.43"/>
+      <rect class="st0" x="320.75" y="236.44" width="26.71" height="24.43"/>
+      <rect class="st0" x="289.55" y="236.44" width="26.71" height="24.43"/>
+    </g>
+    <polyline class="st4" points="373.2 210.65 318.5 173.23 263.81 210.65"/>
+  </g>
+</svg>

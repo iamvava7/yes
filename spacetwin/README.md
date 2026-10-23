@@ -15,6 +15,33 @@ npm run build && npm run test:capture   # simulated phone capture + stitching ac
 npm run build && npm run test:tour      # tour page: listing, minimap, guided tour, share, phone sheet
 ```
 
+## Best quality: the pro stitcher (optional, recommended)
+
+With Python 3 and OpenCV installed, the server re-stitches every phone capture
+the way desktop stitchers do: exposure compensation, a graph cut that routes
+each seam around objects (so a chair or a door frame comes from one photo, not
+a ghost of two), and multi-band blending. The phone still aligns the photos;
+the server does the blending, which takes about a minute per spot on a laptop.
+
+```
+pip install opencv-python-headless numpy      # Windows: py -m pip install opencv-python-headless numpy
+```
+
+The server prints `Pro stitcher ready` when it finds it. Without it, everything
+works with the built-in stitcher. `SPACETWIN_PYTHON` points at a specific
+Python; `SPACETWIN_PRO_STITCH=0` turns it off. To compare the two stitchers on
+a ray-traced hand-held capture with real parallax:
+`python3 scripts/bench_frames.py /tmp/bench` (writes photos, poses and the true
+panorama).
+
+## Put a tour on a VerifiCasa listing
+
+Open a tour, tap **Share** and copy **Link for a VerifiCasa listing**
+(`https://<server>/3D/<id>`). Paste it into the listing's **Link Tur 3D**
+field: the listing's "Tur 3D" tab shows the tour (360°, dollhouse, floor plan,
+measuring) without repeating the listing details. The tour speaks Romanian on
+Romanian phones and browsers; add `?lang=en` or `?lang=ro` to force one.
+
 ## Use it on your iPhone
 
 Capture needs the camera and motion sensors, which iPhones only allow on
@@ -78,7 +105,7 @@ Capture quality (phone only, no 360° camera needed):
 
 | Matterport | SpaceTwin (phase 1) |
 | --- | --- |
-| Capture app drives a camera, one scan per spot | Guided phone capture: aim at dots, auto-shoot, stitch on the phone (`web/src/capture/`). Or upload one 2:1 panorama per spot from any 360° camera |
+| Capture app drives a camera, one scan per spot | Guided phone capture: aim at dots, auto-shoot, align on the phone, blend with OpenCV on the server when installed (`web/src/capture/`, `server/pro_stitch.py`). Or upload one 2:1 panorama per spot from any 360° camera |
 | On-site alignment of each scan | Drag scans onto the 2D plan, rotate with the heading handle |
 | Cortex AI infers depth and room shape | **Trace room**: click the floor corners in the panorama. With the camera height known, each click is a ray hitting the floor plane, giving exact positions. One click on the ceiling corner gives the height |
 | Textured 3D mesh | Room polygons are extruded into meshes and painted by projecting each panorama from its capture point (`web/src/viewer/projectionMaterial.js`) |

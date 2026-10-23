@@ -1,5 +1,5 @@
 import { api, panoUrl } from '../api.js';
-import { brand } from '../brand.js';
+import { brand, brandMark } from '../brand.js';
 import { formatArea, formatPrice, plural } from '../listing.js';
 import { h, icon, toast } from '../ui.js';
 
@@ -8,7 +8,7 @@ export async function renderHome(app) {
   const grid = h('div.space-grid');
   const page = h('main.home',
     h('header.home-header',
-      h('div.brand', h('span.brand-mark', { 'aria-hidden': true }), brand.name),
+      h('div.brand', brandMark(), brand.name),
       h('div.home-actions',
         h('button.secondary', { onclick: loadSample }, 'Open sample'),
         h('button.primary', { onclick: create }, icon('plus'), 'New property'),

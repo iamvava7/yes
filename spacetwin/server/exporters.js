@@ -44,10 +44,15 @@ export function toFloorPlanSvg(space) {
       const p = pts[i], q = pts[(i + 1) % pts.length];
       const len = distance2(p, q);
       if (len < 0.5) continue;
-      // label sits just inside the wall (walls are wound so the interior is on the left)
+      // label sits just inside the wall (walls are wound so the interior is on
+      // the left), running along it and turned to read upright
       const mx = (p[0] + q[0]) / 2, mz = (p[1] + q[1]) / 2;
       const nx = -(q[1] - p[1]) / len, nz = (q[0] - p[0]) / len;
-      out.push(`<text x="${X(mx + nx * 0.25).toFixed(1)}" y="${Y(mz + nz * 0.25).toFixed(1)}" font-size="13" fill="#666" text-anchor="middle" dominant-baseline="middle">${formatLength(len)}</text>`);
+      let angle = (Math.atan2(q[1] - p[1], q[0] - p[0]) * 180) / Math.PI;
+      if (angle > 90) angle -= 180;
+      if (angle <= -90) angle += 180;
+      const lx = X(mx + nx * 0.2).toFixed(1), ly = Y(mz + nz * 0.2).toFixed(1);
+      out.push(`<text x="${lx}" y="${ly}" transform="rotate(${angle.toFixed(1)} ${lx} ${ly})" font-size="12" fill="#59646a" text-anchor="middle" dominant-baseline="middle">${formatLength(len)}</text>`);
     }
     out.push(`<text x="${X(cx).toFixed(1)}" y="${(Y(cz) - 8).toFixed(1)}" font-size="16" font-weight="600" fill="#222" text-anchor="middle">${escapeXml(room.name)}</text>`);
     out.push(`<text x="${X(cx).toFixed(1)}" y="${(Y(cz) + 12).toFixed(1)}" font-size="13" fill="#555" text-anchor="middle">${polygonArea(pts).toFixed(1)} m²</text>`);

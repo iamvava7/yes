@@ -7,3 +7,4 @@ ios/SpaceTwin/Info.plist
 ios/build/
 .DS_Store
 xcuserdata/
+__pycache__/

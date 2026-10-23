@@ -39,6 +39,16 @@ npm install
 npm run phone
 ```
 
+**For the best panoramas (recommended):** install [Python 3](https://www.python.org/downloads/)
+(tick "Add Python to PATH" on Windows), then run once:
+
+```
+py -m pip install opencv-python-headless numpy      (Windows)
+python3 -m pip install opencv-python-headless numpy (Mac)
+```
+
+and start the app again. The terminal should say **Pro stitcher ready**.
+
 It prints an address like `https://192.168.1.23:5173`. On the phone, open that
 address in **Safari** (iPhone) or **Chrome** (Android).
 
@@ -73,7 +83,9 @@ Please note anything confusing, slow, broken or ugly, with the phone model.
   around the phone rather than walking around. 28 dots, about a minute.
 - At the end it offers the ceiling and the floor (optional); or tap **✓**.
   **↶** undoes the last photo.
-- Watch it build the 360°, look around the result, and tap **Save spot**.
+- Watch it build the 360° (with the pro stitcher there is an extra step,
+  "Hiding the seams", that takes about a minute), look around the result, and
+  tap **Save spot**.
 - Tap **Outline this room**: turn until the crosshair is on each floor corner
   and tap **Add corner**, then **Close room**, then aim at the ceiling above
   the first corner and tap **Set height**. You then see the 3D model and floor

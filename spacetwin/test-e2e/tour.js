@@ -75,9 +75,10 @@ try {
 
   step('share shows link and embed code');
   await page.getByRole('button', { name: 'Share or embed this tour' }).click();
-  const link = await page.getByLabel('Link').inputValue();
+  const link = await page.getByLabel('Link', { exact: true }).inputValue();
   assert.equal(link, `${base}/#/view/${space.id}`);
-  assert.match(await page.getByLabel('Embed on a website').inputValue(), /^<iframe src="http/);
+  assert.equal(await page.getByLabel('Link for a VerifiCasa listing (Link Tur 3D)').inputValue(), `${base}/3D/${space.id}`);
+  assert.match(await page.getByLabel('Embed on a website').inputValue(), new RegExp(`^<iframe src="${base}/3D/${space.id}"`));
   await page.locator('.share').getByRole('button', { name: 'Copy' }).first().click();
   assert.equal(await page.evaluate(() => navigator.clipboard.readText()), link);
   await page.screenshot({ path: path.join(shots, 't1-share.png') });
@@ -108,6 +109,20 @@ try {
   const dock = await phone.locator('.viewer-dock').boundingBox();
   assert.ok(dock.x >= 0 && dock.x + dock.width <= 390, 'tour controls fit the screen');
   await phone.screenshot({ path: path.join(shots, 't2-phone-sheet.png') });
+
+  step('VerifiCasa listing frame: /3D/<id> in Romanian');
+  const listingPage = await browser.newPage({ viewport: { width: 900, height: 560 }, locale: 'ro-RO' });
+  listingPage.on('pageerror', (e) => errors.push(e.message));
+  await listingPage.setContent(`<iframe src="${base}/3D/${space.id.toUpperCase()}" width="860" height="520" style="border:0"></iframe>`);
+  const frame = listingPage.frameLocator('iframe');
+  await frame.locator('.viewer-stage canvas').waitFor();
+  await frame.getByRole('tab', { name: 'Machetă 3D' }).waitFor();
+  assert.equal(await frame.locator('aside.listing').count(), 0, 'the listing page shows the details, not the frame');
+  assert.equal(await frame.locator('.embed-badge').getAttribute('href'), `${base}/#/view/${space.id}`);
+  assert.equal(await frame.locator('html').getAttribute('lang'), 'ro');
+  await frame.getByRole('tab', { name: 'Plan' }).click();
+  await listingPage.waitForTimeout(1200);
+  await listingPage.screenshot({ path: path.join(shots, 't3-verificasa-frame.png') });
 
   assert.deepEqual(errors, [], errors.join('\n'));
   console.log('TOUR OK');

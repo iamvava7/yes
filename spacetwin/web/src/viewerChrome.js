@@ -1,20 +1,21 @@
 import { centroid, normalizePolygon, pointInPolygon, polygonArea } from '../../shared/geometry.js';
+import { t } from './i18n.js';
 import { panoUrl } from './api.js';
 import { isMuted, onMuteChange, setMuted, sfx, unlock } from './sound.js';
 import { h, icon } from './ui.js';
 import { Viewer } from './viewer/Viewer.js';
 
 const MODES = [
-  ['inside', 'walk', 'Inside'],
-  ['dollhouse', 'cube', 'Dollhouse'],
-  ['floorplan', 'plan', 'Floor plan'],
+  ['inside', 'walk', t('Inside')],
+  ['dollhouse', 'cube', t('Dollhouse')],
+  ['floorplan', 'plan', t('Floor plan')],
 ];
 
 const TOOLS = {
-  navigate: ['hand', 'Navigate'],
-  measure: ['ruler', 'Measure'],
-  tag: ['tag', 'Add tag'],
-  trace: ['trace', 'Trace room'],
+  navigate: ['hand', t('Navigate')],
+  measure: ['ruler', t('Measure')],
+  tag: ['tag', t('Add tag')],
+  trace: ['trace', t('Trace room')],
 };
 
 const TOUR_PAN_MS = 6500; // time spent turning at each spot during the guided tour
@@ -32,14 +33,14 @@ export function createViewerChrome(container, spaceId, {
   onTagCreate, onTagDelete, onRoomTraced, onScanChange, spaceName = 'tour',
 } = {}) {
   const stage = h('div.viewer-stage');
-  const modeBar = h('div.mode-bar', { role: 'tablist', 'aria-label': 'View mode' });
-  const toolBar = h('div.tool-bar', { role: 'toolbar', 'aria-label': 'Tools' });
-  const actionBar = h('div.action-bar', { role: 'toolbar', 'aria-label': 'Tour actions' });
+  const modeBar = h('div.mode-bar', { role: 'tablist', 'aria-label': t('View mode') });
+  const toolBar = h('div.tool-bar', { role: 'toolbar', 'aria-label': t('Tools') });
+  const actionBar = h('div.action-bar', { role: 'toolbar', 'aria-label': t('Tour actions') });
   const banner = h('div.banner', { hidden: true, role: 'status' });
-  const strip = h('div.scan-strip', { 'aria-label': 'Spots' });
+  const strip = h('div.scan-strip', { 'aria-label': t('Spots') });
   const popover = h('div.popover', { hidden: true });
   const sign = h('div.room-sign', { 'aria-live': 'polite' }, h('span.room-sign-name'), h('span.room-sign-area'));
-  const minimap = h('canvas.minimap', { 'aria-label': 'Floor plan map: tap to move there', role: 'img' });
+  const minimap = h('canvas.minimap', { 'aria-label': t('Floor plan map: tap to move there'), role: 'img' });
   container.append(h('div.viewer-wrap',
     stage, sign, minimap,
     h('div.viewer-dock', modeBar, toolBar, actionBar),
@@ -79,20 +80,20 @@ export function createViewerChrome(container, spaceId, {
       onclick: () => { unlock(); stopTour(); viewer.setMode(mode); },
     }, icon(ic), h('span', label)));
   }
-  for (const t of tools) {
-    const [ic, label] = TOOLS[t];
+  for (const tool of tools) {
+    const [ic, label] = TOOLS[tool];
     // tapping an active tool again turns it off (back to navigating)
-    toolBar.append(h('button.tool', { dataset: { tool: t }, title: label, 'aria-pressed': t === 'navigate', onclick: () => { unlock(); setTool(viewer.tool === t && t !== 'navigate' ? 'navigate' : t); } }, icon(ic), h('span', label)));
+    toolBar.append(h('button.tool', { dataset: { tool }, title: label, 'aria-pressed': tool === 'navigate', onclick: () => { unlock(); setTool(viewer.tool === tool && tool !== 'navigate' ? 'navigate' : tool); } }, icon(ic), h('span', label)));
   }
   toolBar.hidden = !tools.length;
 
   // ---------------------------------------------------------------- actions
 
-  const playBtn = h('button.action', { title: 'Play guided tour', 'aria-label': 'Play guided tour', 'aria-pressed': false, onclick: () => (touring ? stopTour() : playTour()) }, icon('play'), h('span', 'Tour'));
+  const playBtn = h('button.action', { title: t('Play guided tour'), 'aria-label': t('Play guided tour'), 'aria-pressed': false, onclick: () => (touring ? stopTour() : playTour()) }, icon('play'), h('span', t('Tour')));
   const soundBtn = h('button.action', { onclick: () => { unlock(); setMuted(!isMuted()); if (!isMuted()) sfx.tap(); } });
   const renderSound = () => {
-    soundBtn.replaceChildren(icon(isMuted() ? 'mute' : 'sound'), h('span', isMuted() ? 'Sound off' : 'Sound on'));
-    soundBtn.title = isMuted() ? 'Turn sound on' : 'Turn sound off';
+    soundBtn.replaceChildren(icon(isMuted() ? 'mute' : 'sound'), h('span', isMuted() ? t('Sound off') : t('Sound on')));
+    soundBtn.title = isMuted() ? t('Turn sound on') : t('Turn sound off');
     soundBtn.setAttribute('aria-label', soundBtn.title);
     soundBtn.setAttribute('aria-pressed', !isMuted());
   };
@@ -100,8 +101,8 @@ export function createViewerChrome(container, spaceId, {
   const offMute = onMuteChange(renderSound);
   const available = {
     play: playBtn,
-    snapshot: h('button.action', { title: 'Save this view as a photo', 'aria-label': 'Save this view as a photo', onclick: snapshot }, icon('camera'), h('span', 'Snapshot')),
-    share: h('button.action', { title: 'Share or embed this tour', 'aria-label': 'Share or embed this tour', onclick: openShare }, icon('share'), h('span', 'Share')),
+    snapshot: h('button.action', { title: t('Save this view as a photo'), 'aria-label': t('Save this view as a photo'), onclick: snapshot }, icon('camera'), h('span', t('Snapshot'))),
+    share: h('button.action', { title: t('Share or embed this tour'), 'aria-label': t('Share or embed this tour'), onclick: openShare }, icon('share'), h('span', t('Share'))),
     sound: soundBtn,
   };
   for (const a of actions) actionBar.append(available[a]);
@@ -122,30 +123,33 @@ export function createViewerChrome(container, spaceId, {
   function openShare(e) {
     unlock();
     sfx.tap();
-    const link = `${location.origin}${location.pathname}#/view/${spaceId}`;
-    const embed = `<iframe src="${link}" width="100%" height="560" style="border:0" allow="fullscreen; accelerometer; gyroscope" loading="lazy"></iframe>`;
+    const link = `${location.origin}/#/view/${spaceId}`;
+    // the short link shows the tour without the listing panel (the listing page has it)
+    const short = `${location.origin}/3D/${spaceId}`;
+    const embed = `<iframe src="${short}" width="100%" height="560" style="border:0" allow="fullscreen; accelerometer; gyroscope; xr-spatial-tracking" loading="lazy"></iframe>`;
     const copyRow = (label, value) => {
       const field = h('input', { value, readOnly: true, 'aria-label': label, onfocus: (ev) => ev.target.select() });
       const btn = h('button.secondary.small', {
         onclick: async () => {
           try {
             await navigator.clipboard.writeText(value);
-            btn.textContent = 'Copied';
+            btn.textContent = t('Copied');
           } catch {
             field.focus();
             field.select();
-            btn.textContent = 'Press ⌘C';
+            btn.textContent = t('Press ⌘C');
           }
-          setTimeout(() => { btn.textContent = 'Copy'; }, 1800);
+          setTimeout(() => { btn.textContent = t('Copy'); }, 1800);
         },
-      }, 'Copy');
+      }, t('Copy'));
       return h('label.field', h('span', label), h('div.input-row', field, btn));
     };
     popover.replaceChildren(h('div.share',
-      h('div.row.spread', h('strong', 'Share this tour'), h('button.icon-btn', { title: 'Close', onclick: closePopover }, icon('x'))),
-      copyRow('Link', link),
-      copyRow('Embed on a website', embed),
-      navigator.share ? h('button.primary.small', { onclick: () => navigator.share({ title: spaceName, url: link }).catch(() => {}) }, 'Share…') : null,
+      h('div.row.spread', h('strong', t('Share this tour')), h('button.icon-btn', { title: t('Close'), onclick: closePopover }, icon('x'))),
+      copyRow(t('Link'), link),
+      copyRow(t('Link for a VerifiCasa listing (Link Tur 3D)'), short),
+      copyRow(t('Embed on a website'), embed),
+      navigator.share ? h('button.primary.small', { onclick: () => navigator.share({ title: spaceName, url: link }).catch(() => {}) }, t('Share…')) : null,
     ));
     const r = e.currentTarget.getBoundingClientRect();
     placePopover(r.left + r.width / 2, r.top - 8, 'above');
@@ -161,9 +165,9 @@ export function createViewerChrome(container, spaceId, {
     touring = true;
     const token = ++tourToken;
     playBtn.setAttribute('aria-pressed', true);
-    playBtn.title = 'Pause guided tour';
+    playBtn.title = t('Pause guided tour');
     playBtn.setAttribute('aria-label', playBtn.title);
-    playBtn.replaceChildren(icon('pause'), h('span', 'Pause'));
+    playBtn.replaceChildren(icon('pause'), h('span', t('Pause')));
     setTool('navigate');
     if (viewer.mode !== 'inside') {
       viewer.setMode('inside');
@@ -181,10 +185,10 @@ export function createViewerChrome(container, spaceId, {
       await new Promise((resolve) => {
         const step = (now) => {
           if (!touring || token !== tourToken) return resolve();
-          const t = Math.min(1, (now - start) / TOUR_PAN_MS);
-          const k = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+          const p = Math.min(1, (now - start) / TOUR_PAN_MS);
+          const k = p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2;
           viewer.setLook(yaw0 + (k * TOUR_PAN_DEG * Math.PI) / 180, -0.08);
-          if (t < 1) requestAnimationFrame(step);
+          if (p < 1) requestAnimationFrame(step);
           else resolve();
         };
         requestAnimationFrame(step);
@@ -197,9 +201,9 @@ export function createViewerChrome(container, spaceId, {
     touring = false;
     tourToken++;
     playBtn.setAttribute('aria-pressed', false);
-    playBtn.title = 'Play guided tour';
+    playBtn.title = t('Play guided tour');
     playBtn.setAttribute('aria-label', playBtn.title);
-    playBtn.replaceChildren(icon('play'), h('span', 'Tour'));
+    playBtn.replaceChildren(icon('play'), h('span', t('Tour')));
   }
   // any direct interaction with the view takes over from the guided tour
   stage.addEventListener('pointerdown', stopTour);
@@ -315,32 +319,32 @@ export function createViewerChrome(container, spaceId, {
   }
 
   function updateBanner() {
-    const t = viewer.trace;
+    const tr = viewer.trace;
     banner.replaceChildren();
     let content = null;
-    if (viewer.tool === 'trace' && t) {
-      if (t.stage === 'floor') {
+    if (viewer.tool === 'trace' && tr) {
+      if (tr.stage === 'floor') {
         content = [
-          h('span', t.points.length < 3
-            ? `Tap each corner where the walls meet the floor, going around the room (${t.points.length} so far).`
-            : 'Keep adding corners, then tap the red first corner or press Enter to close the outline.'),
-          h('button.secondary.small', { disabled: t.points.length < 3, onclick: () => viewer.closeTrace() }, 'Close outline'),
-          h('button.ghost.small', { onclick: () => setTool('navigate') }, 'Cancel'),
+          h('span', tr.points.length < 3
+            ? t('Tap each corner where the walls meet the floor, going around the room ({n} so far).', { n: tr.points.length })
+            : t('Keep adding corners, then tap the red first corner or press Enter to close the outline.')),
+          h('button.secondary.small', { disabled: tr.points.length < 3, onclick: () => viewer.closeTrace() }, t('Close outline')),
+          h('button.ghost.small', { onclick: () => setTool('navigate') }, t('Cancel')),
         ];
       } else {
         content = [
-          h('span', 'Now tap where the ceiling meets the wall, directly above the red corner, to set the room height.'),
-          h('button.secondary.small', { onclick: () => viewer.finishTrace(2.6) }, 'Use 2.6 m'),
-          h('button.ghost.small', { onclick: () => setTool('navigate') }, 'Cancel'),
+          h('span', t('Now tap where the ceiling meets the wall, directly above the red corner, to set the room height.')),
+          h('button.secondary.small', { onclick: () => viewer.finishTrace(2.6) }, t('Use 2.6 m')),
+          h('button.ghost.small', { onclick: () => setTool('navigate') }, t('Cancel')),
         ];
       }
     } else if (viewer.tool === 'measure') {
       content = [
-        h('span', viewer.pendingMeasure ? 'Tap the second point.' : 'Tap two points on any surface to measure between them.'),
-        viewer.measurements.length ? h('button.ghost.small', { onclick: () => { viewer.clearMeasurements(); updateBanner(); } }, 'Clear') : null,
+        h('span', viewer.pendingMeasure ? t('Tap the second point.') : t('Tap two points on any surface to measure between them.')),
+        viewer.measurements.length ? h('button.ghost.small', { onclick: () => { viewer.clearMeasurements(); updateBanner(); } }, t('Clear')) : null,
       ];
     } else if (viewer.tool === 'tag') {
-      content = [h('span', 'Tap a surface to pin a note there.')];
+      content = [h('span', t('Tap a surface to pin a note there.'))];
     }
     banner.hidden = !content;
     if (content) banner.append(...content.filter(Boolean));
@@ -365,8 +369,8 @@ export function createViewerChrome(container, spaceId, {
   }
 
   function openTagForm(position, e) {
-    const label = h('input', { type: 'text', placeholder: 'Label', maxLength: 80, required: true, 'aria-label': 'Tag label' });
-    const desc = h('textarea', { placeholder: 'Notes (optional)', rows: 3, 'aria-label': 'Tag notes' });
+    const label = h('input', { type: 'text', placeholder: t('Label'), maxLength: 80, required: true, 'aria-label': t('Tag label') });
+    const desc = h('textarea', { placeholder: t('Notes (optional)'), rows: 3, 'aria-label': t('Tag notes') });
     const form = h('form.tag-form', {
       onsubmit: async (ev) => {
         ev.preventDefault();
@@ -375,7 +379,7 @@ export function createViewerChrome(container, spaceId, {
         sfx.ding();
         closePopover();
       },
-    }, label, desc, h('div.row', h('button.ghost.small', { type: 'button', onclick: closePopover }, 'Cancel'), h('button.primary.small', { type: 'submit' }, 'Save tag')));
+    }, label, desc, h('div.row', h('button.ghost.small', { type: 'button', onclick: closePopover }, t('Cancel')), h('button.primary.small', { type: 'submit' }, t('Save tag'))));
     popover.replaceChildren(form);
     placePopover(e.clientX, e.clientY);
     label.focus();
@@ -385,9 +389,9 @@ export function createViewerChrome(container, spaceId, {
     const r = el.getBoundingClientRect();
     popover.replaceChildren(
       h('div.tag-view',
-        h('div.row.spread', h('strong', tag.label), h('button.icon-btn', { title: 'Close', onclick: closePopover }, icon('x'))),
+        h('div.row.spread', h('strong', tag.label), h('button.icon-btn', { title: t('Close'), onclick: closePopover }, icon('x'))),
         tag.description ? h('p', tag.description) : null,
-        onTagDelete ? h('button.ghost.small.danger', { onclick: async () => { await onTagDelete(tag); closePopover(); } }, icon('trash'), 'Delete tag') : null,
+        onTagDelete ? h('button.ghost.small.danger', { onclick: async () => { await onTagDelete(tag); closePopover(); } }, icon('trash'), t('Delete tag')) : null,
       ),
     );
     placePopover(r.left + r.width / 2, r.bottom);

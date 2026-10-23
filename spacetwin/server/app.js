@@ -7,7 +7,9 @@ import path from 'node:path';
 import { isSimplePolygon, normalizePolygon, spaceStats } from '../shared/geometry.js';
 import { Worker } from 'node:worker_threads';
 import { toFloorPlanSvg, toObj } from './exporters.js';
+import { detectProStitch, proStitch } from './proStitch.js';
 import { capturedRoomToRooms } from './roomplan.js';
+import { validatePose } from './stitch.js';
 import { newId, NotFoundError, Store } from './store.js';
 
 const PANO_TYPES = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp' };
@@ -89,7 +91,7 @@ function withStats(space) {
   return { ...space, stats: spaceStats(space) };
 }
 
-export async function createApp({ dataDir, sampleDir, webDist } = {}) {
+export async function createApp({ dataDir, sampleDir, webDist, proStitch: allowPro = true } = {}) {
   const store = new Store(dataDir);
   await store.init();
   const upload = multer({
@@ -108,6 +110,11 @@ export async function createApp({ dataDir, sampleDir, webDist } = {}) {
 
   const api = express.Router();
   const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res)).catch(next);
+
+  api.get('/capabilities', wrap(async (_req, res) => {
+    const pro = allowPro && await detectProStitch();
+    res.json({ proStitch: Boolean(pro), opencv: pro?.opencv ?? null });
+  }));
 
   api.get('/spaces', wrap(async (_req, res) => {
     const spaces = await store.list();
@@ -182,7 +189,7 @@ export async function createApp({ dataDir, sampleDir, webDist } = {}) {
       });
       res.status(201).json(withStats(space));
     } finally {
-      await Promise.all(files.map((f) => fs.rm(f.path, { force: true })));
+      await cleanup(req);
     }
   }));
 
@@ -292,29 +299,71 @@ export async function createApp({ dataDir, sampleDir, webDist } = {}) {
     res.status(201).json(withStats(space));
   }));
 
-  // Native app: posed photos (ARKit camera transform + intrinsics) stitched here into a scan.
-  api.post('/spaces/:id/captures', captureUpload.array('frames'), wrap(async (req, res) => {
+  // Posed photos (camera transform + intrinsics per photo) → panorama. Used by
+  // the native app (ARKit poses) and by the browser capture (aligned gyroscope
+  // poses). OpenCV (graph-cut seams, multi-band) when installed, else the JS blender.
+  async function stitchUpload(req, { allowBuiltin = true } = {}) {
     const files = req.files ?? [];
+    let meta;
     try {
-      await store.get(req.params.id);
-      let meta;
+      meta = JSON.parse(req.body?.meta ?? '');
+    } catch {
+      throw bad('meta must be a JSON string field');
+    }
+    if (!Array.isArray(meta.frames) || meta.frames.length !== files.length || files.length < 2) {
+      throw bad('send at least two "frames" files and one meta.frames entry (transform, intrinsics) per file, in the same order');
+    }
+    const width = meta.width === undefined ? 4096 : num(meta.width, 'width', { min: 512, max: 8192 });
+    if (width % 2) throw bad('width must be even');
+    let poses;
+    try {
+      poses = meta.frames.map(validatePose);
+    } catch (err) {
+      throw bad(`meta.frames: ${err.message}`);
+    }
+    let result = null;
+    if (allowPro && await detectProStitch()) {
       try {
-        meta = JSON.parse(req.body?.meta ?? '');
-      } catch {
-        throw bad('meta must be a JSON string field');
+        result = { stitcher: 'opencv', ...await proStitch(files.map((f, i) => ({ path: f.path, pose: poses[i] })), { width }) };
+      } catch (err) {
+        if (!allowBuiltin) throw new HttpError(500, `could not stitch: ${err.message}`);
+        console.warn(`OpenCV stitch failed, using the built-in stitcher: ${err.message}`);
       }
-      if (!Array.isArray(meta.frames) || meta.frames.length !== files.length || files.length < 2) {
-        throw bad('send at least two "frames" files and one meta.frames entry (transform, intrinsics) per file, in the same order');
-      }
-      const width = meta.width === undefined ? 4096 : num(meta.width, 'width', { min: 512, max: 8192 });
-      if (width % 2) throw bad('width must be even');
+    } else if (!allowBuiltin) {
+      throw new HttpError(501, 'the OpenCV stitcher is not installed on this server');
+    }
+    if (!result) {
       const frames = await Promise.all(files.map(async (f, i) => ({ buffer: await fs.readFile(f.path), pose: meta.frames[i] })));
-      const result = await new Promise((resolve, reject) => {
+      const out = await new Promise((resolve, reject) => {
         const worker = new Worker(new URL('./stitch-worker.js', import.meta.url), { workerData: { frames, width } });
         worker.once('message', resolve);
         worker.once('error', reject);
       });
-      if (!result.ok) throw bad(`could not stitch: ${result.error}`);
+      if (!out.ok) throw bad(`could not stitch: ${out.error}`);
+      result = { stitcher: 'builtin', ...out };
+    }
+    const position = poses.map((p) => p.position).reduce((s, p) => s.map((v, i) => v + p[i] / poses.length), [0, 0, 0]);
+    return { ...result, meta, position };
+  }
+
+  const cleanup = (req) => Promise.all((req.files ?? []).map((f) => fs.rm(f.path, { force: true })));
+
+  // Stitch without saving: the browser capture shows the result for review first.
+  api.post('/stitch', captureUpload.array('frames'), wrap(async (req, res) => {
+    try {
+      const result = await stitchUpload(req, { allowBuiltin: false });
+      res.set('X-Stitcher', result.stitcher).type('image/jpeg').send(Buffer.from(result.jpeg));
+    } finally {
+      await cleanup(req);
+    }
+  }));
+
+  // Native app: posed photos stitched here straight into a new scan.
+  api.post('/spaces/:id/captures', captureUpload.array('frames'), wrap(async (req, res) => {
+    try {
+      await store.get(req.params.id);
+      const result = await stitchUpload(req);
+      const { meta } = result;
       const [x, y, z] = result.position;
       const cameraHeight = meta.cameraHeight !== undefined
         ? num(meta.cameraHeight, 'cameraHeight', { min: 0.2, max: 5 })
@@ -330,11 +379,12 @@ export async function createApp({ dataDir, sampleDir, webDist } = {}) {
           position: { x: round3(x), z: round3(z) },
           cameraHeight: round3(cameraHeight),
           heading: 0, // posed photos are stitched directly in world orientation
+          stitcher: result.stitcher,
         });
       });
       res.status(201).json(withStats(space));
     } finally {
-      await Promise.all(files.map((f) => fs.rm(f.path, { force: true })));
+      await cleanup(req);
     }
   }));
 

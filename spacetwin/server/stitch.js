@@ -60,6 +60,14 @@ function sampleBase(f, u, v, out) {
   return out;
 }
 
+/** Check a /captures pose; returns flat column-major arrays and the camera position. */
+export function validatePose({ transform, intrinsics } = {}) {
+  const m = flatten(transform, 16, 'transform');
+  const k = flatten(intrinsics, 9, 'intrinsics');
+  if (!(k[0] > 0 && k[4] > 0)) throw new Error('intrinsics need positive focal lengths');
+  return { transform: m, intrinsics: k, position: [m[12], m[13], m[14]] };
+}
+
 function flatten(v, n, name) {
   const flat = Array.isArray(v?.[0]) ? v.flat() : v;
   if (!Array.isArray(flat) || flat.length !== n || !flat.every(Number.isFinite)) throw new Error(`${name} must have ${n} numbers`);
@@ -209,10 +217,18 @@ export function stitchPosed(frames, { width = 4096, quality = 90 } = {}) {
       out[(y * width + x) * 4 + 3] = 255;
     }
   }
-  fillHoles(out, width, height);
-  const lut = toneCurve(out);
-  for (let i = 0; i < out.length; i += 4) {
-    out[i] = lut[0][out[i]]; out[i + 1] = lut[1][out[i + 1]]; out[i + 2] = lut[2][out[i + 2]];
+  return { jpeg: finishPanorama(out, width, height, quality), width, height, gains };
+}
+
+/**
+ * Shared finish for every server stitcher: fill the uncovered caps (alpha 0),
+ * apply the tone curve, encode. Modifies `rgba` in place; returns JPEG bytes.
+ */
+export function finishPanorama(rgba, width, height, quality = 90) {
+  fillHoles(rgba, width, height);
+  const lut = toneCurve(rgba);
+  for (let i = 0; i < rgba.length; i += 4) {
+    rgba[i] = lut[0][rgba[i]]; rgba[i + 1] = lut[1][rgba[i + 1]]; rgba[i + 2] = lut[2][rgba[i + 2]];
   }
-  return { jpeg: jpeg.encode({ data: out, width, height }, quality).data, width, height, gains };
+  return jpeg.encode({ data: rgba, width, height }, quality).data;
 }

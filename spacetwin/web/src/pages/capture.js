@@ -37,6 +37,8 @@ const STEPS = [
   ['Balancing exposure', 'Evening out the light'],
   ['Blending', 'Blending into one 360°'],
 ];
+// Only when the server has OpenCV: seams routed around objects + multi-band blend
+const PRO_STEP = ['Pro finish', 'Hiding the seams (pro stitcher)'];
 
 /**
  * Capture flow, all on the phone:
@@ -144,7 +146,9 @@ export async function renderCapture(app, spaceId) {
   async function process(frames, opts, wrap, mosaic) {
     teardown = () => mosaic.dispose();
     mosaic.startOrbit();
-    const list = h('ol.steps', STEPS.map(([key, label]) => h('li', { dataset: { step: key } }, h('span.step-dot'), label)));
+    const pro = await api.capabilities().then((c) => c.proStitch, () => false);
+    const steps = pro ? [...STEPS, PRO_STEP] : STEPS;
+    const list = h('ol.steps', steps.map(([key, label]) => h('li', { dataset: { step: key } }, h('span.step-dot'), label)));
     const bar = h('div.progress', h('div'));
     const card = h('div.capture-processing',
       h('h2', 'Building your 360°'),
@@ -153,23 +157,45 @@ export async function renderCapture(app, spaceId) {
     );
     wrap.replaceChildren(wrap.querySelector('.mosaic-canvas'), card);
     let current = null;
+    const progress = (step, f) => {
+      bar.firstChild.style.width = `${Math.round(f * 100)}%`;
+      if (step === current || !steps.some(([k]) => k === step)) return;
+      current = step;
+      let reached = false;
+      for (const li of list.children) {
+        const here = li.dataset.step === step;
+        li.classList.toggle('active', here);
+        li.classList.toggle('done', !here && !reached);
+        if (here) reached = true;
+      }
+      sfx.tap();
+    };
     try {
+      // the phone aligns the photos (and makes a quick panorama as a fallback)
       const result = await stitchPanorama(frames, {
         initialVfov: GUIDE_VFOV,
-        onProgress: (step, f) => {
-          bar.firstChild.style.width = `${Math.round(f * 100)}%`;
-          if (step === current || !STEPS.some(([k]) => k === step)) return;
-          current = step;
-          let reached = false;
-          for (const li of list.children) {
-            const here = li.dataset.step === step;
-            li.classList.toggle('active', here);
-            li.classList.toggle('done', !here && !reached);
-            if (here) reached = true;
-          }
-          sfx.tap();
-        },
+        onProgress: (step, f) => progress(step, pro ? f * 0.45 : f),
       });
+      if (pro) {
+        // the server blends them again with seams that avoid ghosting
+        progress(PRO_STEP[0], 0.5);
+        const started = performance.now();
+        const tick = setInterval(() => {
+          // about a minute for 30 photos on a laptop; ease towards 97%
+          const t = (performance.now() - started) / 60000;
+          bar.firstChild.style.width = `${Math.round(100 * (0.5 + 0.47 * (1 - Math.exp(-2.5 * t))))}%`;
+        }, 250);
+        try {
+          result.blob = await api.proStitch(frames, result.quaternions, result.vfov, result.width);
+          result.stitcher = 'opencv';
+        } catch (err) {
+          console.warn('pro stitch failed, keeping the phone panorama', err);
+          toast('The pro stitcher was unavailable; using the phone panorama.');
+        } finally {
+          clearInterval(tick);
+        }
+        bar.firstChild.style.width = '100%';
+      }
       window.__spacetwinLastStitch = { result, frames }; // inspection handle for tests/debugging
       for (const li of list.children) { li.classList.remove('active'); li.classList.add('done'); }
       sfx.ding();

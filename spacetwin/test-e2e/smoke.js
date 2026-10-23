@@ -143,6 +143,8 @@ try {
   await page.goto(`${base}/#/view/${fresh.id}`);
   await waitTextures();
   await settle(700);
+  // a property without description or contact must not show stray "null" text
+  assert.doesNotMatch(await page.locator('aside.listing').innerText(), /\bnull\b|\bundefined\b/);
   await page.screenshot({ path: path.join(shots, '10-showcase.png') });
 
   step('floor plan SVG export');

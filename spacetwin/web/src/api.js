@@ -22,6 +22,30 @@ export const api = {
   deleteScan: (id, scanId) => request('DELETE', `/spaces/${id}/scans/${scanId}`),
   putRooms: (id, rooms) => request('PUT', `/spaces/${id}/rooms`, { rooms }),
   createTag: (id, tag) => request('POST', `/spaces/${id}/tags`, tag),
+  capabilities: () => request('GET', '/capabilities'),
+
+  /**
+   * Re-stitch captured photos on the server with OpenCV, using the rotations
+   * and lens the phone already solved. Resolves to the panorama JPEG blob.
+   * Poses use the native-capture format: camera → world matrix and pinhole
+   * intrinsics, both column-major.
+   */
+  async proStitch(frames, quaternions, vfov, width) {
+    const form = new FormData();
+    const poses = frames.map((f, i) => {
+      const ty = Math.tan((vfov * Math.PI) / 360), tx = ty * (f.width / f.height);
+      const fx = f.width / 2 / tx, fy = f.height / 2 / ty;
+      form.append('frames', f.blob, `f${i}.jpg`);
+      return { transform: rotationMatrix(quaternions[i]), intrinsics: [fx, 0, 0, 0, fy, 0, f.width / 2 - 0.5, f.height / 2 - 0.5, 1] };
+    });
+    form.append('meta', JSON.stringify({ width, frames: poses }));
+    const res = await fetch('/api/stitch', { method: 'POST', body: form });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error ?? `stitch failed (${res.status})`);
+    }
+    return res.blob();
+  },
   deleteTag: (id, tagId) => request('DELETE', `/spaces/${id}/tags/${tagId}`),
 
   /** Upload panoramas with progress (fetch has no upload progress events). */
@@ -46,3 +70,13 @@ export const api = {
 
 export const panoUrl = (spaceId) => (scan) => `/api/spaces/${spaceId}/scans/${scan.id}/pano?f=${scan.file}`;
 export const exportUrl = (spaceId, file) => `/api/spaces/${spaceId}/export/${file}`;
+
+/** Column-major 4×4 rotation matrix of a unit quaternion {x, y, z, w}. */
+function rotationMatrix({ x, y, z, w }) {
+  return [
+    1 - 2 * (y * y + z * z), 2 * (x * y + z * w), 2 * (x * z - y * w), 0,
+    2 * (x * y - z * w), 1 - 2 * (x * x + z * z), 2 * (y * z + x * w), 0,
+    2 * (x * z + y * w), 2 * (y * z - x * w), 1 - 2 * (x * x + y * y), 0,
+    0, 0, 0, 1,
+  ];
+}

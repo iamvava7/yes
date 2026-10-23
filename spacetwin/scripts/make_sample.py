@@ -65,11 +65,7 @@ def render(room):
 
 def render_rows(room, r0, r1):
     """Render output rows [r0, r1) at SS× resolution and box-filter them down."""
-    x0, x1, z0, z1 = room["box"]
-    h = room["height"]
     s = room["scan"]
-    cx, cy, cz = s["x"], s["cameraHeight"], s["z"]
-
     u = (np.arange(W * SS) + 0.5) / (W * SS)
     v = 1.0 - (np.arange(r0 * SS, r1 * SS) + 0.5) / (H * SS)
     uu, vv = np.meshgrid(u, v)
@@ -78,6 +74,16 @@ def render_rows(room, r0, r1):
     dx = np.cos(lat) * np.sin(lon)
     dy = np.sin(lat)
     dz = -np.cos(lat) * np.cos(lon)
+    img = shade(room, (s["x"], s["cameraHeight"], s["z"]), dx, dy, dz)
+    n = r1 - r0
+    return img.reshape(n, SS, W, SS, 3).mean(axis=(1, 3))
+
+
+def shade(room, origin, dx, dy, dz):
+    """Colour seen along unit rays (dx, dy, dz) from a point inside the room."""
+    x0, x1, z0, z1 = room["box"]
+    h = room["height"]
+    cx, cy, cz = origin
 
     def exit_t(d, c, lo, hi):
         with np.errstate(divide="ignore"):
@@ -90,7 +96,7 @@ def render_rows(room, r0, r1):
     t = np.minimum(np.minimum(tx, ty), tz)
     px, py, pz = cx + dx * t, cy + dy * t, cz + dz * t
 
-    img = np.zeros(uu.shape + (3,))
+    img = np.zeros(dx.shape + (3,))
     hit_floor = (t == ty) & (dy < 0)
     hit_ceil = (t == ty) & (dy > 0)
     hit_x = (t == tx) & ~hit_floor & ~hit_ceil
@@ -134,8 +140,7 @@ def render_rows(room, r0, r1):
 
     # Soft distance shading for depth cues.
     img = img * (1.0 - np.clip(t / 25.0, 0, 0.25))[..., None]
-    n = r1 - r0
-    return img.reshape(n, SS, W, SS, 3).mean(axis=(1, 3))
+    return img
 
 
 def main():

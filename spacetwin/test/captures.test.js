@@ -9,22 +9,29 @@ import { after, before, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import jpeg from 'jpeg-js';
 import { createApp } from '../server/app.js';
+import { detectProStitch } from '../server/proStitch.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sampleDir = path.join(root, 'assets', 'sample');
-let server, base, dataDir, pano;
+let server, base, builtinServer, builtinBase, dataDir, pano, hasOpenCv;
+
+async function listen(app) {
+  const s = app.listen(0);
+  await new Promise((r) => s.once('listening', r));
+  return [s, `http://127.0.0.1:${s.address().port}/api`];
+}
 
 before(async () => {
   dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'spacetwin-captures-'));
-  const app = await createApp({ dataDir, sampleDir });
-  server = app.listen(0);
-  await new Promise((r) => server.once('listening', r));
-  base = `http://127.0.0.1:${server.address().port}/api`;
+  [server, base] = await listen(await createApp({ dataDir, sampleDir }));
+  [builtinServer, builtinBase] = await listen(await createApp({ dataDir, sampleDir, proStitch: false }));
+  hasOpenCv = Boolean(await detectProStitch());
   pano = jpeg.decode(await fs.readFile(path.join(sampleDir, 'scan-1.jpg')), { useTArray: true, maxMemoryUsageInMB: 512 });
 });
 
 after(async () => {
   server.close();
+  builtinServer.close();
   await fs.rm(dataDir, { recursive: true, force: true });
 });
 
@@ -63,7 +70,7 @@ function renderFrame(t, exposure) {
   return jpeg.encode({ data: out, width: W, height: H }, 92).data;
 }
 
-test('posed photos are stitched into a scan placed where they were taken', async () => {
+async function stitchAndCompare(base, expectedStitcher) {
   const { id } = await (await fetch(`${base}/spaces`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"name":"Native"}' })).json();
   const position = [2, 0.1, 2.2]; // ARKit y=0 is wherever the session started
   const floorY = -1.4;
@@ -87,6 +94,7 @@ test('posed photos are stitched into a scan placed where they were taken', async
   assert.deepEqual(scan.position, { x: 2, z: 2.2 });
   assert.equal(scan.cameraHeight, 1.5); // 0.1 - (-1.4)
   assert.equal(scan.width, 1024);
+  assert.equal(scan.stitcher, expectedStitcher);
 
   const stitched = jpeg.decode(Buffer.from(await (await fetch(`${base}/spaces/${id}/scans/${scan.id}/pano`)).arrayBuffer()), { useTArray: true });
   // compare structure after fitting out global tone (the finish changes it on purpose)
@@ -110,6 +118,37 @@ test('posed photos are stitched into a scan placed where they were taken', async
   const err = sum / n;
   assert.ok(err < 6, `stitched panorama differs from the original by ${err.toFixed(2)}/255 after tone fit`);
   assert.ok(fit.every((f) => f.a > 0.75 && f.a < 1.25), 'tone finish should stay gentle');
+}
+
+test('posed photos are stitched into a scan placed where they were taken (built-in stitcher)', () => stitchAndCompare(builtinBase, 'builtin'));
+
+test('posed photos are stitched with OpenCV seams and multi-band blending when installed', async (t) => {
+  if (!hasOpenCv) return t.skip('Python with OpenCV is not installed (pip install opencv-python-headless)');
+  await stitchAndCompare(base, 'opencv');
+  const caps = await (await fetch(`${base}/capabilities`)).json();
+  assert.equal(caps.proStitch, true);
+});
+
+test('/stitch returns a panorama without saving it, and needs OpenCV', async () => {
+  const form = new FormData();
+  const frames = [];
+  for (let i = 0; i < 8; i++) {
+    const t = pose(-i * 45, 0, [0, 0, 0]);
+    form.append('frames', new Blob([renderFrame(t, 1)], { type: 'image/jpeg' }), `f${i}.jpg`);
+    frames.push({ transform: t, intrinsics: [FX, 0, 0, 0, FY, 0, CX, CY, 1] });
+  }
+  form.append('meta', JSON.stringify({ width: 512, frames }));
+  const res = await fetch(`${hasOpenCv ? base : builtinBase}/stitch`, { method: 'POST', body: form });
+  if (!hasOpenCv) {
+    assert.equal(res.status, 501);
+    return;
+  }
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('x-stitcher'), 'opencv');
+  const img = jpeg.decode(Buffer.from(await res.arrayBuffer()));
+  assert.deepEqual([img.width, img.height], [512, 256]);
+  const off = await (await fetch(`${builtinBase}/stitch`, { method: 'POST', body: form })).json();
+  assert.match(off.error, /OpenCV/);
 });
 
 test('bad capture uploads are rejected with a reason', async () => {
