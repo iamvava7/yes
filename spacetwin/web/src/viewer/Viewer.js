@@ -116,6 +116,7 @@ export class Viewer {
     for (const scan of space.scans) this.loadTexture(scan);
     this.buildRooms();
     this.buildMarkers();
+    this.buildHotspots();
     this.buildTags();
     this.refreshProjections();
     if (first) {
@@ -223,9 +224,47 @@ export class Viewer {
   updateMarkerVisibility() {
     for (const g of this.markers.children) {
       const isCurrent = g.userData.scanId === this.currentScanId;
-      g.visible = this.mode !== 'inside' || !isCurrent;
+      // inside, DOM hotspots (when enabled) stand in for the floor rings
+      g.visible = this.mode !== 'inside' ? true : !isCurrent && !this.hotspotsOn;
       const color = this.mode !== 'inside' && isCurrent ? 0x4fb3ff : 0xffffff;
       g.children.forEach((m) => m.material.color.setHex(color));
+    }
+  }
+
+  /**
+   * Walk points as labelled glass rings over the panorama (the tour page's
+   * look) instead of rings painted on the floor. `label(scan)` builds the
+   * pill above each ring.
+   */
+  setHotspots(on, label) {
+    this.hotspotsOn = on;
+    this.hotspotLabel = label;
+    if (this.space) this.buildHotspots();
+    this.updateMarkerVisibility();
+  }
+
+  buildHotspots() {
+    this.overlay.querySelectorAll('.hotspot').forEach((el) => el.remove());
+    this.hotspotEls = [];
+    if (!this.hotspotsOn) return;
+    for (const scan of this.space.scans) {
+      const el = document.createElement('button');
+      el.className = 'hotspot';
+      el.type = 'button';
+      el.dataset.scanId = scan.id;
+      el.setAttribute('aria-label', scan.name);
+      const pill = this.hotspotLabel?.(scan);
+      if (pill) el.append(pill);
+      const ring = document.createElement('span');
+      ring.className = 'hotspot-ring';
+      ring.innerHTML = '<span class="hotspot-dot"></span>';
+      el.append(ring);
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.goToScan(scan.id);
+      });
+      this.overlay.appendChild(el);
+      this.hotspotEls.push({ scan, el, pos: new THREE.Vector3(scan.position.x, 0.02, scan.position.z), occluded: false });
     }
   }
 
@@ -865,6 +904,29 @@ export class Viewer {
       }
       place(t.el, t.pos);
       if (t.occluded) t.el.style.display = 'none';
+    }
+    // Hotspots: other capture points in view, nearest first, not behind a wall.
+    if (this.hotspotEls?.length) {
+      const cam = this.activeCamera();
+      for (const hs of this.hotspotEls) {
+        const dist = cam.position.distanceTo(hs.pos);
+        const show = this.mode === 'inside' && !this.transitioning && hs.scan.id !== this.currentScanId && dist < 12;
+        if (show && this.occlusionTick === 0) {
+          const dir = hs.pos.clone().sub(cam.position);
+          this.raycaster.set(cam.position, dir.normalize());
+          const hit = this.raycaster.intersectObjects(this.rooms.children, false)[0];
+          hs.occluded = !!hit && hit.distance < dist - 0.25;
+        }
+        if (!show) {
+          hs.el.style.display = 'none';
+          continue;
+        }
+        place(hs.el, hs.pos);
+        // behind a wall: still there (it is the way to the next room), but faded
+        hs.el.classList.toggle('behind', hs.occluded);
+        // nearer points draw larger, like objects in the room
+        hs.el.style.setProperty('--hs-scale', Math.max(0.8, Math.min(1, 3.2 / dist)).toFixed(3));
+      }
     }
     this.positionRoomLabels(place);
   }

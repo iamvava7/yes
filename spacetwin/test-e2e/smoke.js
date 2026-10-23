@@ -47,7 +47,7 @@ const clickWorld = async (p) => {
   await settle(120);
 };
 const waitTextures = () => page.waitForFunction(() => {
-  const v = document.querySelector('.viewer-stage')?.viewer;
+  const v = document.querySelector('.viewer-stage, .tv-stage')?.viewer;
   return v && v.space && [...v.textures.values()].length === v.space.scans.length && [...v.textures.values()].every((t) => t.ready);
 });
 
@@ -144,7 +144,9 @@ try {
   await waitTextures();
   await settle(700);
   // a property without description or contact must not show stray "null" text
-  assert.doesNotMatch(await page.locator('aside.listing').innerText(), /\bnull\b|\bundefined\b/);
+  await page.locator('.tv-toggle').click();
+  await page.waitForTimeout(500);
+  assert.doesNotMatch(await page.locator('.tv-panel').innerText(), /\bnull\b|\bundefined\b/);
   await page.screenshot({ path: path.join(shots, '10-showcase.png') });
 
   step('floor plan SVG export');

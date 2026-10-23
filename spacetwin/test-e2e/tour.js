@@ -1,5 +1,6 @@
-// End-to-end test of the shared tour page: listing panel, minimap, room sign,
-// guided tour, snapshot, share and sound, on desktop and phone sizes.
+// End-to-end test of the shared tour page (Figma "Web · 3D Tour viewer"):
+// loading card, hotspots, details panel, floor-plan map, view modes, measuring,
+// save/share, the phone card and the VerifiCasa listing frame.
 // Run `npm run build` first.
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
@@ -31,96 +32,92 @@ try {
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
   const viewer = () => page.evaluate(() => {
-    const v = document.querySelector('.viewer-stage').viewer;
+    const v = document.querySelector('.tv-stage').viewer;
     return { scan: v.currentScanId, mode: v.mode, yaw: v.yaw, transitioning: v.transitioning };
   });
 
-  step('listing beside the tour');
+  const stageViewer = (fn) => page.evaluate(fn);
+  const ready = (p) => p.waitForSelector('.tv-loading', { state: 'detached', timeout: 30000 });
+
+  step('loading card, then the tour');
   await page.goto(`${base}/#/view/${space.id}`);
-  await page.waitForFunction(() => [...(document.querySelector('.viewer-stage')?.viewer?.textures.values() ?? [])].every((t) => t.ready));
-  assert.match(await page.locator('.price').textContent(), /285,000/);
-  assert.match(await page.locator('.facts-row').textContent(), /1 bed.*1 bath.*34\.0 m²/);
-  assert.equal(await page.locator('.room-list li').count(), 2);
-  assert.ok(await page.locator('.minimap').isVisible(), 'minimap shows inside');
-
-  step('room sign when entering a room');
-  await page.getByRole('button', { name: /Bedroom/ }).first().click();
-  await page.waitForFunction(() => document.querySelector('.room-sign.show .room-sign-name')?.textContent === 'Bedroom');
-  assert.match(await page.locator('.room-sign-area').textContent(), /14\.0 m² · 151 ft²/);
-
-  step('minimap tap walks to the nearest spot');
-  const box = await page.locator('.minimap').boundingBox();
-  await page.mouse.click(box.x + box.width * 0.3, box.y + box.height * 0.5); // left room on the map
-  await page.waitForTimeout(1300);
+  await ready(page);
   assert.equal((await viewer()).scan, space.scans[0].id);
+  assert.equal(await page.locator('.tv-rooms .tv-room').count(), 2);
+  assert.equal(await page.locator('.tv-rooms [aria-current="true"] span').textContent(), 'Living room');
+  assert.ok(await page.locator('.tv-hint').isVisible(), 'drag hint on first view');
 
-  step('guided tour moves between spots and looks around');
-  const before = await viewer();
-  await page.getByRole('button', { name: 'Play guided tour' }).click();
-  await page.waitForTimeout(2500);
-  const mid = await viewer();
-  assert.notEqual(mid.yaw, before.yaw, 'tour pans the view');
-  await page.waitForFunction((id) => document.querySelector('.viewer-stage').viewer.currentScanId !== id, before.scan, { timeout: 15000 });
-  await page.getByRole('button', { name: 'Pause guided tour' }).click();
-  const paused = await viewer();
-  await page.waitForTimeout(800);
-  assert.equal((await viewer()).yaw, paused.yaw, 'pause stops the tour');
+  step('a hotspot walks to the next room');
+  const hotspot = page.locator('.hotspot[data-scan-id="' + space.scans[1].id + '"]');
+  await hotspot.locator('.hotspot-ring').waitFor();
+  assert.equal(await hotspot.locator('.hotspot-label span').textContent(), 'Bedroom');
+  await hotspot.locator('.hotspot-ring').click(); // faded (behind the wall) but still a way through
+  await page.waitForFunction((id) => document.querySelector('.tv-stage').viewer.currentScanId === id && !document.querySelector('.tv-stage').viewer.transitioning, space.scans[1].id);
+  assert.equal(await page.locator('.tv-rooms [aria-current="true"] span').textContent(), 'Bedroom');
 
-  step('snapshot downloads a photo');
-  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Save this view as a photo' }).click()]);
-  const file = await download.path();
-  const head = (await fs.readFile(file)).subarray(0, 3);
-  assert.deepEqual([...head], [0xff, 0xd8, 0xff], 'snapshot is a JPEG');
-  assert.match(download.suggestedFilename(), /snapshot\.jpg$/);
+  step('details panel: title, facts, capturer, floor-plan map');
+  await page.getByRole('button', { name: 'Show details' }).click();
+  await page.waitForFunction(() => document.querySelector('.tv').dataset.open === 'true');
+  assert.equal(await page.locator('.tv-title h1').textContent(), 'Unit 4B, sample building');
+  assert.match(await page.locator('.tv-sub').textContent(), /1 bed · 34\.0 m²/);
+  assert.match(await page.locator('.tv-captor').textContent(), /Captured by.*SpaceTwin demo/);
+  assert.equal(await page.locator('.tv-map-count').textContent(), 'Room 2 of 2');
+  await page.locator('.tv-map text', { hasText: 'Living room' }).click();
+  await page.waitForFunction((id) => document.querySelector('.tv-stage').viewer.currentScanId === id && !document.querySelector('.tv-stage').viewer.transitioning, space.scans[0].id);
+  await page.screenshot({ path: path.join(shots, 't1-details.png') });
 
-  step('share shows link and embed code');
-  await page.getByRole('button', { name: 'Share or embed this tour' }).click();
-  const link = await page.getByLabel('Link', { exact: true }).inputValue();
-  assert.equal(link, `${base}/#/view/${space.id}`);
-  assert.equal(await page.getByLabel('Link for a VerifiCasa listing (Link Tur 3D)').inputValue(), `${base}/3D/${space.id}`);
-  assert.match(await page.getByLabel('Embed on a website').inputValue(), new RegExp(`^<iframe src="${base}/3D/${space.id}"`));
-  await page.locator('.share').getByRole('button', { name: 'Copy' }).first().click();
-  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), link);
-  await page.screenshot({ path: path.join(shots, 't1-share.png') });
+  step('view modes and measuring');
+  await page.locator('.tv-modes [data-mode="dollhouse"]').click();
+  await page.waitForFunction(() => document.querySelector('.tv-stage').viewer.mode === 'dollhouse');
+  assert.equal(await page.locator('.tv-modes [data-mode="dollhouse"]').getAttribute('aria-pressed'), 'true');
+  await page.locator('.tv-modes [data-mode="floorplan"]').click();
+  await page.waitForFunction(() => document.querySelector('.tv-stage').viewer.mode === 'floorplan');
+  await page.locator('.tv-modes [data-mode="inside"]').click();
+  await page.waitForFunction(() => document.querySelector('.tv-stage').viewer.mode === 'inside' && !document.querySelector('.tv-stage').viewer.transitioning);
+  await page.getByRole('button', { name: 'Measure' }).click();
+  assert.equal(await stageViewer(() => document.querySelector('.tv-stage').viewer.tool), 'measure');
+  assert.match(await page.locator('.tv-hint').textContent(), /Tap two points/);
+  await page.getByRole('button', { name: 'Measure' }).click();
+  assert.equal(await stageViewer(() => document.querySelector('.tv-stage').viewer.tool), 'navigate');
 
-  step('sound toggle is remembered');
-  await page.getByRole('button', { name: 'Turn sound off' }).click();
+  step('save, copy link, close');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  assert.equal(await page.locator('.tv-action[aria-pressed="true"]').count(), 1);
+  await page.getByRole('button', { name: 'Copy link' }).click();
+  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), `${base}/3D/${space.id}`);
   await page.reload();
-  await page.getByRole('button', { name: 'Turn sound on' }).waitFor();
+  await ready(page);
+  await page.getByRole('button', { name: 'Show details' }).click();
+  assert.equal(await page.getByRole('button', { name: 'Saved' }).getAttribute('aria-pressed'), 'true', 'saved is remembered');
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => document.querySelector('.tv').dataset.open === 'false');
 
-  step('measure toggles off by tapping it again');
-  await page.getByRole('button', { name: 'Measure' }).click();
-  assert.equal(await page.evaluate(() => document.querySelector('.viewer-stage').viewer.tool), 'measure');
-  await page.getByRole('button', { name: 'Measure' }).click();
-  assert.equal(await page.evaluate(() => document.querySelector('.viewer-stage').viewer.tool), 'navigate');
-
-  step('phone: listing sheet slides up');
+  step('phone: details card');
   const phone = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
   phone.on('pageerror', (e) => errors.push(e.message));
   await phone.goto(`${base}/#/view/${space.id}`);
-  await phone.waitForFunction(() => [...(document.querySelector('.viewer-stage')?.viewer?.textures.values() ?? [])].every((t) => t.ready));
-  await phone.waitForTimeout(500);
-  const closedTop = (await phone.locator('.listing').boundingBox()).y;
-  await phone.locator('.sheet-handle').tap();
-  assert.match(await phone.locator('.listing').getAttribute('class'), /\bopen\b/);
-  // wait for the slide-up to finish (software rendering here is slow)
-  await phone.waitForFunction((closed) => document.querySelector('.listing').getBoundingClientRect().top < closed - 300, closedTop, { timeout: 5000 });
+  await ready(phone);
+  assert.equal(await phone.locator('.tv-rooms').isVisible(), false, 'no thumbnail strip on phones');
+  await phone.locator('.tv-toggle').tap();
+  await phone.waitForTimeout(600);
+  const card = await phone.locator('.tv-panel').boundingBox();
+  assert.ok(card.x >= 0 && card.x + card.width <= 390 && card.y + card.height <= 844, 'card fits the screen');
+  assert.equal(await phone.locator('.tv-room-chip').count(), 2);
   assert.equal(await phone.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'no sideways scroll');
-  const dock = await phone.locator('.viewer-dock').boundingBox();
-  assert.ok(dock.x >= 0 && dock.x + dock.width <= 390, 'tour controls fit the screen');
-  await phone.screenshot({ path: path.join(shots, 't2-phone-sheet.png') });
+  await phone.screenshot({ path: path.join(shots, 't2-phone-card.png') });
 
   step('VerifiCasa listing frame: /3D/<id> in Romanian');
   const listingPage = await browser.newPage({ viewport: { width: 900, height: 560 }, locale: 'ro-RO' });
   listingPage.on('pageerror', (e) => errors.push(e.message));
   await listingPage.setContent(`<iframe src="${base}/3D/${space.id.toUpperCase()}" width="860" height="520" style="border:0"></iframe>`);
   const frame = listingPage.frameLocator('iframe');
-  await frame.locator('.viewer-stage canvas').waitFor();
-  await frame.getByRole('tab', { name: 'Machetă 3D' }).waitFor();
-  assert.equal(await frame.locator('aside.listing').count(), 0, 'the listing page shows the details, not the frame');
-  assert.equal(await frame.locator('.embed-badge').getAttribute('href'), `${base}/#/view/${space.id}`);
+  await frame.locator('.tv-stage canvas').waitFor();
+  await frame.locator('.tv-loading').waitFor({ state: 'detached', timeout: 30000 });
+  assert.equal(await frame.locator('.tv-listing').count(), 0, 'no link back to the listing it sits in');
+  await frame.locator('.tv-toggle').click();
+  await frame.locator('.tv-modes [data-mode="dollhouse"]', { hasText: 'Machetă 3D' }).waitFor();
   assert.equal(await frame.locator('html').getAttribute('lang'), 'ro');
-  await frame.getByRole('tab', { name: 'Plan' }).click();
+  await frame.locator('.tv-modes [data-mode="floorplan"]', { hasText: 'Plan' }).click();
   await listingPage.waitForTimeout(1200);
   await listingPage.screenshot({ path: path.join(shots, 't3-verificasa-frame.png') });
 
