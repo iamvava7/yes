@@ -68,13 +68,18 @@ Please note anything confusing, slow, broken or ugly, with the phone model.
 **2. Capture a real room with the phone camera**
 - Go back to the home page → **New property** → **Capture**.
 - Allow camera and motion access.
-- Stand in the middle of a room. Follow the dots: aim the ring at each white
-  dot and hold still until it shoots (30 shots, about a minute). Turn around
-  the phone rather than walking around.
-- Wait for the stitching (about 30 seconds), look at the result, and tap
-  **Save spot**. Capture 1–2 more spots, 1.5–3 m apart.
-- Tell us: did it shoot easily? Are there visible seams, blur or ghosting?
-  What did the quality score say?
+- Stand in the middle of a room. Put the white ring on the orange dot and
+  hold still until it shoots. Each photo appears in place around you. Turn
+  around the phone rather than walking around. 28 dots, about a minute.
+- At the end it offers the ceiling and the floor (optional); or tap **✓**.
+  **↶** undoes the last photo.
+- Watch it build the 360°, look around the result, and tap **Save spot**.
+- Tap **Outline this room**: turn until the crosshair is on each floor corner
+  and tap **Add corner**, then **Close room**, then aim at the ceiling above
+  the first corner and tap **Set height**. You then see the 3D model and floor
+  plan.
+- Tell us: did it shoot easily? Did it ever get stuck? Are there visible
+  seams, blur or ghosting? What did the quality chip say?
 
 **3. Build the floor plan** (easier on the computer, at
 `https://localhost:5173`)

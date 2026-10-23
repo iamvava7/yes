@@ -196,7 +196,7 @@ export class Viewer {
       caps.userData.room = room;
       this.wallCaps.add(caps);
     }
-    this.sky.visible = this.mode === 'inside' && this.space.rooms.length === 0;
+    this.applyPanoOnly();
     this.wallCaps.visible = this.mode !== 'inside';
   }
 
@@ -268,6 +268,24 @@ export class Viewer {
     return new THREE.Vector3(-Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch));
   }
 
+  /**
+   * Show just the panorama around the current spot, without room geometry or
+   * other spots (used when outlining a new room: existing rooms would bend
+   * the photo where the new room isn't modelled yet).
+   */
+  setPanoOnly(on) {
+    this.panoOnly = on;
+    this.applyPanoOnly();
+  }
+
+  applyPanoOnly() {
+    if (!this.space) return;
+    this.sky.visible = this.panoOnly || (this.mode === 'inside' && this.space.rooms.length === 0);
+    this.rooms.visible = !this.panoOnly;
+    this.markers.visible = !this.panoOnly;
+    this.wallCaps.visible = !this.panoOnly && this.mode !== 'inside';
+  }
+
   /** Point the inside view (used by the guided tour). */
   setLook(yaw, pitch = this.pitch) {
     this.yaw = yaw;
@@ -302,9 +320,13 @@ export class Viewer {
     };
   }
 
+  /** Orbit pose that frames the whole space, whatever the view's shape. */
   dollhousePose() {
     const { center, size } = this.spaceCenterAndSize();
-    const dist = size * 1.25 + 3;
+    const vfov = (this.camera.fov * Math.PI) / 180;
+    const hfov = 2 * Math.atan(Math.tan(vfov / 2) * this.camera.aspect);
+    const radius = size * 0.62 + 0.8; // about half the diagonal, plus a margin
+    const dist = radius / Math.sin(Math.min(vfov, hfov) / 2);
     const dir = new THREE.Vector3(0.55, 0.85, 1).normalize();
     return { position: center.clone().addScaledVector(dir, dist), target: center.clone().setY(0.8) };
   }
@@ -330,7 +352,7 @@ export class Viewer {
     this.mode = mode;
     this.orbit.enabled = mode === 'dollhouse';
     this.planControls.enabled = mode === 'floorplan';
-    this.sky.visible = mode === 'inside' && this.space.rooms.length === 0;
+    this.applyPanoOnly();
     this.wallCaps.visible = mode !== 'inside';
     this.cursor.visible = false;
     this.updateMarkerVisibility();
@@ -470,6 +492,61 @@ export class Viewer {
     this.updateAnnotations();
     this.cb.onTraceProgress?.(null);
     this.cb.onTraceComplete?.({ points, height: round(height) });
+  }
+
+  // Centre-aim tracing for phones: turn until the fixed crosshair is on a
+  // corner, then add it. Fingers don't cover the corner and taps can't miss.
+
+  aimCenter() {
+    this.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.activeCamera());
+  }
+
+  /** Where the crosshair meets the floor, or null when aiming at or above the horizon. */
+  centerFloorPoint() {
+    this.aimCenter();
+    const p = new THREE.Vector3();
+    return this.raycaster.ray.intersectPlane(this.floorPlane, p) ? p : null;
+  }
+
+  /** Add the floor corner under the crosshair. Returns false if the crosshair isn't on the floor. */
+  traceAddAtCenter() {
+    if (!this.trace || this.trace.stage !== 'floor') return false;
+    const p = this.centerFloorPoint();
+    if (!p) return false;
+    this.trace.points.push(p);
+    this.updateAnnotations();
+    this.cb.onTraceProgress?.(this.trace);
+    return true;
+  }
+
+  traceUndo() {
+    if (!this.trace) return;
+    if (this.trace.stage === 'ceiling') this.trace.stage = 'floor';
+    else this.trace.points.pop();
+    this.updateAnnotations();
+    this.cb.onTraceProgress?.(this.trace);
+  }
+
+  /** Ceiling height from the crosshair aimed above the first corner; finishes the trace. */
+  traceCeilingAtCenter() {
+    if (this.trace?.stage !== 'ceiling') return null;
+    this.aimCenter();
+    const h = this.ceilingHeightFromRay();
+    if (h) this.finishTrace(h);
+    return h;
+  }
+
+  /** Live preview of the corner/height under the crosshair (when centreAim is on). */
+  updateCenterAim() {
+    const t = this.trace;
+    if (!t) return;
+    if (t.stage === 'floor') {
+      t.cursor = this.centerFloorPoint();
+    } else {
+      this.aimCenter();
+      t.cursor = { height: this.ceilingHeightFromRay() };
+    }
+    this.updateAnnotations();
   }
 
   // ---------------------------------------------------------------- input
@@ -838,6 +915,7 @@ export class Viewer {
     }
     if (this.orbit.enabled && !this.transitioning) this.orbit.update();
     if (this.planControls.enabled) this.planControls.update();
+    if (this.centerAim && this.trace && !this.transitioning) this.updateCenterAim();
     if (this.space) this.positionOverlay();
     this.renderer.render(this.scene, this.activeCamera());
   }

@@ -1,6 +1,6 @@
 {
-  "name": "SpaceTwin",
-  "short_name": "SpaceTwin",
+  "name": "VerifiCasa 3D",
+  "short_name": "VerifiCasa",
   "description": "Capture 360° spots with your phone and share walkable 3D tours.",
   "start_url": "/",
   "display": "standalone",

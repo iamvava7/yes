@@ -9,6 +9,7 @@
 //   transform   camera → world, camera looks down -z, x right, y up
 //   intrinsics  3×3 [fx 0 0, 0 fy 0, cx cy 1]; pixel v grows downward
 import jpeg from 'jpeg-js';
+import { fillHoles } from '../shared/fill.js';
 import { toneCurve } from '../shared/tone.js';
 
 const BASE_SCALE = 16; // base layer = photo averaged over 16×16 blocks (as the GPU stitcher's mip level 4)
@@ -187,7 +188,7 @@ export function stitchPosed(frames, { width = 4096, quality = 90 } = {}) {
         color[o + 1] = bg / bw + (dw > 0 ? dg / dw : 0);
         color[o + 2] = bb / bw + (dw > 0 ? db / dw : 0);
       } else {
-        color[o] = color[o + 1] = color[o + 2] = 128; // never seen (usually straight down, under the phone)
+        color[o] = color[o + 1] = color[o + 2] = -1; // never photographed: filled below
       }
     }
   }
@@ -197,14 +198,18 @@ export function stitchPosed(frames, { width = 4096, quality = 90 } = {}) {
     const up = Math.max(0, y - 1), down = Math.min(height - 1, y + 1);
     for (let x = 0; x < width; x++) {
       const l = (x + width - 1) % width, r = (x + 1) % width;
+      const o = (y * width + x) * 3;
+      if (color[o] < 0) { out[(y * width + x) * 4 + 3] = 0; continue; } // hole
       for (let c = 0; c < 3; c++) {
-        const v = color[(y * width + x) * 3 + c];
-        const blur = (color[(y * width + l) * 3 + c] + color[(y * width + r) * 3 + c] + color[(up * width + x) * 3 + c] + color[(down * width + x) * 3 + c]) / 4;
+        const v = color[o + c];
+        const at = (i) => (color[i * 3] < 0 ? v : color[i * 3 + c]); // holes don't pull the sharpening
+        const blur = (at(y * width + l) + at(y * width + r) + at(up * width + x) + at(down * width + x)) / 4;
         out[(y * width + x) * 4 + c] = Math.min(255, Math.max(0, v + sharpen * (v - blur)));
       }
       out[(y * width + x) * 4 + 3] = 255;
     }
   }
+  fillHoles(out, width, height);
   const lut = toneCurve(out);
   for (let i = 0; i < out.length; i += 4) {
     out[i] = lut[0][out[i]]; out[i + 1] = lut[1][out[i + 1]]; out[i + 2] = lut[2][out[i + 2]];

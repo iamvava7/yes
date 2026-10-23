@@ -123,7 +123,8 @@ const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
   args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
 });
-const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+// 1× pixels: software rendering at 2× makes the fake camera lag far more than a real phone's
+const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: Number(process.env.DPR ?? 1) });
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
@@ -137,7 +138,7 @@ try {
 
   step('capture intro');
   await page.goto(`${base}/#/capture/${space.id}`);
-  await page.getByRole('heading', { name: 'Capture a 360° spot' }).waitFor();
+  await page.getByRole('button', { name: 'Start capture' }).waitFor();
   await page.screenshot({ path: path.join(shots, 'c1-capture-intro.png') });
   await page.waitForFunction(() => window.__sim.ready);
   await page.getByRole('button', { name: 'Start capture' }).click();
@@ -150,7 +151,9 @@ try {
   for (let i = 0; i < 12; i++) targets.push([-(i * 30), 0]);
   for (let i = 0; i < 8; i++) targets.push([-(i * 45 + 22.5), 48]);
   for (let i = 0; i < 8; i++) targets.push([-(i * 45 + 22.5), -48]);
-  targets.push([0, 89.9], [0, -89.9]);
+  // Ceiling and floor at 78°: people rarely hold a phone exactly vertical.
+  // (Before the fix these needed 86.4° and capture got stuck here.)
+  targets.push([0, 78], [0, -78]);
   const window_truths = []; // true (alpha, beta, gamma) of each photo
   let rng = 7;
   const rand = () => ((rng = (rng * 16807) % 2147483647) / 2147483647) * 2 - 1;
@@ -164,14 +167,25 @@ try {
     await page.evaluate(({ yaw, pitch, noise, exposure }) => {
       Object.assign(window.__sim, { alpha: yaw - noise.alpha, beta: 90 + pitch - noise.beta, gamma: -noise.gamma, noise, exposure });
     }, { yaw, pitch, noise, exposure });
-    await page.waitForFunction((n) => document.querySelector('.capture-counter')?.textContent.startsWith(`${n} /`) || !document.querySelector('.capture-live'), k + 1, { timeout: 8000 });
+    await page.waitForFunction((n) => document.querySelector('.capture-counter')?.textContent.startsWith(`${n} /`) || document.querySelector('.capture-processing') || !document.querySelector('.capture-live'), k + 1, { timeout: 8000 });
     if (k === 5) await page.screenshot({ path: path.join(shots, 'c2-capture-live.png') });
   }
 
   step('stitch');
   await page.locator('.capture-processing').waitFor();
   await page.screenshot({ path: path.join(shots, 'c3-stitching.png') });
-  await page.locator('.capture-review').waitFor({ timeout: 300_000 });
+  // the progress screen must stay live while stitching: watch which steps light up
+  const seen = new Set();
+  let shot = false;
+  while (!(await page.locator('.capture-review').count())) {
+    const active = await page.locator('.steps li.active').textContent().catch(() => null);
+    if (active) seen.add(active);
+    if (!shot && seen.size >= 3) { await page.screenshot({ path: path.join(shots, 'c3b-stitching-live.png') }); shot = true; }
+    await page.waitForTimeout(250);
+  }
+  console.log(`  steps seen while stitching: ${[...seen].join(' → ')}`);
+  // the quick steps (reading, exposure) can finish between polls; the slow ones must show
+  assert.ok(['Measuring your lens', 'Lining up every photo', 'Blending into one 360°'].every((t) => seen.has(t)), `progress screen froze (saw ${[...seen].join(', ')})`);
   await page.screenshot({ path: path.join(shots, 'c4-review.png') });
   const facts = await page.locator('.capture-review .facts').textContent();
   // Per-photo orientation error after alignment, against the simulator's truth.
@@ -193,6 +207,21 @@ try {
   }, window_truths);
   const stats = (a) => `max ${Math.max(...a).toFixed(2)}, mean ${(a.reduce((s, x) => s + x, 0) / a.length).toFixed(2)}`;
   console.log(`  gyro orientation error before alignment (deg): ${stats(orient.raw)}`);
+  if (process.env.DUMP_FRAMES) {
+    const dump = await page.evaluate(async () => Promise.all(window.__spacetwinLastStitch.frames.map(async (f) => {
+      const d = { x: 0, y: 0, z: -1 };
+      const q = f.q;
+      // rotate (0,0,-1) by q
+      const ix = q.w * d.x + q.y * d.z - q.z * d.y, iy = q.w * d.y + q.z * d.x - q.x * d.z, iz = q.w * d.z + q.x * d.y - q.y * d.x, iw = -q.x * d.x - q.y * d.y - q.z * d.z;
+      const fy = iy * q.w + iw * -q.y + iz * -q.x - ix * -q.z;
+      return { id: f.targetId, pitch: (Math.asin(Math.max(-1, Math.min(1, fy))) * 180) / Math.PI, url: await new Promise((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(f.blob); }) };
+    })));
+    for (const d of dump) {
+      if (d.id < 26) continue;
+      await fs.writeFile(path.join(shots, `frame-${d.id}.jpg`), Buffer.from(d.url.split(',')[1], 'base64'));
+      console.log(`  frame ${d.id}: recorded pitch ${d.pitch.toFixed(1)}°`);
+    }
+  }
   const blurredKept = await page.evaluate(async () => {
     let n = 0;
     const which = [];
@@ -257,6 +286,45 @@ try {
   assert.equal(after.scans.length, 3);
   assert.equal(after.scans[2].cameraHeight, 1.5);
   assert.equal(after.scans[2].name, 'Spot 3');
+
+  step('outline the room with the crosshair');
+  await page.getByRole('button', { name: 'Outline this room' }).click();
+  await page.locator('.outline-card').waitFor();
+  await page.waitForFunction(() => document.querySelector('.outline-stage')?.viewer?.textures.size && [...document.querySelector('.outline-stage').viewer.textures.values()].every((t) => t.ready));
+  const spot = (await (await fetch(`${base}/api/spaces/${space.id}`)).json()).scans[2].position;
+  assert.ok(spot.x > 8.5, `new spot placed beside the existing plan (x=${spot.x})`);
+  // The new spot shows the sample living room as seen from (2, 2.2); its corners relative to the camera:
+  const corners = [[-2, -2.2], [3, -2.2], [3, 1.8], [-2, 1.8]];
+  const aim = (dx, dz, height) => page.evaluate(([dx, dz, height]) => {
+    const v = document.querySelector('.outline-stage').viewer;
+    v.setLook(Math.atan2(-dx, -dz), Math.atan2(height - 1.5, Math.hypot(dx, dz)));
+  }, [dx, dz, height]);
+  for (const [dx, dz] of corners) {
+    await aim(dx, dz, 0);
+    await page.waitForTimeout(80);
+    await page.getByRole('button', { name: 'Add corner' }).click();
+  }
+  await page.screenshot({ path: path.join(shots, 'c6-outline.png') });
+  assert.match(await page.locator('.outline-card h2').textContent(), /^4 corners$/, 'each tap adds exactly one corner');
+  await page.getByRole('button', { name: 'Close room' }).click();
+  await aim(corners[0][0], corners[0][1], 2.7);
+  await page.waitForTimeout(80);
+  await page.getByRole('button', { name: 'Set height' }).click();
+  await page.locator('.capture-result').waitFor({ timeout: 15000 });
+  await page.waitForTimeout(1200);
+  await page.screenshot({ path: path.join(shots, 'c7-result.png'), fullPage: true });
+  const final = await (await fetch(`${base}/api/spaces/${space.id}`)).json();
+  const room = final.rooms.at(-1);
+  const area = final.stats.rooms.at(-1).area;
+  console.log(`  outlined "${room.name}": ${area.toFixed(2)} m² (truth 20), height ${room.height} m (truth 2.7)`);
+  assert.equal(final.rooms.length, 3);
+  assert.equal(room.name, 'Room 3');
+  assert.equal(final.rooms.filter((r) => r.name === 'Room 3').length, 1);
+  assert.ok(Math.abs(area - 20) < 0.3, `area ${area}`);
+  assert.ok(Math.abs(room.height - 2.7) < 0.05, `height ${room.height}`);
+  // the room sits around the spot it was outlined from
+  assert.ok(room.points.every(([x, z]) => Math.abs(x - spot.x) < 3.1 && Math.abs(z - spot.z) < 2.3));
+  assert.match(await page.locator('.result-stats').textContent(), /3\s*spots.*3\s*rooms/s);
 
   assert.deepEqual(errors, [], errors.join('\n'));
   console.log('CAPTURE OK');

@@ -1,5 +1,6 @@
 import { bestScanForRoom, polygonArea } from '../../../shared/geometry.js';
 import { api, exportUrl } from '../api.js';
+import { brand } from '../brand.js';
 import { formatArea, formatPrice, plural } from '../listing.js';
 import { sfx, unlock } from '../sound.js';
 import { h, icon } from '../ui.js';
@@ -94,7 +95,7 @@ export async function renderShowcase(app, id) {
       listing.contactName ? h('p', listing.contactName) : null,
       contact.length ? h('div.row', contact) : null,
     ) : null,
-    h('p.made-with', '3D tour made with SpaceTwin'),
+    h('p.made-with', '3D tour by ', h('a', { href: brand.site, target: '_blank', rel: 'noopener' }, brand.siteLabel)),
   );
 
   function sheet(open) {

@@ -1,6 +1,7 @@
 import { api, exportUrl } from '../api.js';
 import { PlanEditor } from '../editor/PlanEditor.js';
 import { perimeter, polygonArea } from '../../../shared/geometry.js';
+import { brand } from '../brand.js';
 import { formatPrice, LISTING_STATUS } from '../listing.js';
 import { fmtArea, h, icon, toast } from '../ui.js';
 import { createViewerChrome } from '../viewerChrome.js';
@@ -124,7 +125,7 @@ export async function renderEditor(app, id) {
 
   function apply(next) {
     space = next;
-    document.title = `${space.name} · SpaceTwin`;
+    document.title = `${space.name} · ${brand.name}`;
     stats.textContent = `${space.stats.scanCount} scans · ${space.stats.roomCount} rooms · ${fmtArea(space.stats.totalArea)}`;
     dropzone.hidden = space.scans.length > 0;
     plan.setSpace(space);

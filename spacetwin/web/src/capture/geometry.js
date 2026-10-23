@@ -59,8 +59,23 @@ export function captureTargets() {
   ring(0, 12);
   ring(48, 8, 22.5);
   ring(-48, 8, 22.5);
-  targets.push({ yaw: 0, pitch: 89.9 * DEG }, { yaw: 0, pitch: -89.9 * DEG });
+  // Ceiling and floor: optional, and any steep enough shot counts (see onTarget).
+  targets.push({ yaw: 0, pitch: 89.9 * DEG, pole: 1 }, { yaw: 0, pitch: -89.9 * DEG, pole: -1 });
   return targets.map((t, i) => ({ ...t, id: i, dir: dirFromYawPitch(t.yaw, t.pitch) }));
+}
+
+export const RING_SHOTS = 28; // horizon + upper + lower rings; ceiling/floor are extra
+export const POLE_MIN_PITCH = 72 * DEG; // a ceiling/floor shot only has to be this steep, in any direction
+
+/**
+ * Is the camera, looking along `fwd`, aimed at target `t`? Ring dots need
+ * `tolerance`; the ceiling/floor accept any direction steeper than 72°,
+ * because holding a phone exactly vertical is hard and the sensors are least
+ * reliable there.
+ */
+export function onTarget(t, fwd, tolerance) {
+  if (t.pole) return Math.asin(Math.max(-1, Math.min(1, fwd.y))) * t.pole > POLE_MIN_PITCH;
+  return angleBetween(t.dir, fwd) < tolerance;
 }
 
 /** Pinhole intrinsics from a vertical field of view and the frame's width/height ratio. */

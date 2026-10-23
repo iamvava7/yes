@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { fillHoles } from '../../../shared/fill.js';
 import { toneCurve } from '../../../shared/tone.js';
 import { forwardOf, intrinsics, projectToFrame, rayFromFrame } from './geometry.js';
 
@@ -18,6 +19,16 @@ const THUMB_SMALL = 160; // coarse alignment: smooth error surface, few false mi
 const THUMB_LARGE = 320; // fine alignment: sub-pixel detail at 4K output
 const GRID = 36; // samples per side when comparing two overlapping photos
 const DEG = Math.PI / 180;
+
+// The CPU steps take seconds on a phone. Hand control back to the browser
+// every ~30 ms so the progress screen keeps animating instead of freezing.
+let lastBreath = 0;
+async function breathe() {
+  const now = performance.now();
+  if (now - lastBreath < 30) return;
+  await new Promise((r) => setTimeout(r, 0));
+  lastBreath = performance.now();
+}
 // Cost of moving a photo away from its gyroscope reading, per degree², in the
 // same units as pairError (squared grey levels). Neighbouring photos can agree
 // with each other while the whole ring slowly twists, especially over plain
@@ -43,14 +54,14 @@ export async function stitchPanorama(frames, { width = 4096, onProgress = () => 
   const gyro = frames.map((f) => f.q.clone());
 
   onProgress('Calibrating lens', 0.12);
-  let vfov = calibrateFov(small, qs, aspect, range(initialVfov - 15, initialVfov + 15, 1));
+  let vfov = await calibrateFov(small, qs, aspect, range(initialVfov - 15, initialVfov + 15, 1));
   const before = alignmentError(large, qs, intrinsics(vfov, aspect));
 
   onProgress('Aligning photos', 0.25);
-  for (const step of [1.0, 0.5, 0.25, 0.12]) refineRotations(small, qs, intrinsics(vfov, aspect), step * DEG, gyro);
-  vfov = calibrateFov(small, qs, aspect, range(vfov - 1.5, vfov + 1.5, 0.25));
+  for (const step of [1.0, 0.5, 0.25, 0.12]) await refineRotations(small, qs, intrinsics(vfov, aspect), step * DEG, gyro);
+  vfov = await calibrateFov(small, qs, aspect, range(vfov - 1.5, vfov + 1.5, 0.25));
   onProgress('Aligning photos', 0.35);
-  for (const step of [0.12, 0.06, 0.03]) refineRotations(large, qs, intrinsics(vfov, aspect), step * DEG, gyro);
+  for (const step of [0.12, 0.06, 0.03]) await refineRotations(large, qs, intrinsics(vfov, aspect), step * DEG, gyro);
   const intr = intrinsics(vfov, aspect);
   const after = alignmentError(large, qs, intr);
 
@@ -156,7 +167,7 @@ export function alignmentError(thumbs, qs, intr) {
  * being skipped; otherwise a too-narrow lens would look good simply by
  * comparing less.
  */
-function calibrateFov(thumbs, qs, aspect, candidates) {
+async function calibrateFov(thumbs, qs, aspect, candidates) {
   const pairs = neighbours(qs, 75 * DEG);
   const LOST_PAIR = { error: 40 * 40, n: GRID * GRID * 0.15 };
   const score = (vfov) => {
@@ -171,6 +182,7 @@ function calibrateFov(thumbs, qs, aspect, candidates) {
   };
   let best = { vfov: candidates[Math.floor(candidates.length / 2)], error: Infinity };
   for (const vfov of candidates) {
+    await breathe();
     const e = score(vfov);
     if (e < best.error) best = { vfov, error: e };
   }
@@ -183,7 +195,7 @@ function calibrateFov(thumbs, qs, aspect, candidates) {
  * reduce disagreement with overlapping neighbours, without straying far from
  * the gyroscope reading.
  */
-function refineRotations(thumbs, qs, intr, step, gyro) {
+async function refineRotations(thumbs, qs, intr, step, gyro) {
   const pairs = neighbours(qs, 75 * DEG);
   const nbrs = qs.map(() => []);
   for (const [i, j] of pairs) { nbrs[i].push(j); nbrs[j].push(i); }
@@ -199,6 +211,7 @@ function refineRotations(thumbs, qs, intr, step, gyro) {
   };
   for (let pass = 0; pass < 2; pass++) {
     for (let i = 1; i < qs.length; i++) {
+      await breathe();
       let current = frameError(i, qs[i]);
       for (const axis of axes) {
         for (const sign of [1, -1]) {
@@ -332,17 +345,20 @@ const finishShader = /* glsl */ `
   uniform vec2 texel;
   uniform float sharpen;
   varying vec2 vUv;
-  vec3 colorAt(vec2 uv) {
+  // rgb, and a = 1 where some photo covered this pixel
+  vec4 colorAt(vec2 uv) {
     vec4 b = texture2D(baseAcc, uv), d = texture2D(detailAcc, uv);
-    if (b.a <= 0.0) return vec3(0.5); // never photographed
-    return b.rgb / b.a + (d.a > 0.0 ? d.rgb / d.a : vec3(0.0));
+    if (b.a <= 0.0) return vec4(0.0);
+    return vec4(b.rgb / b.a + (d.a > 0.0 ? d.rgb / d.a : vec3(0.0)), 1.0);
   }
+  vec3 orSelf(vec4 n, vec3 c) { return n.a > 0.0 ? n.rgb : c; }
   void main() {
-    vec3 c = colorAt(vUv);
+    vec4 c = colorAt(vUv);
+    if (c.a <= 0.0) { gl_FragColor = vec4(0.0); return; } // never photographed: filled on the CPU
     // light unsharp mask restores crispness lost to resampling
-    vec3 blur = (colorAt(vUv + vec2(texel.x, 0.0)) + colorAt(vUv - vec2(texel.x, 0.0)) +
-                 colorAt(vUv + vec2(0.0, texel.y)) + colorAt(vUv - vec2(0.0, texel.y))) * 0.25;
-    gl_FragColor = vec4(clamp(c + sharpen * (c - blur), 0.0, 1.0), 1.0);
+    vec3 blur = (orSelf(colorAt(vUv + vec2(texel.x, 0.0)), c.rgb) + orSelf(colorAt(vUv - vec2(texel.x, 0.0)), c.rgb) +
+                 orSelf(colorAt(vUv + vec2(0.0, texel.y)), c.rgb) + orSelf(colorAt(vUv - vec2(0.0, texel.y)), c.rgb)) * 0.25;
+    gl_FragColor = vec4(clamp(c.rgb + sharpen * (c.rgb - blur), 0.0, 1.0), 1.0);
   }
 `;
 
@@ -420,22 +436,21 @@ async function renderEquirect(frames, qs, gains, intr, width, onProgress) {
   for (const rt of [baseAcc, detailAcc, output]) rt.dispose();
   renderer.dispose();
 
-  // WebGL rows run bottom-up; images run top-down. Tone correction is applied on the way.
-  const lut = toneCurve(pixels);
+  // WebGL rows run bottom-up; images run top-down.
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');
   const img = ctx.createImageData(width, height);
   const row = width * 4;
-  for (let y = 0; y < height; y++) {
-    const src = (height - 1 - y) * row, dst = y * row;
-    for (let x = 0; x < row; x += 4) {
-      img.data[dst + x] = lut[0][pixels[src + x]];
-      img.data[dst + x + 1] = lut[1][pixels[src + x + 1]];
-      img.data[dst + x + 2] = lut[2][pixels[src + x + 2]];
-      img.data[dst + x + 3] = 255;
-    }
+  for (let y = 0; y < height; y++) img.data.set(pixels.subarray((height - 1 - y) * row, (height - y) * row), y * row);
+  fillHoles(img.data, width, height); // unphotographed ceiling/floor
+  const lut = toneCurve(img.data);
+  for (let i = 0; i < img.data.length; i += 4) {
+    img.data[i] = lut[0][img.data[i]];
+    img.data[i + 1] = lut[1][img.data[i + 1]];
+    img.data[i + 2] = lut[2][img.data[i + 2]];
+    img.data[i + 3] = 255;
   }
   ctx.putImageData(img, 0, 0);
   return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('could not encode panorama'))), 'image/jpeg', 0.9));
