@@ -58,6 +58,7 @@ export async function renderShowcase(app, id, { embed = false } = {}) {
     panoUrl: pano,
     onScanChange: () => updateCurrent(),
     onModeChange: (mode) => {
+      root.dataset.mode = mode;
       for (const b of modeChips.querySelectorAll('[data-mode]')) b.setAttribute('aria-pressed', b.dataset.mode === mode);
       cubeBtn.setAttribute('aria-pressed', mode === 'dollhouse');
       updateCurrent();
@@ -321,6 +322,7 @@ export async function renderShowcase(app, id, { embed = false } = {}) {
       if ((first?.ready && performance.now() - started > 500) || performance.now() - started > 20000) {
         loading.classList.add('done');
         setTimeout(() => loading.remove(), 450);
+        if (!embed || matchMedia('(min-width: 641px)').matches) viewer.playIntro();
         return;
       }
       requestAnimationFrame(tick);

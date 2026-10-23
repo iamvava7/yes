@@ -3,7 +3,7 @@
 // public REST endpoint its own pages use works here without a login:
 //   GET {server}/api/apps/{appId}/entities/Property?q=<json>&sort=-created_date&limit=N
 // Configure with VERIFICASA_APP_ID / VERIFICASA_API; VERIFICASA_SITE builds
-// the listing links.
+// the listing links. VERIFICASA_API=off turns the link off (offline demos, tests).
 
 const DEFAULTS = {
   api: 'https://base44.app',
@@ -47,6 +47,9 @@ export function toListing(p, site) {
     latitude: num(p.latitude),
     longitude: num(p.longitude),
     tourUrl: p.tour_3d_url || null,
+    views: num(p.views_count),
+    posterPlan: ['basic', 'pro', 'agent'].includes(p.poster_plan_override || p.poster_plan) ? (p.poster_plan_override || p.poster_plan) : null,
+    sellerRole: p.seller_role === 'Agent' ? 'Agent' : p.seller_role ? 'Proprietar' : null,
     status: p.status ?? null,
   };
 }
@@ -76,10 +79,13 @@ export function createVerificasaClient({ config = verificasaConfig(), fetchImpl 
     return data;
   }
 
+  const off = config.api === 'off';
   return {
     config,
+    off,
     /** Approved, active listings, newest first; `search` matches title, city or zone. */
     async listings({ search = '', limit = 60 } = {}) {
+      if (off) return [];
       const q = { approval_status: 'APPROVED', status: 'Activ' };
       const params = new URLSearchParams({ q: JSON.stringify(q), sort: '-created_date', limit: String(limit) });
       const rows = await get(`?${params}`);
@@ -88,6 +94,7 @@ export function createVerificasaClient({ config = verificasaConfig(), fetchImpl 
       return needle ? list.filter((l) => [l.title, l.city, l.zone, l.address].some((v) => v?.toLowerCase().includes(needle))) : list;
     },
     async listing(id) {
+      if (off) return null;
       const row = await get(`/${encodeURIComponent(id)}`);
       return row ? toListing(row, config.site) : null;
     },

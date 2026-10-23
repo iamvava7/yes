@@ -7,12 +7,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
 import { createApp } from '../server/app.js';
+import { createVerificasaClient } from '../server/verificasa.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const shots = path.join(root, 'test-e2e', 'screenshots');
 await fs.mkdir(shots, { recursive: true });
 const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'spacetwin-e2e-'));
-const app = await createApp({ dataDir, sampleDir: path.join(root, 'assets', 'sample'), webDist: path.join(root, 'web', 'dist') });
+const app = await createApp({ dataDir, sampleDir: path.join(root, 'assets', 'sample'), webDist: path.join(root, 'web', 'dist'), verificasa: createVerificasaClient({ config: { api: 'off', appId: '', site: 'https://verificasa.ro' } }) });
 const server = app.listen(0);
 await new Promise((r) => server.once('listening', r));
 const base = `http://127.0.0.1:${server.address().port}`;

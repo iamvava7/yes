@@ -23,6 +23,8 @@ export const api = {
   putRooms: (id, rooms) => request('PUT', `/spaces/${id}/rooms`, { rooms }),
   createTag: (id, tag) => request('POST', `/spaces/${id}/tags`, tag),
   capabilities: () => request('GET', '/capabilities'),
+  verificasaListings: (search = '') => request('GET', `/verificasa/listings?search=${encodeURIComponent(search)}`),
+  spaceFromListing: (propertyId) => request('POST', '/spaces/from-listing', { propertyId }),
 
   /**
    * Re-stitch captured photos on the server with OpenCV, using the rotations
@@ -49,10 +51,11 @@ export const api = {
   deleteTag: (id, tagId) => request('DELETE', `/spaces/${id}/tags/${tagId}`),
 
   /** Upload panoramas with progress (fetch has no upload progress events). */
-  uploadScans(id, files, onProgress) {
+  uploadScans(id, files, onProgress, capture) {
     return new Promise((resolve, reject) => {
       const form = new FormData();
       for (const f of files) form.append('panorama', f, f.name);
+      if (capture) form.append('capture', JSON.stringify(capture));
       const xhr = new XMLHttpRequest();
       xhr.open('POST', `/api/spaces/${id}/scans`);
       xhr.upload.onprogress = (e) => e.lengthComputable && onProgress?.(e.loaded / e.total);

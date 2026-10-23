@@ -10,6 +10,7 @@ import { toFloorPlanSvg, toObj } from './exporters.js';
 import { detectProStitch, proStitch } from './proStitch.js';
 import { capturedRoomToRooms } from './roomplan.js';
 import { validatePose } from './stitch.js';
+import { createVerificasaClient, distanceMeters } from './verificasa.js';
 import { newId, NotFoundError, Store } from './store.js';
 
 const PANO_TYPES = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp' };
@@ -87,11 +88,73 @@ function parseListing(input) {
   return out;
 }
 
+/**
+ * A space as the API returns it: with stats, and with where each photo was
+ * taken reduced to "captured on site" (date, distance from the listing). Exact
+ * coordinates stay on the server.
+ */
 function withStats(space) {
-  return { ...space, stats: spaceStats(space) };
+  const scans = space.scans.map(({ capture, ...scan }) => (capture ? { ...scan, capture: { at: capture.at, method: capture.method } } : scan));
+  const out = { ...space, scans, stats: spaceStats(space), onSite: onSiteOf(space) };
+  if (space.verificasa) {
+    const { latitude, longitude, ...link } = space.verificasa; // only used for the distance above
+    out.verificasa = link;
+  }
+  return out;
 }
 
-export async function createApp({ dataDir, sampleDir, webDist, proStitch: allowPro = true } = {}) {
+function onSiteOf(space) {
+  const guided = space.scans.filter((s) => s.capture?.method === 'guided' && s.capture.at);
+  if (!guided.length) return null;
+  const capturedAt = guided.map((s) => s.capture.at).sort().at(-1);
+  const home = space.verificasa;
+  const located = guided.filter((s) => Number.isFinite(s.capture.latitude) && Number.isFinite(s.capture.longitude));
+  const distance = home && Number.isFinite(home.latitude) && Number.isFinite(home.longitude) && located.length
+    ? Math.round(Math.min(...located.map((s) => distanceMeters(home, s.capture))))
+    : null;
+  return { capturedAt, distance, spots: guided.length };
+}
+
+/** Optional capture details sent with a phone-captured spot. */
+function parseCapture(raw) {
+  if (raw === undefined || raw === '') return null;
+  let c;
+  try {
+    c = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  } catch {
+    throw bad('capture must be JSON');
+  }
+  if (!c || typeof c !== 'object') throw bad('capture must be an object');
+  const at = new Date(c.at ?? Date.now());
+  if (Number.isNaN(at.getTime()) || at.getTime() > Date.now() + 60_000) throw bad('capture.at must be a date, not in the future');
+  const out = { at: at.toISOString(), method: c.method === 'guided' ? 'guided' : 'upload' };
+  if (c.latitude !== undefined && c.longitude !== undefined) {
+    out.latitude = num(c.latitude, 'capture.latitude', { min: -90, max: 90 });
+    out.longitude = num(c.longitude, 'capture.longitude', { min: -180, max: 180 });
+    if (c.accuracy !== undefined) out.accuracy = num(c.accuracy, 'capture.accuracy', { min: 0, max: 100000 });
+  }
+  return out;
+}
+
+const VC_STATUS = { SALE: 'For sale', RENT: 'For rent' };
+
+/** Listing details for a new tour, from a VerifiCasa listing. */
+function fromVerificasa(l) {
+  return {
+    listing: {
+      address: l.address ?? l.title, description: l.description ?? null, contactName: l.contactName ?? null,
+      contactPhone: l.phone ?? null, price: l.price, currency: l.currency, yearBuilt: l.year ?? null,
+      status: l.status === 'Activ' ? VC_STATUS[l.transaction] : null,
+    },
+    verificasa: {
+      propertyId: l.id, url: l.url, title: l.title, city: l.city, zone: l.zone, rooms: l.rooms, surface: l.surface,
+      posterName: l.contactName, posterPlan: l.posterPlan, sellerRole: l.sellerRole, views: l.views,
+      latitude: l.latitude, longitude: l.longitude, linkedAt: new Date().toISOString(),
+    },
+  };
+}
+
+export async function createApp({ dataDir, sampleDir, webDist, proStitch: allowPro = true, verificasa = createVerificasaClient() } = {}) {
   const store = new Store(dataDir);
   await store.init();
   const upload = multer({
@@ -121,7 +184,40 @@ export async function createApp({ dataDir, sampleDir, webDist, proStitch: allowP
     res.json(spaces.map((s) => ({
       id: s.id, name: s.name, updatedAt: s.updatedAt,
       coverScanId: s.scans[0]?.id ?? null, stats: spaceStats(s), listing: s.listing ?? null,
+      verificasa: s.verificasa ? { propertyId: s.verificasa.propertyId, url: s.verificasa.url } : null,
     })));
+  }));
+
+  // VerifiCasa listings (read-only), so an agent can pick the listing a tour is for.
+  api.get('/verificasa/listings', wrap(async (req, res) => {
+    try {
+      const listings = await verificasa.listings({ search: String(req.query.search ?? '').slice(0, 100) });
+      res.json({ site: verificasa.config.site, listings, off: verificasa.off });
+    } catch (err) {
+      throw new HttpError(502, err.message);
+    }
+  }));
+
+  // Start (or reopen) the tour for a VerifiCasa listing, with its details filled in.
+  api.post('/spaces/from-listing', wrap(async (req, res) => {
+    const propertyId = str(req.body?.propertyId ?? '', 'propertyId', 64);
+    if (!/^[\w-]+$/.test(propertyId)) throw bad('propertyId must be a VerifiCasa listing id');
+    const existing = (await store.list()).find((s) => s.verificasa?.propertyId === propertyId);
+    if (existing) return res.json(withStats(existing));
+    let l;
+    try {
+      l = await verificasa.listing(propertyId);
+    } catch (err) {
+      throw new HttpError(502, err.message);
+    }
+    if (!l) throw new HttpError(404, 'listing not found on VerifiCasa');
+    const created = await store.create(l.title.slice(0, 120) || 'VerifiCasa listing');
+    const { listing, verificasa: link } = fromVerificasa(l);
+    const space = await store.update(created.id, (s) => {
+      s.listing = parseListing(Object.fromEntries(Object.entries(listing).filter(([, v]) => v != null)));
+      s.verificasa = link;
+    });
+    res.status(201).json(withStats(space));
   }));
 
   api.post('/spaces', wrap(async (req, res) => {
@@ -152,6 +248,7 @@ export async function createApp({ dataDir, sampleDir, webDist, proStitch: allowP
     const files = req.files ?? [];
     try {
       if (!files.length) throw bad('attach one or more panoramas in the "panorama" field');
+      const capture = parseCapture(req.body?.capture);
       await store.get(req.params.id);
       const accepted = [];
       for (const f of files) {
@@ -184,6 +281,7 @@ export async function createApp({ dataDir, sampleDir, webDist, proStitch: allowP
             position: last ? { x: last.position.x + 2, z: last.position.z } : { x: 0, z: 0 },
             cameraHeight: 1.5,
             heading: 0,
+            ...(capture ? { capture } : {}),
           });
         }
       });
@@ -380,6 +478,7 @@ export async function createApp({ dataDir, sampleDir, webDist, proStitch: allowP
           cameraHeight: round3(cameraHeight),
           heading: 0, // posed photos are stitched directly in world orientation
           stitcher: result.stitcher,
+          capture: parseCapture({ method: 'guided', ...(meta.capture ?? {}) }),
         });
       });
       res.status(201).json(withStats(space));

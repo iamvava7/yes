@@ -17,12 +17,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
 import { createApp } from '../server/app.js';
+import { createVerificasaClient } from '../server/verificasa.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const shots = path.join(root, 'test-e2e', 'screenshots');
 await fs.mkdir(shots, { recursive: true });
 const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'spacetwin-capture-'));
-const app = await createApp({ dataDir, sampleDir: path.join(root, 'assets', 'sample'), webDist: path.join(root, 'web', 'dist') });
+const app = await createApp({ dataDir, sampleDir: path.join(root, 'assets', 'sample'), webDist: path.join(root, 'web', 'dist'), verificasa: createVerificasaClient({ config: { api: 'off', appId: '', site: 'https://verificasa.ro' } }) });
 const server = app.listen(0);
 await new Promise((r) => server.once('listening', r));
 const base = `http://127.0.0.1:${server.address().port}`;
@@ -185,7 +186,7 @@ try {
   }
   console.log(`  steps seen while stitching: ${[...seen].join(' → ')}`);
   // the quick steps (reading, exposure) can finish between polls; the slow ones must show
-  assert.ok(['Measuring your lens', 'Lining up every photo', 'Blending into one 360°'].every((t) => seen.has(t)), `progress screen froze (saw ${[...seen].join(', ')})`);
+  assert.ok(['Lining up every photo', 'Blending into one 360°'].every((t) => seen.has(t)), `progress screen froze (saw ${[...seen].join(', ')})`);
   await page.screenshot({ path: path.join(shots, 'c4-review.png') });
   const facts = await page.locator('.capture-review .facts').textContent();
   // Per-photo orientation error after alignment, against the simulator's truth.

@@ -105,6 +105,7 @@ export async function renderCapture(app, spaceId) {
           start({ name: name.value.trim() || `Spot ${n}`, cameraHeight: height });
         },
       }, icon('camera'), 'Start capture'),
+      h('p.dim', 'Your phone will ask for its location once: the tour then shows “captured on site” and how far it was taken from the listing’s address (never the exact spot).'),
       h('p.dim', 'Have a 360° camera instead? ', h('a', { href: `#/space/${spaceId}` }, 'Upload its photos in the editor'), '.'),
     ));
   }
@@ -114,6 +115,7 @@ export async function renderCapture(app, spaceId) {
     const motionPermission = typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission
       ? DeviceOrientationEvent.requestPermission().catch(() => 'denied')
       : Promise.resolve('granted');
+    opts.where = locate(); // "captured on site": asked once, never blocks the capture
     let stream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({
@@ -221,7 +223,8 @@ export async function renderCapture(app, spaceId) {
         save.textContent = 'Saving…';
         try {
           const file = new File([result.blob], `${opts.name}.jpg`, { type: 'image/jpeg' });
-          const updated = await api.uploadScans(spaceId, [file]);
+          const where = await Promise.race([opts.where, new Promise((r) => setTimeout(() => r(null), 3000))]);
+          const updated = await api.uploadScans(spaceId, [file], undefined, { method: 'guided', at: new Date().toISOString(), ...(where ?? {}) });
           const scan = updated.scans.at(-1);
           await api.updateScan(spaceId, scan.id, { cameraHeight: opts.cameraHeight, position: besideThePlan() });
           space = await api.getSpace(spaceId);
@@ -386,12 +389,35 @@ export async function renderCapture(app, spaceId) {
       space.scans.length > 1 && space.rooms.length > 1
         ? h('p.dim', 'Rooms outlined from different spots start side by side. Drag them into place once in the editor; the 3D model and floor plan follow.')
         : null,
+      publishPanel(),
       h('div.stack',
         h('button.primary.big', { onclick: () => { sfx.tap(); showIntro(); } }, icon('camera'), 'Capture next spot'),
         h('a.button.secondary.big', { href: `#/view/${spaceId}` }, icon('walk'), 'Open the tour'),
         h('a.button.ghost', { href: `#/space/${spaceId}` }, 'Arrange in the editor'),
       ),
     );
+    function publishPanel() {
+      if (!space.scans.length) return null;
+      const link = `${location.origin}/3D/${spaceId}`;
+      const copy = h('button.secondary.small', {
+        onclick: async () => {
+          try {
+            await navigator.clipboard.writeText(link);
+            copy.textContent = 'Copied';
+          } catch {
+            prompt('Copy this link', link);
+          }
+        },
+      }, 'Copy');
+      const vc = space.verificasa;
+      return h('section.result-panel.publish',
+        h('h3', vc ? 'Put it on your VerifiCasa listing' : 'Share the tour'),
+        vc ? h('p', 'Copy the link, open the listing and paste it into the “Link Tur 3D” field (step “Poze & contact”).') : null,
+        h('div.input-row', h('input', { value: link, readOnly: true, 'aria-label': 'Tour link', onfocus: (e) => e.target.select() }), copy),
+        vc ? h('a.button.primary', { href: vc.url, target: '_blank', rel: 'noopener' }, 'Open the listing') : null,
+      );
+    }
+
     let viewer = null;
     show(node, () => viewer?.dispose());
     if (space.rooms.length || space.scans.length) {
@@ -400,6 +426,18 @@ export async function renderCapture(app, spaceId) {
       if (space.rooms.length) viewer.setMode('dollhouse', { animate: false });
     }
   }
+}
+
+/** Where the phone is, for the "captured on site" stamp; null if refused or unavailable. */
+function locate() {
+  if (!navigator.geolocation) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      (p) => resolve({ latitude: p.coords.latitude, longitude: p.coords.longitude, accuracy: Math.round(p.coords.accuracy) }),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 120000 },
+    );
+  });
 }
 
 /** Resolve on the next decoded video frame (falls back to two animation frames). */

@@ -1,6 +1,7 @@
 import { api, panoUrl } from '../api.js';
 import { brand, brandMark } from '../brand.js';
 import { formatArea, formatPrice, plural } from '../listing.js';
+import { t } from '../i18n.js';
 import { h, icon, toast } from '../ui.js';
 
 export async function renderHome(app) {
@@ -19,6 +20,7 @@ export async function renderHome(app) {
       h('p', brand.pitch),
     ),
     grid,
+    listingsSection(),
   );
   app.append(page);
 
@@ -77,5 +79,70 @@ export async function renderHome(app) {
         ),
       ),
     ));
+  }
+}
+
+/**
+ * Listings published on verificasa.ro. Picking one starts its tour with the
+ * listing's details filled in and goes straight to the camera; the finished
+ * tour's link goes back into the listing's "Link Tur 3D" field.
+ */
+function listingsSection() {
+  const list = h('div.space-grid.vc-listings', h('p.dim', t('Loading listings…')));
+  const search = h('input', { type: 'search', placeholder: t('Search by title or neighbourhood'), 'aria-label': t('Search VerifiCasa listings') });
+  const section = h('section.vc-section',
+    h('div.vc-head',
+      h('div', h('h2', t('Your VerifiCasa listings')), h('p.dim', t('Pick a listing to capture its 3D tour. Its price, address and contact come with it.'))),
+      search),
+    list);
+  let timer;
+  search.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(load, 250); });
+  load();
+  return section;
+
+  async function load() {
+    let data, tours;
+    try {
+      [data, tours] = await Promise.all([api.verificasaListings(search.value), api.listSpaces()]);
+    } catch (err) {
+      list.replaceChildren(h('p.empty', t('VerifiCasa is not reachable right now ({error}).', { error: err.message })));
+      return;
+    }
+    if (data.off) { section.remove(); return; }
+    const byProperty = new Map(tours.filter((s) => s.verificasa).map((s) => [s.verificasa.propertyId, s]));
+    if (!data.listings.length) {
+      list.replaceChildren(h('p.empty', search.value ? t('No listing matches “{q}”.', { q: search.value }) : t('No published listings yet.')));
+      return;
+    }
+    list.replaceChildren(...data.listings.map((l) => {
+      const tour = byProperty.get(l.id);
+      const price = formatPrice({ price: l.price, currency: l.currency });
+      return h('article.space-card.vc-card',
+        h('div.cover', l.image ? h('img.photo', { src: l.image, alt: '', loading: 'lazy', referrerPolicy: 'no-referrer' }) : h('div.cover-empty', t('No photo'))),
+        h('div.card-body',
+          price ? h('p.meta.price', price, l.transaction === 'RENT' ? h('small', t(' / month')) : null) : null,
+          h('h3', l.title),
+          h('p.meta', [[l.zone, l.city].filter(Boolean).join(', '), l.rooms != null ? `${l.rooms} ${t('rooms')}` : null, l.surface ? `${l.surface} m²` : null].filter(Boolean).join(' · ')),
+          h('div.card-actions',
+            tour
+              ? h('a.button.secondary.small', { href: `#/view/${tour.id}` }, t('View tour'))
+              : h('button.primary.small', { onclick: (e) => start(l, e.currentTarget) }, icon('camera'), t('Create 3D tour')),
+            tour ? h('a.button.ghost.small', { href: `#/capture/${tour.id}` }, icon('camera'), t('Add rooms')) : null,
+            h('a.button.ghost.small', { href: l.url, target: '_blank', rel: 'noopener' }, t('Listing')),
+          ),
+        ),
+      );
+    }));
+  }
+
+  async function start(l, btn) {
+    btn.disabled = true;
+    try {
+      const space = await api.spaceFromListing(l.id);
+      location.hash = `#/capture/${space.id}`;
+    } catch (err) {
+      toast(err.message, 'error');
+      btn.disabled = false;
+    }
   }
 }

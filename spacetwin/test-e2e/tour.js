@@ -9,12 +9,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
 import { createApp } from '../server/app.js';
+import { createVerificasaClient } from '../server/verificasa.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const shots = path.join(root, 'test-e2e', 'screenshots');
 await fs.mkdir(shots, { recursive: true });
 const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'spacetwin-tour-'));
-const app = await createApp({ dataDir, sampleDir: path.join(root, 'assets', 'sample'), webDist: path.join(root, 'web', 'dist') });
+const app = await createApp({ dataDir, sampleDir: path.join(root, 'assets', 'sample'), webDist: path.join(root, 'web', 'dist'), verificasa: createVerificasaClient({ config: { api: 'off', appId: '', site: 'https://verificasa.ro' } }) });
 const server = app.listen(0);
 await new Promise((r) => server.once('listening', r));
 const base = `http://127.0.0.1:${server.address().port}`;
@@ -99,9 +100,10 @@ try {
   await ready(phone);
   assert.equal(await phone.locator('.tv-rooms').isVisible(), false, 'no thumbnail strip on phones');
   await phone.locator('.tv-toggle').tap();
-  await phone.waitForTimeout(600);
+  // the card slides up (slowly under software rendering while the intro plays)
+  await phone.waitForFunction(() => document.querySelector('.tv-panel').getBoundingClientRect().bottom <= innerHeight, null, { timeout: 10000 });
   const card = await phone.locator('.tv-panel').boundingBox();
-  assert.ok(card.x >= 0 && card.x + card.width <= 390 && card.y + card.height <= 844, 'card fits the screen');
+  assert.ok(card.x >= 0 && card.x + card.width <= 390 && card.y + card.height <= 844, `card fits the screen: ${JSON.stringify(card)}`);
   assert.equal(await phone.locator('.tv-room-chip').count(), 2);
   assert.equal(await phone.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'no sideways scroll');
   await phone.screenshot({ path: path.join(shots, 't2-phone-card.png') });

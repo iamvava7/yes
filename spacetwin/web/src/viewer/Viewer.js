@@ -75,6 +75,23 @@ export class Viewer {
     this.sky = new THREE.Mesh(new THREE.SphereGeometry(60, 64, 32), this.skyMaterial);
     this.scene.add(this.sky);
 
+    // Dollhouse: a light studio backdrop and a soft contact shadow under the
+    // model; plan: a flat light ground like paper. Inside the room the
+    // background is never seen.
+    this.backgrounds = {
+      inside: new THREE.Color(0x1d1f24),
+      dollhouse: studioBackdrop(),
+      floorplan: new THREE.Color(0xf5f5f7),
+    };
+    this.ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(1, 1),
+      new THREE.MeshBasicMaterial({ map: shadowTexture(), transparent: true, depthWrite: false, opacity: 0.55 }),
+    );
+    this.ground.rotation.x = -Math.PI / 2;
+    this.ground.renderOrder = -1;
+    this.ground.visible = false;
+    this.scene.add(this.ground);
+
     this.cursor = new THREE.Mesh(
       new THREE.RingGeometry(0.16, 0.2, 48),
       new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, depthTest: false }),
@@ -163,7 +180,7 @@ export class Viewer {
     if (this.textures.has(url)) return this.textures.get(url).promise;
     const entry = { texture: null, ready: false };
     entry.promise = new THREE.TextureLoader().loadAsync(url).then((tex) => {
-      entry.texture = configurePanoTexture(tex);
+      entry.texture = configurePanoTexture(tex, this.renderer.capabilities.getMaxAnisotropy());
       entry.ready = true;
       this.refreshProjections();
       this.cb.onTextureLoaded?.(scan.id);
@@ -197,8 +214,22 @@ export class Viewer {
       caps.userData.room = room;
       this.wallCaps.add(caps);
     }
+    const { center, size } = this.spaceCenterAndSize();
+    this.ground.position.set(center.x, -0.01, center.z);
+    this.ground.scale.setScalar(size * 1.9);
     this.applyPanoOnly();
     this.wallCaps.visible = this.mode !== 'inside';
+    this.applyModeLook();
+  }
+
+  /** Backdrop, ground shadow and plan wash for the current mode. */
+  applyModeLook() {
+    const plan = this.mode === 'floorplan';
+    this.scene.background = this.backgrounds[this.mode] ?? this.backgrounds.inside;
+    this.ground.visible = this.mode === 'dollhouse' && !this.panoOnly && this.space?.rooms.length > 0;
+    for (const m of this.rooms.children) m.material.uniforms.wash.value = plan ? 0.84 : 0;
+    for (const c of this.wallCaps.children) c.material.color.setHex(plan ? 0x1f2328 : 0x2b2d33);
+    this.overlay.classList.toggle('plan-view', plan);
   }
 
   buildMarkers() {
@@ -397,6 +428,7 @@ export class Viewer {
     this.updateMarkerVisibility();
     this.refreshProjections();
     this.overlay.classList.toggle('show-room-labels', mode !== 'inside');
+    this.applyModeLook();
     if (animate) sfx.swoop();
 
     if (mode === 'dollhouse') {
@@ -600,6 +632,7 @@ export class Viewer {
       return Math.hypot(a.x - b.x, a.y - b.y);
     };
     el.addEventListener('pointerdown', (e) => {
+      if (this.intro) this.finishIntro(); // a tap skips the opening
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (pointers.size === 2 && this.mode === 'inside') {
         pinch = { dist: spread(), fov: this.camera.fov };
@@ -727,13 +760,49 @@ export class Viewer {
       this.cursor.visible = false;
       return;
     }
+    const snapped = this.tool === 'measure' ? this.measurePoint(hit) : { point: hit.point, snapped: false };
     this.cursor.visible = true;
-    this.cursor.position.copy(hit.point).addScaledVector(hit.normal, 0.01);
-    this.cursor.lookAt(hit.point.clone().add(hit.normal));
+    this.cursor.position.copy(snapped.point).addScaledVector(hit.normal, 0.01);
+    this.cursor.lookAt(snapped.point.clone().add(hit.normal));
+    this.cursor.material.color.setHex(snapped.snapped ? 0x2e9e63 : 0xffffff);
     if (this.tool === 'measure' && this.pendingMeasure) {
-      this.pendingMeasure.hover = hit.point.clone();
+      this.pendingMeasure.hover = snapped.point.clone();
       this.updateAnnotations();
     }
+  }
+
+  /**
+   * Where a measurement point lands: on a room corner when close to one, on
+   * the floor or ceiling line when close to it, and, for the second point,
+   * straight above/below or level with the first when nearly so. Real rooms
+   * are measured corner to corner and floor to ceiling; this makes those
+   * exact instead of a few centimetres off.
+   */
+  measurePoint(hit) {
+    const p = hit.point.clone();
+    let snapped = false;
+    let best = 0.18; // metres
+    for (const room of this.space?.rooms ?? []) {
+      for (const [x, z] of room.points) {
+        for (const y of [0, room.height]) {
+          const d = Math.hypot(p.x - x, p.y - y, p.z - z);
+          if (d < best) { best = d; p.set(x, y, z); snapped = true; }
+        }
+      }
+    }
+    if (!snapped) {
+      const room = this.space?.rooms.find((r) => pointInPolygon([p.x, p.z], r.points) || hit.room === r) ?? hit.room;
+      if (p.y < 0.06) { p.y = 0; snapped = true; }
+      else if (room && Math.abs(p.y - room.height) < 0.06) { p.y = room.height; snapped = true; }
+    }
+    const a = this.pendingMeasure?.a;
+    if (a) {
+      const v = p.clone().sub(a);
+      const horizontal = Math.hypot(v.x, v.z);
+      if (horizontal < Math.abs(v.y) * Math.tan(6 * DEG)) { p.x = a.x; p.z = a.z; snapped = true; } // plumb
+      else if (Math.abs(v.y) < horizontal * Math.tan(4 * DEG)) { p.y = a.y; snapped = true; } // level
+    }
+    return { point: p, snapped };
   }
 
   onClick(e) {
@@ -742,10 +811,11 @@ export class Viewer {
     if (this.tool === 'measure') {
       const hit = this.pick(e, { markers: false });
       if (!hit) return;
+      const { point } = this.measurePoint(hit);
       if (!this.pendingMeasure) {
-        this.pendingMeasure = { a: hit.point.clone(), hover: null };
+        this.pendingMeasure = { a: point, hover: null };
       } else {
-        this.measurements.push({ a: this.pendingMeasure.a, b: hit.point.clone() });
+        this.measurements.push({ a: this.pendingMeasure.a, b: point });
         this.pendingMeasure = null;
         this.cb.onMeasure?.(this.measurements.at(-1));
       }
@@ -934,19 +1004,49 @@ export class Viewer {
   positionRoomLabels(place) {
     if (!this.roomLabelEls || this.roomLabelEls.space !== this.space) {
       this.overlay.querySelectorAll('.room-label').forEach((el) => el.remove());
+      this.overlay.querySelectorAll('.wall-label').forEach((el) => el.remove());
       this.roomLabelEls = this.space.rooms.map((room) => {
         const el = document.createElement('div');
         el.className = 'room-label';
-        el.innerHTML = '<strong></strong><span></span>';
+        el.innerHTML = '<strong></strong><span></span><em></em>';
         el.querySelector('strong').textContent = room.name;
         el.querySelector('span').textContent = `${polygonArea(room.points).toFixed(1)} m²`;
+        const dims = rectangleDims(room.points);
+        el.querySelector('em').textContent = dims ? `${dims[0].toFixed(2)} × ${dims[1].toFixed(2)} m` : '';
         this.overlay.appendChild(el);
         const [x, z] = centroid(normalizePolygon(room.points));
         return { el, pos: new THREE.Vector3(x, 0.05, z) };
       });
       this.roomLabelEls.space = this.space;
+      // wall lengths, just inside each wall (shown in the plan view)
+      this.wallLabelEls = this.space.rooms.flatMap((room) => {
+        const pts = normalizePolygon(room.points);
+        return pts.map((p, i) => {
+          const q = pts[(i + 1) % pts.length];
+          const len = Math.hypot(q[0] - p[0], q[1] - p[1]);
+          if (len < 0.6) return null;
+          const nx = -(q[1] - p[1]) / len, nz = (q[0] - p[0]) / len; // inward (walls wind counter-clockwise)
+          const el = document.createElement('div');
+          el.className = 'wall-label';
+          el.textContent = `${len.toFixed(2)} m`;
+          this.overlay.appendChild(el);
+          const mid = new THREE.Vector3((p[0] + q[0]) / 2 + nx * 0.28, 0.05, (p[1] + q[1]) / 2 + nz * 0.28);
+          return { el, pos: mid, a: new THREE.Vector3(p[0], 0, p[1]), b: new THREE.Vector3(q[0], 0, q[1]) };
+        }).filter(Boolean);
+      });
     }
     for (const { el, pos } of this.roomLabelEls) place(el, pos);
+    if (this.mode === 'floorplan') {
+      for (const w of this.wallLabelEls) {
+        place(w.el, w.pos);
+        const a = this.toScreen(w.a), b = this.toScreen(w.b);
+        if (!a || !b) continue;
+        let ang = Math.atan2(b.y - a.y, b.x - a.x);
+        if (ang > Math.PI / 2) ang -= Math.PI;
+        if (ang < -Math.PI / 2) ang += Math.PI;
+        w.el.style.transform += ` rotate(${ang.toFixed(3)}rad)`;
+      }
+    }
   }
 
   // ---------------------------------------------------------------- loop
@@ -963,8 +1063,70 @@ export class Viewer {
     this.ortho.updateProjectionMatrix();
   }
 
+  /**
+   * Opening reveal: the panorama starts as a "tiny planet" (looking straight
+   * down from the top of the photo sphere, very wide) and unrolls into the
+   * room view at the current look direction. Resolves when it has finished
+   * or been skipped by a tap.
+   */
+  playIntro({ ms = 2800, spin = 2.4 } = {}) {
+    const proj = this.projectionOf(this.scanById(this.currentScanId));
+    if (this.mode !== 'inside' || !proj?.texture || this.intro) return Promise.resolve();
+    if (!this.introScene) {
+      this.introMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+          pano: { value: null }, heading: { value: 0 }, yaw: { value: 0 }, pitch: { value: 0 },
+          tanHalf: { value: 1 }, aspect: { value: 1 }, dist: { value: 0 },
+        },
+        vertexShader: 'varying vec2 vNdc; void main() { vNdc = position.xy; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+        fragmentShader: INTRO_FRAGMENT,
+        depthTest: false,
+        depthWrite: false,
+      });
+      this.introScene = new THREE.Scene();
+      this.introScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.introMaterial));
+      this.introCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    }
+    const u = this.introMaterial.uniforms;
+    u.pano.value = proj.texture;
+    u.heading.value = proj.heading;
+    this.transitioning = true;
+    return new Promise((resolve) => {
+      this.intro = { start: performance.now(), ms, spin, yaw: this.yaw, pitch: this.pitch, fov: this.camera.fov, resolve };
+    });
+  }
+
+  finishIntro() {
+    const intro = this.intro;
+    if (!intro) return;
+    this.intro = null;
+    this.transitioning = false;
+    this.placeInsideCamera();
+    intro.resolve();
+  }
+
+  renderIntro(now) {
+    const { start, ms, spin, yaw, pitch, fov } = this.intro;
+    const t = Math.min(1, (now - start) / ms);
+    // hold the planet for a beat, then unroll with an ease-in-out
+    const k = t < 0.14 ? 0 : (t - 0.14) / 0.86;
+    const e = k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2;
+    const u = this.introMaterial.uniforms;
+    u.dist.value = 1 - e;
+    u.pitch.value = THREE.MathUtils.lerp(-89.9 * DEG, pitch, e);
+    u.yaw.value = yaw - spin * (1 - e);
+    u.tanHalf.value = Math.tan(THREE.MathUtils.lerp(150, fov, e) * DEG / 2);
+    u.aspect.value = this.camera.aspect;
+    this.renderer.render(this.introScene, this.introCamera);
+    if (t >= 1) this.finishIntro();
+  }
+
   frame(now) {
     this.raf = requestAnimationFrame(this.frame);
+    if (this.intro) {
+      if (this.space) this.positionOverlay();
+      return this.renderIntro(now);
+    }
     if (this.tweens.length) {
       const live = [];
       for (const tw of this.tweens) {
@@ -1018,4 +1180,76 @@ function wallCapGeometry(room) {
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   return geo;
+}
+
+// Ray-traces the photo sphere (radius 1) from a camera `dist` behind its centre:
+// dist 1 looking down is the stereographic "tiny planet", dist 0 the normal view.
+const INTRO_FRAGMENT = /* glsl */ `
+  uniform sampler2D pano;
+  uniform float heading, yaw, pitch, tanHalf, aspect, dist;
+  varying vec2 vNdc;
+  const float PI = 3.141592653589793;
+  void main() {
+    vec3 f = vec3(-sin(yaw) * cos(pitch), sin(pitch), -cos(yaw) * cos(pitch));
+    vec3 r = vec3(cos(yaw), 0.0, -sin(yaw));
+    vec3 u = cross(r, f);
+    vec3 dir = normalize(f + vNdc.x * tanHalf * aspect * r + vNdc.y * tanHalf * u);
+    vec3 c = -f * dist;
+    float b = dot(c, dir);
+    float tt = -b + sqrt(max(b * b - (dot(c, c) - 1.0), 0.0));
+    vec3 d = normalize(c + tt * dir);
+    float ch = cos(heading), sh = sin(heading);
+    vec3 l = vec3(ch * d.x - sh * d.z, d.y, sh * d.x + ch * d.z);
+    vec2 uv = vec2(0.5 + atan(l.x, -l.z) / (2.0 * PI), 0.5 + asin(clamp(l.y, -1.0, 1.0)) / PI);
+    vec2 dx = dFdx(uv), dy = dFdy(uv);
+    float u2 = fract(uv.x + 0.5);
+    float dx2 = dFdx(u2), dy2 = dFdy(u2);
+    if (abs(dx2) + abs(dy2) < abs(dx.x) + abs(dy.x)) { dx.x = dx2; dy.x = dy2; }
+    gl_FragColor = vec4(textureGrad(pano, uv, dx, dy).rgb, 1.0);
+    #include <colorspace_fragment>
+  }
+`;
+
+/** Side lengths of a room that is a rectangle (any rotation), else null. */
+function rectangleDims(points) {
+  const p = normalizePolygon(points);
+  if (p.length !== 4) return null;
+  const v = p.map((a, i) => { const b = p[(i + 1) % 4]; return [b[0] - a[0], b[1] - a[1]]; });
+  for (let i = 0; i < 4; i++) {
+    const [a, b] = [v[i], v[(i + 1) % 4]];
+    const cos = (a[0] * b[0] + a[1] * b[1]) / (Math.hypot(...a) * Math.hypot(...b));
+    if (Math.abs(cos) > 0.035) return null; // more than ~2° off square
+  }
+  return [Math.hypot(...v[0]), Math.hypot(...v[1])];
+}
+
+/** Soft vertical gradient for the dollhouse, like a photo studio sweep. */
+function studioBackdrop() {
+  const c = document.createElement('canvas');
+  c.width = 2;
+  c.height = 256;
+  const g = c.getContext('2d');
+  const grad = g.createLinearGradient(0, 0, 0, 256);
+  grad.addColorStop(0, '#e9ecef');
+  grad.addColorStop(0.6, '#dfe3e7');
+  grad.addColorStop(1, '#c9cfd5');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 2, 256);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/** Radial falloff used as the contact shadow under the dollhouse. */
+function shadowTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(64, 64, 8, 64, 64, 64);
+  grad.addColorStop(0, 'rgba(20,24,30,0.55)');
+  grad.addColorStop(0.55, 'rgba(20,24,30,0.22)');
+  grad.addColorStop(1, 'rgba(20,24,30,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(c);
 }

@@ -24,7 +24,7 @@ export class PanoPreview {
     this.pitch = -0.08;
     this.drift = true;
     new THREE.TextureLoader().load(url, (tex) => {
-      this.texture = configurePanoTexture(tex);
+      this.texture = configurePanoTexture(tex, this.renderer.capabilities.getMaxAnisotropy());
       setProjection(material, { texture: this.texture, origin: new THREE.Vector3(), heading: 0 });
       this.ready = true;
       this.onReady?.();
