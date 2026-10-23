@@ -13,11 +13,28 @@ a computer and use it from an iPhone (or any phone) on the same Wi-Fi.
 
 ## Start it (5 minutes)
 
-Open a terminal (Windows: **PowerShell**; Mac: **Terminal**) and run:
+Open a terminal and run these lines one at a time.
+
+**Windows (PowerShell):**
 
 ```
-git clone <this repository's URL>
-cd <the folder it created>
+cd $HOME
+git clone -b spacetwin https://github.com/iamvava7/yes
+cd yes\spacetwin
+npm.cmd install
+npm.cmd run phone
+```
+
+`cd $HOME` matters: PowerShell often opens in `C:\Windows\system32`, where
+nothing can be saved ("Permission denied"). `npm.cmd` instead of `npm` avoids
+the "running scripts is disabled on this system" error.
+
+**Mac (Terminal):**
+
+```
+cd ~
+git clone -b spacetwin https://github.com/iamvava7/yes
+cd yes/spacetwin
 npm install
 npm run phone
 ```
@@ -29,9 +46,10 @@ The certificate is self-made, so the browser warns once:
 - iPhone Safari: **Show Details → visit this website → Visit Website**
 - Chrome: **Advanced → Proceed**
 
-If the phone can't load the page, allow Node.js through the computer's
-firewall when asked (Windows shows a pop-up the first time), and check that
-both devices are on the same network.
+If the phone can't load the page: on Windows, allow Node.js on **Private
+networks** when the firewall asks (the pop-up appears the first time), and
+check that both devices are on the same Wi-Fi. If you missed the pop-up, search
+Windows for "Allow an app through Windows Firewall" and tick Node.js.
 
 To stop the app, press **Ctrl + C** in the terminal.
 
