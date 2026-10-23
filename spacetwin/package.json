@@ -12,7 +12,7 @@
     "test:e2e": "node test-e2e/smoke.js",
     "sample:assets": "python3 scripts/make_sample.py assets/sample",
     "test:capture": "node test-e2e/capture.js",
-    "phone": "PHONE=1 node scripts/dev.js",
+    "phone": "node scripts/dev.js --phone",
     "test:tour": "node test-e2e/tour.js"
   },
   "dependencies": {

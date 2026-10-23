@@ -1,5 +1,7 @@
 # SpaceTwin
 
+> **Testing it for someone?** Start with [TESTING.md](TESTING.md).
+
 Turn 360° panoramas into a walkable, measurable 3D tour, the way Matterport does,
 using only a photo per capture point and a few clicks to trace each room.
 

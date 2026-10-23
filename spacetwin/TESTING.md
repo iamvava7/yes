@@ -1,0 +1,84 @@
+# Testing SpaceTwin
+
+Thanks for helping. SpaceTwin turns phone photos of a home into a walkable 3D
+tour with a floor plan, measurements and a property listing. You'll run it on
+a computer and use it from an iPhone (or any phone) on the same Wi-Fi.
+
+## What you need
+
+- A computer (Windows, Mac or Linux) and a phone **on the same Wi-Fi**
+  (not a guest network)
+- [Node.js](https://nodejs.org) **20 or newer** (choose "LTS")
+- [Git](https://git-scm.com/downloads)
+
+## Start it (5 minutes)
+
+Open a terminal (Windows: **PowerShell**; Mac: **Terminal**) and run:
+
+```
+git clone <this repository's URL>
+cd <the folder it created>
+npm install
+npm run phone
+```
+
+It prints an address like `https://192.168.1.23:5173`. On the phone, open that
+address in **Safari** (iPhone) or **Chrome** (Android).
+
+The certificate is self-made, so the browser warns once:
+- iPhone Safari: **Show Details → visit this website → Visit Website**
+- Chrome: **Advanced → Proceed**
+
+If the phone can't load the page, allow Node.js through the computer's
+firewall when asked (Windows shows a pop-up the first time), and check that
+both devices are on the same network.
+
+To stop the app, press **Ctrl + C** in the terminal.
+
+## What to try
+
+Please note anything confusing, slow, broken or ugly, with the phone model.
+
+**1. Look at a finished tour**
+- Tap **Open sample**. Drag to look around; pinch to zoom.
+- Tap the spot thumbnails, or the small floor-plan map at the top left, to move
+  between rooms. A room name should slide in when you enter a room.
+- Try **Dollhouse** and **Floor plan**, the **Tour** (play) button,
+  **Snapshot**, **Share**, and **Measure** (tap two points).
+- Pull up the white panel at the bottom: price, rooms, floor plan, contact.
+
+**2. Capture a real room with the phone camera**
+- Go back to the home page → **New property** → **Capture**.
+- Allow camera and motion access.
+- Stand in the middle of a room. Follow the dots: aim the ring at each white
+  dot and hold still until it shoots (30 shots, about a minute). Turn around
+  the phone rather than walking around.
+- Wait for the stitching (about 30 seconds), look at the result, and tap
+  **Save spot**. Capture 1–2 more spots, 1.5–3 m apart.
+- Tell us: did it shoot easily? Are there visible seams, blur or ghosting?
+  What did the quality score say?
+
+**3. Build the floor plan** (easier on the computer, at
+`https://localhost:5173`)
+- Open the property. Drag each spot on the plan to where it was taken.
+- Stand in a room in the 3D view, pick **Trace room**, and tap each floor
+  corner, then the ceiling above the first corner.
+- Add **Listing details** (address, price…) and open **View tour**.
+
+## Reporting
+
+For each problem: what you did, what you expected, what happened, the phone
+and browser, and a screenshot if you can. If something errors, copy what the
+terminal printed.
+
+## For developers
+
+```
+npm test                                   # unit and API tests
+npm run build && npm run test:e2e          # browser walkthrough
+npm run build && npm run test:tour         # tour page features
+npm run build && npm run test:capture      # simulated phone capture + stitching accuracy
+```
+
+The browser tests use Chromium via `playwright-core`; set `CHROMIUM_PATH` to
+your Chrome/Chromium executable if it isn't found.
