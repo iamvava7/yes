@@ -370,6 +370,10 @@ body.dragging-files .viewer-pane::after {
 .stack { display: grid; gap: 10px; margin-top: 8px; }
 .saved-mark { width: 72px; height: 72px; margin: 0 auto; border-radius: 50%; display: grid; place-items: center; background: var(--primary-bg); color: var(--primary-text); animation: pop 0.5s var(--ease) both; }
 .saved-mark svg { width: 36px; height: 36px; stroke-width: 2.4; }
+.auto-room-plan:empty { display: none; }
+.auto-room-plan svg { display: block; width: min(220px, 70%); max-height: 200px; margin: 4px auto; }
+.auto-room-plan polygon { fill: color-mix(in srgb, var(--verde) 16%, transparent); stroke: var(--verde); stroke-width: 3; stroke-linejoin: round; }
+.capture-message .spinner { width: 28px; height: 28px; margin: 8px auto; border-radius: 50%; border: 3px solid var(--line); border-top-color: var(--verde); animation: spin 0.8s linear infinite; }
 @keyframes pop { from { transform: scale(0.4); opacity: 0; } to { transform: none; opacity: 1; } }
 
 /* live capture: sphere view, framed live camera, dots, bottom bar */
@@ -795,3 +799,5 @@ body.dragging-files .viewer-pane::after {
   .tv[data-open="true"] .maria-orb-btn { opacity: 0; pointer-events: none; }
   .maria { left: 8px; right: 8px; bottom: 8px; width: auto; height: min(78%, 620px); }
 }
+
+@keyframes spin { to { transform: rotate(360deg); } }

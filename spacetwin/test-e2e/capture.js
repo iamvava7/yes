@@ -28,11 +28,13 @@ const server = app.listen(0);
 await new Promise((r) => server.once('listening', r));
 const base = `http://127.0.0.1:${server.address().port}`;
 
-const TRUE_VFOV = 62;
+// LENS=wide runs the same capture with the 0.5× ultra-wide lens (16 photos).
+const LENS = process.env.LENS === 'wide' ? 'wide' : 'main';
+const TRUE_VFOV = LENS === 'wide' ? 104 : 62;
 const NOISE_DEG = Number(process.env.NOISE_DEG ?? 1.5);
 
 // Runs in the page before the app: fake camera + gyroscope.
-function simulator({ vfov, panoUrl }) {
+function simulator({ vfov, panoUrl, wide }) {
   const W = 360, H = 480; // portrait frames
   const sim = (window.__sim = { alpha: 0, beta: 90, gamma: 0, noise: { alpha: 0, beta: 0, gamma: 0 }, exposure: 1, ready: false, motionBlur: true, frameNo: 0 });
   const img = new Image();
@@ -111,8 +113,14 @@ function simulator({ vfov, panoUrl }) {
     fctx.putImageData(out, 0, 0);
   }
   requestAnimationFrame(render);
-  const stream = frame.captureStream(30);
-  navigator.mediaDevices.getUserMedia = async () => stream;
+  navigator.mediaDevices.getUserMedia = async () => frame.captureStream(30);
+  if (wide) {
+    // Safari lists the ultra-wide as a camera of its own
+    navigator.mediaDevices.enumerateDevices = async () => [
+      { kind: 'videoinput', label: 'Back Camera', deviceId: 'main' },
+      { kind: 'videoinput', label: 'Back Ultra Wide Camera', deviceId: 'ultra' },
+    ];
+  }
   setInterval(() => {
     window.dispatchEvent(new DeviceOrientationEvent('deviceorientation', {
       alpha: sim.alpha + sim.noise.alpha, beta: sim.beta + sim.noise.beta, gamma: sim.gamma + sim.noise.gamma, absolute: false,
@@ -135,13 +143,14 @@ try {
   const space = await (await fetch(`${base}/api/sample`, { method: 'POST' })).json();
   const truth = space.scans[0];
   const panoUrl = `/api/spaces/${space.id}/scans/${truth.id}/pano`;
-  await page.addInitScript(simulator, { vfov: TRUE_VFOV, panoUrl });
+  await page.addInitScript(simulator, { vfov: TRUE_VFOV, panoUrl, wide: LENS === 'wide' });
 
   step('capture intro');
   await page.goto(`${base}/#/capture/${space.id}`);
   await page.getByRole('button', { name: 'Start capture' }).waitFor();
   await page.screenshot({ path: path.join(shots, 'c1-capture-intro.png') });
   await page.waitForFunction(() => window.__sim.ready);
+  if (LENS === 'wide') await page.getByRole('radio', { name: '0.5×' }).click();
   await page.getByRole('button', { name: 'Start capture' }).click();
   await page.locator('.capture-live').waitFor();
   await page.waitForTimeout(500);
@@ -149,9 +158,15 @@ try {
   step('aim at every dot');
   // Same order and positions as captureTargets(): yaw turns right (negative).
   const targets = [];
-  for (let i = 0; i < 12; i++) targets.push([-(i * 30), 0]);
-  for (let i = 0; i < 8; i++) targets.push([-(i * 45 + 22.5), 48]);
-  for (let i = 0; i < 8; i++) targets.push([-(i * 45 + 22.5), -48]);
+  if (LENS === 'wide') {
+    for (let i = 0; i < 8; i++) targets.push([-(i * 45), 0]);
+    for (let i = 0; i < 4; i++) targets.push([-(i * 90 + 45), 60]);
+    for (let i = 0; i < 4; i++) targets.push([-(i * 90 + 45), -60]);
+  } else {
+    for (let i = 0; i < 12; i++) targets.push([-(i * 30), 0]);
+    for (let i = 0; i < 8; i++) targets.push([-(i * 45 + 22.5), 48]);
+    for (let i = 0; i < 8; i++) targets.push([-(i * 45 + 22.5), -48]);
+  }
   // Ceiling and floor at 78°: people rarely hold a phone exactly vertical.
   // (Before the fix these needed 86.4° and capture got stuck here.)
   targets.push([0, 78], [0, -78]);
@@ -288,8 +303,17 @@ try {
   assert.equal(after.scans[2].cameraHeight, 1.5);
   assert.equal(after.scans[2].name, 'Spot 3');
 
+  step('the room is found automatically from the stitched 360°');
+  await page.getByText(/^Found a [\d.]+ × [\d.]+ m room|weren’t clear enough/).waitFor({ timeout: 30_000 });
+  const found = await page.locator('.capture-message p').first().textContent();
+  console.log(`  ${found}`);
+  const [fw, fd] = found.match(/([\d.]+) × ([\d.]+)/).slice(1).map(Number);
+  assert.ok(Math.abs(fw * fd - 20) < 2.5, `detected ${fw} × ${fd} m, truth 5 × 4`);
+  await page.locator('.auto-room-plan svg').waitFor();
+  await page.screenshot({ path: path.join(shots, 'c5b-auto-room.png') });
+
   step('outline the room with the crosshair');
-  await page.getByRole('button', { name: 'Outline this room' }).click();
+  await page.getByRole('button', { name: 'Outline by hand' }).click();
   await page.locator('.outline-card').waitFor();
   await page.waitForFunction(() => document.querySelector('.outline-stage')?.viewer?.textures.size && [...document.querySelector('.outline-stage').viewer.textures.values()].every((t) => t.ready));
   const spot = (await (await fetch(`${base}/api/spaces/${space.id}`)).json()).scans[2].position;

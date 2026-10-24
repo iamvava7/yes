@@ -1,4 +1,6 @@
 import './styles.css';
+import { api } from './api.js';
+import { toast } from './ui.js';
 import { renderCapture } from './pages/capture.js';
 import { renderEditor } from './pages/editor.js';
 import { renderHome } from './pages/home.js';
@@ -31,6 +33,17 @@ async function route() {
   else if ((m = hash.match(/^\/space\/([a-z0-9]+)$/))) dispose = await renderEditor(host, m[1]);
   else if ((m = hash.match(/^\/view\/([a-z0-9]+)$/))) dispose = await renderShowcase(host, m[1]);
   else if ((m = hash.match(/^\/capture\/([a-z0-9]+)$/))) dispose = await renderCapture(host, m[1]);
+  else if ((m = hash.match(/^\/from-listing\/([a-z0-9]+)$/))) {
+    // "Creează tur 3D" on a website listing: open (or create) its tour and capture
+    try {
+      const space = await api.spaceFromListing(m[1]);
+      location.replace(`#/${space.scans.length ? 'space' : 'capture'}/${space.id}`);
+      return;
+    } catch (err) {
+      dispose = await renderHome(host);
+      toast(err.message, 'error');
+    }
+  }
   else dispose = await renderHome(host);
   if (current !== navigation) {
     dispose?.();

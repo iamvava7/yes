@@ -96,6 +96,34 @@ a ray-traced hand-held capture with real parallax:
 `python3 scripts/bench_frames.py /tmp/bench` (writes photos, poses and the true
 panorama).
 
+## Automatic floor plan and dollhouse
+
+After a spot is saved, the server finds its room in the 360° photo
+(`server/layout.js`): the line where the walls meet the ceiling and the floor,
+traced around the whole panorama, then straight walls at right angles fitted
+through it. The phone shows the outline with its size and height: **Use this
+room**, or **Outline by hand** when a room is unusual. In the editor, **Detect
+rooms automatically** does every spot at once (`POST
+/api/spaces/:id/scans/:scanId/auto-room`). On the sample rooms it lands within
+about 10 cm and 5 cm of height. Rooms from different spots start side by side;
+drag them into place once on the plan.
+
+## Lens: 1× or 0.5× quick mode
+
+The capture screen offers **1×** (most detail, about 30 photos) and **0.5×**
+(the ultra-wide lens: about 16 photos with more overlap, so cleaner seams, but
+roughly half the detail per degree). The shot pattern is worked out from the
+lens's field of view. When a browser doesn't expose the ultra-wide camera, the
+capture falls back to 1× and says so.
+
+## Quality
+
+- Full camera frames (1920 px) go to the stitcher, and the pro stitcher
+  renders up to 6144 × 3072 (was 4096), with a light sharpening pass.
+- Tours open on a 2048 px preview and swap in the full panorama when loaded.
+- A VerifiCasa badge covers the floor under each spot (where the hand or
+  tripod was).
+
 ## Maria, the assistant on every tour
 
 Visitors open Maria from the orb button on the tour. She answers only about

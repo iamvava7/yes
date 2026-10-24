@@ -403,6 +403,15 @@ export default function PropertyEditForm({ property, onDone, isAdmin = false }) 
           )}
         </div>
 
+        {/* Turul se face cu telefonul, în aplicația de tururi de pe același
+            site; la final, „Pune-l pe anunț" îl leagă aici (tot prin SetTourUrl). */}
+        <a
+          href={`/tours#/from-listing/${property.id}`}
+          className="mt-3 flex h-11 items-center justify-center gap-2 rounded-full border border-emerald/40 bg-emerald-soft px-5 text-sm font-bold text-emerald transition-opacity hover:opacity-90"
+        >
+          <Camera className="h-4 w-4" aria-hidden="true" /> {form.tour_3d_url ? "Refă turul 3D cu telefonul" : "Creează turul 3D cu telefonul"}
+        </a>
+
         {(tour?.allowed || form.tour_3d_url) && (
           <div className="mt-3 flex flex-wrap items-end gap-2">
             <label className="min-w-0 flex-1">

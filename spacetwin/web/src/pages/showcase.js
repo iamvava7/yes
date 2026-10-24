@@ -180,6 +180,12 @@ export async function renderShowcase(app, id, { embed = false } = {}) {
   // ---------------------------------------------------------------- behaviour
 
   viewer.setSpace(space);
+  // No rooms yet (none detected or traced): only the 360° exists, so don't
+  // offer a dollhouse or plan that would show an empty scene.
+  if (!space.rooms.length) {
+    for (const b of modeChips.querySelectorAll('[data-mode="dollhouse"], [data-mode="floorplan"]')) b.hidden = true;
+    cubeBtn.hidden = true;
+  }
   renderRooms();
   updateCurrent();
   showHint();

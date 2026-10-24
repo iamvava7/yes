@@ -8,6 +8,7 @@ import { isSimplePolygon, normalizePolygon, spaceStats } from '../shared/geometr
 import { Worker } from 'node:worker_threads';
 import { toFloorPlanSvg, toObj } from './exporters.js';
 import { detectProStitch, proStitch } from './proStitch.js';
+import { placeRoom } from './layout.js';
 import { capturedRoomToRooms } from './roomplan.js';
 import { validatePose } from './stitch.js';
 import { createLocalVerificasaClient, createVerificasaClient, distanceMeters } from './verificasa.js';
@@ -50,6 +51,7 @@ function validateRoom(input, i) {
     name: input.name === undefined ? `Room ${i + 1}` : str(input.name, 'name'),
     height: input.height === undefined ? 2.6 : num(input.height, 'height', { min: 1.5, max: 10 }),
     points,
+    ...(typeof input.scanId === 'string' && /^[a-z0-9]{12}$/.test(input.scanId) ? { scanId: input.scanId } : {}),
   };
 }
 
@@ -158,6 +160,24 @@ function fromVerificasa(l) {
 // `platform` is the VerifiCasa website backend (server/platform); `siteDist`
 // its built pages. With both, one server runs the website at / and the tour
 // app at /tours and /3D/<code>.
+const PREVIEW_WIDTH = 2048;
+const previews = new Map(); // file → Promise<preview path>, so each is made once
+
+function previewOf(file) {
+  const out = `${file}.preview.jpg`;
+  if (!previews.has(file)) {
+    previews.set(file, fs.access(out).then(() => out, () => new Promise((resolve, reject) => {
+      const worker = new Worker(new URL('./preview-worker.js', import.meta.url), { workerData: { file, out, width: PREVIEW_WIDTH } });
+      worker.once('message', (m) => (m.ok ? resolve(out) : reject(new Error(m.error))));
+      worker.once('error', reject);
+    })).catch((err) => {
+      previews.delete(file);
+      throw err;
+    }));
+  }
+  return previews.get(file);
+}
+
 export async function createApp({ dataDir, sampleDir, webDist, siteDist, platform, proStitch: allowPro = true, verificasa, assistant } = {}) {
   verificasa ??= platform ? createLocalVerificasaClient(platform) : createVerificasaClient();
   // Maria's Claude key: the server's environment, else the one saved in the admin panel.
@@ -330,7 +350,11 @@ export async function createApp({ dataDir, sampleDir, webDist, siteDist, platfor
     const scan = space.scans.find((s) => s.id === req.params.scanId);
     if (!scan) throw new NotFoundError('scan not found');
     res.set('Cache-Control', 'public, max-age=31536000, immutable');
-    res.sendFile(store.panoPath(space.id, scan.file));
+    const file = store.panoPath(space.id, scan.file);
+    // ?size=preview: a 2048 px copy that opens the tour in a moment; the
+    // viewer swaps in the full panorama when it has arrived
+    if (req.query.size === 'preview' && scan.width > PREVIEW_WIDTH) return res.sendFile(await previewOf(file));
+    res.sendFile(file);
   }));
 
   api.patch('/spaces/:id/scans/:scanId', wrap(async (req, res) => {
@@ -370,6 +394,37 @@ export async function createApp({ dataDir, sampleDir, webDist, siteDist, platfor
       s.rooms = rooms;
     });
     res.json(withStats(space));
+  }));
+
+  // Automatic room: finds the walls in a spot's panorama and proposes the
+  // room around it (server/layout.js). { save: true } adds it to the plan,
+  // replacing a room already detected for this spot.
+  api.post('/spaces/:id/scans/:scanId/auto-room', wrap(async (req, res) => {
+    const space = await store.get(req.params.id);
+    const scan = space.scans.find((s) => s.id === req.params.scanId);
+    if (!scan) throw new NotFoundError('scan not found');
+    const out = await new Promise((resolve, reject) => {
+      const worker = new Worker(new URL('./layout-worker.js', import.meta.url), {
+        workerData: { file: store.panoPath(space.id, scan.file), cameraHeight: scan.cameraHeight },
+      });
+      worker.once('message', resolve);
+      worker.once('error', reject);
+    });
+    if (!out.ok) throw new HttpError(500, `could not read the panorama: ${out.error}`);
+    if (!out.layout) return res.json({ room: null, reason: 'no clear walls found; outline this room by hand' });
+    const room = validateRoom({
+      name: /^Spot \d+$/.test(scan.name) ? `Room ${space.rooms.length + 1}` : scan.name,
+      height: out.layout.height, points: placeRoom(out.layout, scan),
+    }, 0);
+    room.scanId = scan.id;
+    room.auto = { confidence: out.layout.confidence, shape: out.layout.shape };
+    let saved = space;
+    if (req.body?.save) {
+      saved = await store.update(space.id, (s) => {
+        s.rooms = [...s.rooms.filter((r) => r.scanId !== scan.id), room];
+      });
+    }
+    res.json({ room, confidence: out.layout.confidence, space: req.body?.save ? withStats(saved) : undefined });
   }));
 
   // Tags: annotations pinned to a 3D point.

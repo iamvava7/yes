@@ -21,6 +21,8 @@ export const api = {
   updateScan: (id, scanId, patch) => request('PATCH', `/spaces/${id}/scans/${scanId}`, patch),
   deleteScan: (id, scanId) => request('DELETE', `/spaces/${id}/scans/${scanId}`),
   putRooms: (id, rooms) => request('PUT', `/spaces/${id}/rooms`, { rooms }),
+  /** Find the room around a spot from its panorama; `save` adds it to the plan. */
+  autoRoom: (id, scanId, save = false) => request('POST', `/spaces/${id}/scans/${scanId}/auto-room`, { save }),
   createTag: (id, tag) => request('POST', `/spaces/${id}/tags`, tag),
   capabilities: () => request('GET', '/capabilities'),
   verificasaListings: (search = '') => request('GET', `/verificasa/listings?search=${encodeURIComponent(search)}`),

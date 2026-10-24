@@ -226,9 +226,42 @@ export function stitchPosed(frames, { width = 4096, quality = 90 } = {}) {
  */
 export function finishPanorama(rgba, width, height, quality = 90) {
   fillHoles(rgba, width, height);
+  sharpen(rgba, width, height);
   const lut = toneCurve(rgba);
   for (let i = 0; i < rgba.length; i += 4) {
     rgba[i] = lut[0][rgba[i]]; rgba[i + 1] = lut[1][rgba[i + 1]]; rgba[i + 2] = lut[2][rgba[i + 2]];
   }
   return jpeg.encode({ data: rgba, width, height }, quality).data;
+}
+
+/**
+ * Light unsharp mask on brightness: phone video frames are a little soft,
+ * and blending softens them again. Small differences (noise, flat walls) are
+ * left alone; the panorama wraps around horizontally.
+ */
+export function sharpen(rgba, width, height, { amount = 0.4, threshold = 3 } = {}) {
+  const n = width * height;
+  const luma = new Uint8Array(n);
+  for (let i = 0; i < n; i++) luma[i] = (77 * rgba[i * 4] + 150 * rgba[i * 4 + 1] + 29 * rgba[i * 4 + 2]) >> 8;
+  const blurX = new Uint16Array(n); // 1-2-1 across, x4
+  for (let y = 0; y < height; y++) {
+    const row = y * width;
+    for (let x = 0; x < width; x++) {
+      const l = luma[row + (x ? x - 1 : width - 1)], r = luma[row + (x < width - 1 ? x + 1 : 0)];
+      blurX[row + x] = l + 2 * luma[row + x] + r;
+    }
+  }
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = y * width + x;
+      const blur = (blurX[i - width] + 2 * blurX[i] + blurX[i + width]) / 16;
+      const d = luma[i] - blur;
+      if (d > -threshold && d < threshold) continue;
+      const add = amount * d;
+      const o = i * 4;
+      rgba[o] = Math.max(0, Math.min(255, rgba[o] + add));
+      rgba[o + 1] = Math.max(0, Math.min(255, rgba[o + 1] + add));
+      rgba[o + 2] = Math.max(0, Math.min(255, rgba[o + 2] + add));
+    }
+  }
 }

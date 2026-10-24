@@ -79,10 +79,10 @@ try {
   step('walk to the bedroom scan');
   await page.getByRole('button', { name: 'Navigate' }).click();
   await page.locator('.scan-thumb').nth(1).click();
-  await settle(1300);
-  const current = await page.evaluate(() => document.querySelector('.viewer-stage').viewer.currentScanId);
   const sample = await (await fetch(`${base}/api/spaces/${page.url().split('/').pop()}`)).json();
-  assert.equal(current, sample.scans[1].id);
+  // the walk is animated, and waits for the room's photo if it is still loading
+  await page.waitForFunction((id) => document.querySelector('.viewer-stage').viewer.currentScanId === id, sample.scans[1].id, { timeout: 10_000 });
+  await settle(300);
   await page.screenshot({ path: path.join(shots, '04-bedroom.png') });
 
   step('dollhouse and floor plan');

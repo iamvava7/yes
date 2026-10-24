@@ -238,6 +238,7 @@ export async function renderEditor(app, id) {
         h('p.dim', `Position ${scan.position.x.toFixed(2)}, ${scan.position.z.toFixed(2)} m · ${scan.width}×${scan.height}px`),
         h('div.row',
           h('button.secondary.small', { onclick: () => chrome.viewer.goToScan(scan.id) }, 'Go here'),
+          h('button.secondary.small', { onclick: (e) => detectRoom(scan, e.currentTarget) }, icon('trace'), 'Detect room'),
           h('button.ghost.small.danger', {
             onclick: async () => {
               if (!confirm(`Delete scan “${scan.name}”? Its panorama will be removed.`)) return;
@@ -280,13 +281,45 @@ export async function renderEditor(app, id) {
       ),
       h('p.dim', space.rooms.length
         ? 'Select a scan or room on the plan to edit it.'
-        : 'Next: stand in a room in the 3D view, pick “Trace room” and click the floor corners. Or draw rooms on this plan.'),
+        : 'Next: let VerifiCasa find the rooms in your 360° photos, or trace them yourself (“Trace room” in the 3D view, or “Draw room” on this plan).'),
+      space.scans.some((sc) => !space.rooms.some((r) => r.scanId === sc.id))
+        ? h('button.primary.small', { onclick: (e) => detectAll(e.currentTarget) }, icon('trace'), space.rooms.length ? 'Detect the missing rooms' : 'Detect rooms automatically')
+        : null,
       h('div.listing-summary',
         h('div', h('strong', space.listing?.address || 'No listing details yet'),
           h('span.dim', [space.listing?.status, formatPrice(space.listing)].filter(Boolean).join(' · ') || 'Add an address, price and contact to show beside the tour.')),
         h('button.secondary.small', { onclick: openListing }, icon('info'), 'Listing details'),
       ),
     );
+  }
+
+  /** Find a spot's room from its panorama and add it (replaces one found before). */
+  async function detectRoom(scan, btn) {
+    btn.disabled = true;
+    try {
+      const out = await api.autoRoom(id, scan.id, true);
+      if (!out.room) throw new Error(out.reason || 'no clear walls found');
+      apply(out.space);
+      toast(`${out.room.name}: ${fmtArea(polygonArea(out.room.points))}, ${out.room.height} m high${out.confidence < 0.6 ? ' — check the corners' : ''}`);
+    } catch (err) {
+      toast(`${scan.name}: ${err.message}. Trace it by hand instead.`, 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function detectAll(btn) {
+    btn.disabled = true;
+    const todo = space.scans.filter((sc) => !space.rooms.some((r) => r.scanId === sc.id));
+    let found = 0;
+    for (const scan of todo) {
+      try {
+        const out = await api.autoRoom(id, scan.id, true);
+        if (out.room) { found++; apply(out.space); }
+      } catch { /* reported below */ }
+    }
+    toast(found === todo.length ? `Found ${found} room${found === 1 ? '' : 's'}. Drag them into place on the plan if needed.` : `Found ${found} of ${todo.length} rooms; trace the others by hand.`, found ? undefined : 'error');
+    btn.disabled = false;
   }
 
   /** Address, price, beds/baths and contact shown beside the shared tour. */

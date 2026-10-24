@@ -99,6 +99,14 @@ export class Viewer {
     this.cursor.renderOrder = 10;
     this.cursor.visible = false;
     this.scene.add(this.cursor);
+    // The floor right under the camera is the one part a phone can't see
+    // cleanly (hand, tripod, filled-in blur): cover it with a badge, as
+    // Matterport and Teleport do.
+    this.nadir = new THREE.Mesh(new THREE.CircleGeometry(0.26, 64), new THREE.MeshBasicMaterial({ map: nadirTexture(), transparent: true, depthWrite: false }));
+    this.nadir.rotation.x = -Math.PI / 2;
+    this.nadir.renderOrder = 2;
+    this.nadir.visible = false;
+    this.scene.add(this.nadir);
 
     this.floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
     this.raycaster = new THREE.Raycaster();
@@ -114,6 +122,7 @@ export class Viewer {
   }
 
   dispose() {
+    this.disposed = true;
     cancelAnimationFrame(this.raf);
     this.resizeObserver.disconnect();
     this.orbit.dispose();
@@ -175,17 +184,32 @@ export class Viewer {
     return { texture: entry?.ready ? entry.texture : null, origin: this.eyeOf(scan), heading: (scan.heading ?? 0) * DEG };
   }
 
+  /**
+   * Large panoramas arrive in two steps, as on Matterport: a 2048 px preview
+   * that opens the room at once, then the full one swapped in when loaded.
+   * The promise resolves as soon as something can be shown.
+   */
   loadTexture(scan) {
     const url = this.panoUrl(scan);
     if (this.textures.has(url)) return this.textures.get(url).promise;
-    const entry = { texture: null, ready: false };
-    entry.promise = new THREE.TextureLoader().loadAsync(url).then((tex) => {
-      entry.texture = configurePanoTexture(tex, this.renderer.capabilities.getMaxAnisotropy());
+    const entry = { texture: null, ready: false, full: false };
+    const aniso = this.renderer.capabilities.getMaxAnisotropy();
+    const show = (tex, full) => {
+      if (this.disposed || entry.full) return tex.dispose();
+      const old = entry.texture;
+      entry.texture = configurePanoTexture(tex, aniso);
       entry.ready = true;
+      entry.full = full;
       this.refreshProjections();
+      old?.dispose();
       this.cb.onTextureLoaded?.(scan.id);
-      return tex;
-    }).catch((err) => {
+    };
+    const loader = new THREE.TextureLoader();
+    const full = loader.loadAsync(url).then((tex) => show(tex, true));
+    const first = scan.width > 2048
+      ? Promise.race([loader.loadAsync(`${url}${url.includes('?') ? '&' : '?'}size=preview`).then((tex) => show(tex, false)), full])
+      : full;
+    entry.promise = first.catch(() => full).catch((err) => {
       console.error('failed to load panorama', url, err);
     });
     this.textures.set(url, entry);
@@ -1154,6 +1178,9 @@ export class Viewer {
     if (this.planControls.enabled) this.planControls.update();
     if (this.centerAim && this.trace && !this.transitioning) this.updateCenterAim();
     if (this.space) this.positionOverlay();
+    const here = this.mode === 'inside' && !this.transitioning && this.scanById(this.currentScanId);
+    this.nadir.visible = Boolean(here);
+    if (here) this.nadir.position.set(here.position.x, 0.003, here.position.z);
     this.renderer.render(this.scene, this.activeCamera());
   }
 
@@ -1265,4 +1292,31 @@ function shadowTexture() {
   g.fillStyle = grad;
   g.fillRect(0, 0, 128, 128);
   return new THREE.CanvasTexture(c);
+}
+
+/** The floor badge: a light disc with the brand ring and name. */
+function nadirTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = 'rgba(248, 246, 241, 0.94)';
+  g.beginPath();
+  g.arc(128, 128, 126, 0, Math.PI * 2);
+  g.fill();
+  g.strokeStyle = '#1f7048';
+  g.lineWidth = 8;
+  g.beginPath();
+  g.arc(128, 128, 112, 0, Math.PI * 2);
+  g.stroke();
+  g.fillStyle = '#1f7048';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.font = '800 34px system-ui, -apple-system, sans-serif';
+  g.fillText('VerifiCasa', 128, 120);
+  g.font = '600 18px system-ui, -apple-system, sans-serif';
+  g.fillText('TUR 3D', 128, 156);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  return tex;
 }

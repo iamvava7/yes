@@ -2,7 +2,7 @@ import { Vector3 } from 'three';
 import { api, exportUrl, panoUrl } from '../api.js';
 import { brand } from '../brand.js';
 import {
-  angleBetween, captureTargets, deviceQuaternion, forwardOf, headingCorrection, intrinsics, onTarget, RING_SHOTS, yawPitchOf,
+  angleBetween, captureTargets, deviceQuaternion, forwardOf, headingCorrection, intrinsics, onTarget, ringSizes, yawPitchOf,
 } from '../capture/geometry.js';
 import { Mosaic } from '../capture/mosaic.js';
 import { PanoPreview } from '../capture/panoPreview.js';
@@ -18,6 +18,12 @@ const AIM_TOLERANCE = 3.5 * DEG; // how close to a ring dot counts as "on target
 const STEADY_MS = 350; // hold still this long before a shot
 const STEADY_MAX = 0.7 * DEG; // max wobble while holding still
 const GUIDE_VFOV = 65; // typical iPhone main camera in portrait; the stitcher calibrates the real value
+// 1×: the most detail. 0.5×: the ultra-wide lens, half the photos and more
+// overlap between them (cleaner seams), at about half the detail per degree.
+const LENSES = {
+  main: { vfov: GUIDE_VFOV, name: '1×', hint: 'Most detail · about 30 photos' },
+  wide: { vfov: 100, name: '0.5×', hint: 'Quick · about 16 photos' },
+};
 const MAX_PHOTO_SIDE = 1920; // keep the camera's full frame: every pixel ends up in the panorama
 const PRO_MAX_WIDTH = 6144; // 6144×3072: 1.5× the old detail, still light enough for phone browsers
 const BURST = 5; // frames grabbed per dot; the sharpest is kept (all 5 blurred is rare)
@@ -85,6 +91,20 @@ export async function renderCapture(app, spaceId) {
         },
       }, label));
     }
+    let lens = loadLens();
+    const lensPick = h('div.segmented', { role: 'radiogroup', 'aria-label': 'Lens' });
+    const lensHint = h('span.dim.lens-hint', LENSES[lens].hint);
+    for (const [key, l] of Object.entries(LENSES)) {
+      lensPick.append(h('button', {
+        type: 'button', role: 'radio', 'aria-checked': key === lens, dataset: { lens: key },
+        onclick: (e) => {
+          lens = key;
+          saveLens(key);
+          lensHint.textContent = l.hint;
+          for (const b of lensPick.children) b.setAttribute('aria-checked', b === e.currentTarget);
+        },
+      }, l.name));
+    }
     const problems = [];
     if (!window.isSecureContext) problems.push('Camera capture needs a secure (https://) address. Open the app through its https link on your phone.');
     if (!navigator.mediaDevices?.getUserMedia) problems.push('This browser has no camera access.');
@@ -98,12 +118,13 @@ export async function renderCapture(app, spaceId) {
       ),
       h('label.field', h('span', 'Name'), name),
       h('label.field', h('span', 'Phone height'), h('div.input-row', mount, heightInput, h('span.suffix', 'm'))),
+      h('div.field', h('span', 'Lens'), h('div.input-row', lensPick, lensHint)),
       problems.length ? h('div.capture-problem', problems.map((p) => h('p', p))) : null,
       h('button.primary.big', {
         disabled: problems.length > 0,
         onclick: () => {
           unlock(); // iOS only allows audio to start from a tap
-          start({ name: name.value.trim() || `Spot ${n}`, cameraHeight: height });
+          start({ name: name.value.trim() || `Spot ${n}`, cameraHeight: height, lens });
         },
       }, icon('camera'), 'Start capture'),
       h('p.dim', 'Your phone will ask for its location once: the tour then shows “captured on site” and how far it was taken from the listing’s address (never the exact spot).'),
@@ -119,10 +140,11 @@ export async function renderCapture(app, spaceId) {
     opts.where = locate(); // "captured on site": asked once, never blocks the capture
     let stream;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1440 } },
-      });
+      const cam = await openCamera(opts.lens);
+      stream = cam.stream;
+      opts.vfov = cam.vfov;
+      if (opts.lens === 'wide' && cam.lens !== 'wide') toast('This browser doesn’t offer the 0.5× lens on this phone, so the capture uses 1×.');
+      opts.lens = cam.lens;
     } catch (err) {
       toast(`Camera unavailable: ${err.message}`, 'error');
       return;
@@ -136,6 +158,7 @@ export async function renderCapture(app, spaceId) {
     let session = null;
     show(wrap, () => session?.dispose());
     session = new CaptureSession(wrap, stream, {
+      vfov: opts.vfov,
       onDone: (frames, mosaic) => {
         session.handOver(); // the mosaic stays on screen while stitching
         process(frames, opts, wrap, mosaic);
@@ -176,7 +199,7 @@ export async function renderCapture(app, spaceId) {
     try {
       // the phone aligns the photos (and makes a quick panorama as a fallback)
       const result = await stitchPanorama(frames, {
-        initialVfov: GUIDE_VFOV,
+        initialVfov: opts.vfov ?? GUIDE_VFOV,
         onProgress: (step, f) => progress(step, pro ? f * 0.45 : f),
       });
       if (pro) {
@@ -279,16 +302,64 @@ export async function renderCapture(app, spaceId) {
   // ---------------------------------------------------------------- saved
 
   function saved(scan) {
+    // The room is found from the panorama itself (server/layout.js); tracing
+    // corners by hand is only the fallback.
+    const status = h('p', 'Finding the walls in your 360°…');
+    const plan = h('div.auto-room-plan');
+    const actions = h('div.stack');
+    const manual = h('button.secondary.big', { onclick: () => { sfx.tap(); outline(scan); } }, icon('trace'), 'Outline by hand');
+    const next = h('button.secondary.big', { onclick: () => { sfx.tap(); showIntro(); } }, icon('camera'), 'Capture next spot');
+    const see = h('button.ghost', { onclick: () => result() }, 'See the 3D result');
+    actions.replaceChildren(h('div.spinner', { 'aria-hidden': true }));
     show(h('div.capture-message',
       h('div.saved-mark', icon('check')),
       h('h2', `Saved “${scan.name}”`),
-      h('p', 'Next, outline this room so it appears in 3D and on the floor plan. It takes about a minute: you point at each corner.'),
-      h('div.stack',
-        h('button.primary.big', { onclick: () => { sfx.tap(); outline(scan); } }, icon('trace'), 'Outline this room'),
-        h('button.secondary.big', { onclick: () => { sfx.tap(); showIntro(); } }, icon('camera'), 'Capture next spot'),
-        h('button.ghost', { onclick: () => result() }, 'See the 3D result'),
-      ),
+      status, plan, actions,
     ));
+    api.autoRoom(spaceId, scan.id).then(({ room, confidence }) => {
+      if (!room) throw new Error('no room');
+      const [w, d] = roomSize(room.points);
+      status.textContent = `Found a ${w.toFixed(1)} × ${d.toFixed(1)} m room, ${room.height.toFixed(2)} m high${confidence < 0.6 ? '. Check the corners: some walls were hard to see.' : '.'}`;
+      plan.replaceChildren(roomSketch(room.points));
+      const use = h('button.primary.big', {
+        onclick: async () => {
+          use.disabled = true;
+          try {
+            space = (await api.autoRoom(spaceId, scan.id, true)).space;
+            sfx.success();
+            result(room.name);
+          } catch (err) {
+            toast(err.message, 'error');
+            use.disabled = false;
+          }
+        },
+      }, icon('check'), 'Use this room');
+      actions.replaceChildren(use, manual, next, see);
+    }).catch(() => {
+      status.textContent = 'The walls weren’t clear enough to find automatically. Outline this room by pointing at its corners (about a minute).';
+      actions.replaceChildren(manual, next, see);
+    });
+  }
+
+  /** Width and depth of a room's bounding box, metres. */
+  function roomSize(points) {
+    const xs = points.map((p) => p[0]), zs = points.map((p) => p[1]);
+    return [Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs)];
+  }
+
+  /** A small drawing of the detected outline, so it can be checked at a glance. */
+  function roomSketch(points) {
+    const xs = points.map((p) => p[0]), zs = points.map((p) => p[1]);
+    const minX = Math.min(...xs), minZ = Math.min(...zs);
+    const span = Math.max(Math.max(...xs) - minX, Math.max(...zs) - minZ, 0.1);
+    const k = 180 / span;
+    const pts = points.map(([x, z]) => `${(10 + (x - minX) * k).toFixed(1)},${(10 + (z - minZ) * k).toFixed(1)}`).join(' ');
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', `0 0 ${20 + (Math.max(...xs) - minX) * k} ${20 + (Math.max(...zs) - minZ) * k}`);
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', 'Detected room outline');
+    svg.innerHTML = `<polygon points="${pts}" />`;
+    return svg;
   }
 
   // ---------------------------------------------------------------- outline the room
@@ -416,11 +487,32 @@ export async function renderCapture(app, spaceId) {
         },
       }, 'Copy');
       const vc = space.verificasa;
+      // Same site as the listings: signed in there, the tour goes on the
+      // listing in one tap (SetTourUrl checks ownership and the plan's quota).
+      const token = websiteToken();
+      const attach = vc && token ? h('button.primary', {
+        onclick: async () => {
+          attach.disabled = true;
+          try {
+            const res = await fetch('/api/platform/functions/SetTourUrl', {
+              method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+              body: JSON.stringify({ property_id: vc.propertyId, tour_3d_url: link }),
+            });
+            const out = await res.json().catch(() => ({}));
+            if (!res.ok || out.error) throw new Error(out.error || out.message || `HTTP ${res.status}`);
+            sfx.success();
+            attach.replaceChildren(icon('check'), 'On the listing');
+          } catch (err) {
+            toast(err.message, 'error');
+            attach.disabled = false;
+          }
+        },
+      }, 'Put it on the listing') : null;
       return h('section.result-panel.publish',
         h('h3', vc ? 'Put it on your VerifiCasa listing' : 'Share the tour'),
-        vc ? h('p', 'Copy the link, open the listing and paste it into the “Link Tur 3D” field (step “Poze & contact”).') : null,
+        vc && !attach ? h('p', 'Sign in on VerifiCasa to attach it in one tap, or copy the link into the listing’s “Link Tur 3D” field.') : null,
         h('div.input-row', h('input', { value: link, readOnly: true, 'aria-label': 'Tour link', onfocus: (e) => e.target.select() }), copy),
-        vc ? h('a.button.primary', { href: vc.url, target: '_blank', rel: 'noopener' }, 'Open the listing') : null,
+        h('div.row', attach, vc ? h('a.button.secondary', { href: vc.url, target: '_blank', rel: 'noopener' }, 'Open the listing') : null),
       );
     }
 
@@ -459,10 +551,12 @@ function nextVideoFrame(video) {
  * frame at its centre, dots to aim at, and each photo landing as a tile.
  */
 class CaptureSession {
-  constructor(wrap, stream, { onDone, onCancel }) {
+  constructor(wrap, stream, { onDone, onCancel, vfov = GUIDE_VFOV }) {
     this.stream = stream;
     this.onDone = onDone;
-    this.targets = captureTargets();
+    this.vfov = vfov;
+    this.targets = captureTargets({ vfov });
+    this.rings = ringSizes(this.targets);
     this.frames = [];
     this.tiles = [];
     this.q = null; // aligned camera orientation
@@ -476,7 +570,7 @@ class CaptureSession {
     this.video.setAttribute('playsinline', '');
     this.video.srcObject = stream;
     this.video.addEventListener('loadedmetadata', () => {
-      this.mosaic.setIntrinsics(intrinsics(GUIDE_VFOV, this.video.videoWidth / this.video.videoHeight));
+      this.mosaic.setIntrinsics(intrinsics(this.vfov, this.video.videoWidth / this.video.videoHeight));
     });
     this.mosaic.onResize = (r) => {
       this.video.style.width = `${r.width}px`;
@@ -635,7 +729,8 @@ class CaptureSession {
     void this.video.offsetWidth;
     this.video.classList.add('shot');
     // chime when a whole ring is done: horizon (12), upper (20), lower (28)
-    if ([12, 20, 28].includes(this.frames.filter((f) => !this.targets[f.targetId].pole).length)) setTimeout(() => sfx.ding(), 120);
+    const { horizon, tilted } = this.rings;
+    if ([horizon, horizon + tilted, horizon + 2 * tilted].includes(this.frames.filter((f) => !this.targets[f.targetId].pole).length)) setTimeout(() => sfx.ding(), 120);
     this.updateBar();
   }
 
@@ -650,8 +745,8 @@ class CaptureSession {
 
   updateBar() {
     const rings = this.frames.filter((f) => !this.targets[f.targetId].pole).length;
-    this.ringFill.style.strokeDashoffset = String(100 - Math.min(100, (rings / RING_SHOTS) * 100));
-    this.finishBtn.disabled = this.frames.length < MIN_SHOTS;
+    this.ringFill.style.strokeDashoffset = String(100 - Math.min(100, (rings / this.rings.total) * 100));
+    this.finishBtn.disabled = this.frames.length < Math.min(MIN_SHOTS, this.rings.horizon);
     this.finishBtn.classList.toggle('ready', this.ringsDone());
     this.undoBtn.disabled = !this.frames.length;
   }
@@ -670,7 +765,7 @@ class CaptureSession {
   }
 
   finish() {
-    if (this.finished || this.frames.length < MIN_SHOTS) return;
+    if (this.finished || this.frames.length < Math.min(MIN_SHOTS, this.rings.horizon)) return;
     this.finished = true;
     this.stopSensing();
     sfx.ding();
@@ -772,4 +867,53 @@ class CaptureSession {
       ctx.restore();
     }
   }
+}
+
+function loadLens() {
+  try { return localStorage.getItem('capture-lens') === 'wide' ? 'wide' : 'main'; } catch { return 'main'; }
+}
+
+function saveLens(lens) {
+  try { localStorage.setItem('capture-lens', lens); } catch { /* private mode */ }
+}
+
+/**
+ * The back camera with the chosen lens. Safari lists the ultra-wide as its own
+ * camera ("Back Ultra Wide Camera", labels appear once access is granted);
+ * other browsers zoom out below 1× instead. Falls back to 1× when neither is
+ * offered. Resolves to { stream, lens, vfov } with the lens actually used.
+ */
+async function openCamera(want) {
+  const video = { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1440 } };
+  let stream = await navigator.mediaDevices.getUserMedia({ audio: false, video });
+  const main = { stream, lens: 'main', vfov: GUIDE_VFOV };
+  if (want !== 'wide') return main;
+  const devices = await navigator.mediaDevices.enumerateDevices().catch(() => []);
+  const ultra = devices.find((d) => d.kind === 'videoinput' && /ultra|0[.,]5\s*[x×]/i.test(d.label));
+  if (ultra) {
+    if (stream.getVideoTracks()[0]?.getSettings?.().deviceId !== ultra.deviceId) {
+      try {
+        const wide = await navigator.mediaDevices.getUserMedia({ audio: false, video: { deviceId: { exact: ultra.deviceId }, width: video.width, height: video.height } });
+        stream.getTracks().forEach((t) => t.stop());
+        stream = wide;
+      } catch {
+        return main;
+      }
+    }
+    return { stream, lens: 'wide', vfov: LENSES.wide.vfov };
+  }
+  const track = stream.getVideoTracks()[0];
+  const zoom = track?.getCapabilities?.().zoom;
+  if (zoom && zoom.min < 1) {
+    try {
+      await track.applyConstraints({ advanced: [{ zoom: zoom.min }] });
+      return { stream, lens: 'wide', vfov: (2 * Math.atan(Math.tan((GUIDE_VFOV * DEG) / 2) / zoom.min)) / DEG };
+    } catch { /* keep 1× */ }
+  }
+  return main;
+}
+
+/** The VerifiCasa website session on this same site, if signed in. */
+function websiteToken() {
+  try { return localStorage.getItem('base44_access_token') || null; } catch { return null; }
 }

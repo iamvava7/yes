@@ -43,28 +43,41 @@ export function headingCorrection(yaw) {
 }
 
 /**
- * Shots needed for a full sphere with a phone held upright (portrait, ~50°×65°
- * field of view): a horizon ring, a ring above and below, then straight up and
- * down. Neighbouring shots overlap by roughly a third, which the stitcher needs
- * to align and blend them. Order: horizon first (the easiest, and what fixes
- * the heading), then up, down, zenith, nadir.
+ * Shots needed for a full sphere with a phone held upright, worked out from
+ * the lens: a horizon ring, a ring above and below, then straight up and down
+ * (optional). Neighbouring shots overlap by about 40%, which the stitcher
+ * needs to align and blend them. The main camera (≈65° × 50° portrait) gets
+ * 12 + 8 + 8; the 0.5× ultra-wide (≈100° × 84°) gets 8 + 4 + 4. Order:
+ * horizon first (the easiest, and what fixes the heading), then up, down,
+ * zenith, nadir.
  */
-export function captureTargets() {
+export function captureTargets({ vfov = 65, aspect = 0.75 } = {}) {
+  const hfov = 2 * Math.atan(Math.tan((vfov * DEG) / 2) * aspect) / DEG;
+  const step = hfov * 0.6; // 40% overlap side by side
+  const tilt = Math.min(Math.round(vfov * 0.74), 60); // ~25% overlap with the horizon ring
+  const around = Math.ceil(360 / step);
+  const tilted = Math.max(3, Math.ceil((360 * Math.cos(tilt * DEG)) / step));
   const targets = [];
   const ring = (pitchDeg, count, offsetDeg = 0) => {
     for (let i = 0; i < count; i++) {
       targets.push({ yaw: -(i * 360 / count + offsetDeg) * DEG, pitch: pitchDeg * DEG });
     }
   };
-  ring(0, 12);
-  ring(48, 8, 22.5);
-  ring(-48, 8, 22.5);
+  ring(0, around);
+  ring(tilt, tilted, 180 / tilted);
+  ring(-tilt, tilted, 180 / tilted);
   // Ceiling and floor: optional, and any steep enough shot counts (see onTarget).
   targets.push({ yaw: 0, pitch: 89.9 * DEG, pole: 1 }, { yaw: 0, pitch: -89.9 * DEG, pole: -1 });
   return targets.map((t, i) => ({ ...t, id: i, dir: dirFromYawPitch(t.yaw, t.pitch) }));
 }
 
-export const RING_SHOTS = 28; // horizon + upper + lower rings; ceiling/floor are extra
+/** Ring sizes of a target list (horizon, upper, lower), for progress and chimes. */
+export function ringSizes(targets) {
+  const rings = targets.filter((t) => !t.pole);
+  const horizon = rings.filter((t) => t.pitch === 0).length;
+  return { horizon, tilted: (rings.length - horizon) / 2, total: rings.length };
+}
+
 export const POLE_MIN_PITCH = 72 * DEG; // a ceiling/floor shot only has to be this steep, in any direction
 
 /**
