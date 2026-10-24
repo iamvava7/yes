@@ -1,0 +1,139 @@
+{
+  "name": "InspectionRequest",
+  "type": "object",
+  "title": "InspectionRequest",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Nume"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "title": "Email"
+    },
+    "phone": {
+      "type": "string",
+      "title": "Telefon"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "Proprietar",
+        "Chiria\u0219/Cump\u0103r\u0103tor",
+        "Agent"
+      ],
+      "default": "Proprietar",
+      "title": "Rol"
+    },
+    "address_or_url": {
+      "type": "string",
+      "title": "Adres\u0103 / Link anun\u021b"
+    },
+    "package_interest": {
+      "type": "string",
+      "title": "Pachet de interes"
+    },
+    "message": {
+      "type": "string",
+      "title": "Mesaj"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Nou",
+        "Contactat",
+        "\u00cenchis"
+      ],
+      "default": "Nou",
+      "title": "Status"
+    },
+    "description": {
+      "type": "string",
+      "title": "Descriere",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "name",
+    "email"
+  ],
+  "rls": {
+    "create": null,
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    }
+  }
+}

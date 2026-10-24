@@ -1,0 +1,149 @@
+{
+  "name": "Inquiry",
+  "type": "object",
+  "title": "Inquiry",
+  "properties": {
+    "property_id": {
+      "type": "string",
+      "title": "Property ID"
+    },
+    "property_title": {
+      "type": "string",
+      "title": "Titlu proprietate"
+    },
+    "name": {
+      "type": "string",
+      "title": "Nume chiria\u0219"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "title": "Email"
+    },
+    "phone": {
+      "type": "string",
+      "title": "Telefon"
+    },
+    "occupation": {
+      "type": "string",
+      "title": "Ocupa\u021bie"
+    },
+    "estimated_income": {
+      "type": "number",
+      "title": "Venit estimat lunar"
+    },
+    "move_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Data mut\u0103rii"
+    },
+    "message": {
+      "type": "string",
+      "title": "Mesaj"
+    },
+    "preferred_visit_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Data vizion\u0103rii preferat\u0103"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Nou",
+        "Calificat",
+        "Vizionare programat\u0103",
+        "Respins"
+      ],
+      "default": "Nou",
+      "title": "Status"
+    },
+    "description": {
+      "type": "string",
+      "title": "Descriere",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "property_id",
+    "name",
+    "email"
+  ],
+  "rls": {
+    "create": null,
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    }
+  }
+}

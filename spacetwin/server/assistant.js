@@ -63,16 +63,27 @@ export function parseChat(body) {
   return { messages: out, lang: body.lang === 'ro' ? 'ro' : 'en' };
 }
 
-export function createAssistant({ client } = {}) {
-  let anthropic = client ?? null;
-  if (!anthropic && (process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN)) anthropic = new Anthropic();
+// `apiKey` may be a function: the key is then looked up on every question, so
+// one saved later in Admin → Integrări & chei API is used without a restart.
+export function createAssistant({ client, apiKey } = {}) {
+  let fixed = client ?? null;
+  if (!fixed && !apiKey && (process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN)) fixed = new Anthropic();
+  let made = { key: null, client: null };
+  const anthropic = () => {
+    if (fixed) return fixed;
+    const key = typeof apiKey === 'function' ? apiKey() : apiKey;
+    if (!key) return null;
+    if (made.key !== key) made = { key, client: new Anthropic({ apiKey: key }) };
+    return made.client;
+  };
   return {
-    engine: anthropic ? 'claude' : 'faq',
+    get engine() { return anthropic() ? 'claude' : 'faq'; },
     async answer(space, { messages, lang }) {
       const facts = factsOf(space);
-      if (anthropic) {
+      const ai = anthropic();
+      if (ai) {
         try {
-          return { ...(await claudeAnswer(anthropic, facts, messages, lang)), engine: 'claude' };
+          return { ...(await claudeAnswer(ai, facts, messages, lang)), engine: 'claude' };
         } catch (err) {
           console.warn(`Maria: Claude unavailable (${err.message}); using the built-in answers`);
         }

@@ -1,0 +1,112 @@
+{
+  "name": "User",
+  "type": "object",
+  "title": "User",
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "SUPER_ADMIN",
+        "ADMIN",
+        "AGENT",
+        "PROPRIETAR",
+        "SUPPORT",
+        "admin",
+        "user"
+      ],
+      "default": "user",
+      "title": "Rol"
+    },
+    "is_verified": {
+      "type": "boolean",
+      "default": false,
+      "title": "Verificat"
+    },
+    "phone": {
+      "type": "string",
+      "title": "Telefon"
+    },
+    "whatsapp_phone": {
+      "type": "string",
+      "title": "WhatsApp"
+    },
+    "avatar_url": {
+      "type": "string",
+      "title": "Avatar URL"
+    },
+    "cover_image_url": {
+      "type": "string",
+      "title": "Imagine background profil"
+    },
+    "bio": {
+      "type": "string",
+      "title": "Descriere / Bio",
+      "maxLength": 500
+    },
+    "seller_type": {
+      "type": "string",
+      "enum": [
+        "Proprietar",
+        "Agent"
+      ],
+      "default": "Proprietar",
+      "title": "Tip v\u00e2nz\u0103tor (profil)"
+    },
+    "agency_name": {
+      "type": "string",
+      "title": "Nume agen\u021bie"
+    },
+    "agency_logo_url": {
+      "type": "string",
+      "title": "Logo agen\u021bie URL"
+    },
+    "license_number": {
+      "type": "string",
+      "title": "Nr. licen\u021b\u0103 (op\u021bional)"
+    },
+    "phone_public": {
+      "type": "boolean",
+      "default": true,
+      "title": "Telefon public pe anun\u021buri"
+    },
+    "whatsapp_visible": {
+      "type": "boolean",
+      "default": true,
+      "title": "WhatsApp vizibil pe anun\u021buri"
+    },
+    "profile_visibility": {
+      "type": "string",
+      "enum": [
+        "public",
+        "authenticated_only"
+      ],
+      "default": "public",
+      "title": "Vizibilitate profil"
+    },
+    "show_activity_status": {
+      "type": "boolean",
+      "default": true,
+      "title": "Afi\u0219eaz\u0103 status activitate"
+    },
+    "email_notify_messages": {
+      "type": "boolean",
+      "default": true,
+      "title": "Notific\u0103ri email pentru mesaje noi"
+    },
+    "email_notify_reviews": {
+      "type": "boolean",
+      "default": true,
+      "title": "Notific\u0103ri email pentru recenzii noi"
+    },
+    "last_active": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Ultima activitate"
+    },
+    "last_name_change_date": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Data ultimei schimb\u0103ri de nume"
+    }
+  }
+}

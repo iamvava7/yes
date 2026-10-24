@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      try {
+        // Light mode e mereu default pentru vizitatori noi, indiferent de preferința
+        // sistemului lor de operare — dark mode se activează doar dacă userul îl alege
+        // explicit (salvat în vc_theme). Nu mai citim prefers-color-scheme aici.
+        var t = localStorage.getItem("vc_theme");
+        if (t === "dark") {
+          document.documentElement.classList.add("dark");
+        }
+      } catch (e) {}
+    </script>
+    <!-- Sigla NOASTRĂ. Aici era hotlink la https://base44.com/logo_v2.svg, adică
+         fila browserului arăta sigla platformei pe care e construit site-ul. -->
+    <link rel="icon" type="image/svg+xml" href="/images/brand/verificasa-icon.svg" />
+    <link rel="apple-touch-icon" href="/images/brand/verificasa-icon.svg" />
+    <meta name="theme-color" content="#1F7048" />
+    <!-- viewport-fit=cover is what makes env(safe-area-inset-*) return real
+         numbers. Header, BottomNav, Footer, the toast viewport, the map sheet
+         and the auth shell all pad by those insets; without this attribute
+         every one of those reads 0 and the padding silently does nothing. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="VerifiCasa — platformă imobiliară pentru închirieri verificate online: fiecare anunț este verificat înainte de publicare și primește un scor de încredere. România." />
+    <meta name="application-name" content="VerifiCasa" />
+    <meta property="og:site_name" content="VerifiCasa" />
+    <meta property="og:title" content="VerifiCasa — Chirii verificate online" />
+    <meta property="og:description" content="VerifiCasa verifică online fiecare anunț — poze, acte și preț — și îți arată un scor de încredere pentru fiecare proprietate." />
+    <link rel="manifest" href="/manifest.json" />
+    <title>VerifiCasa — Chirii verificate online</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

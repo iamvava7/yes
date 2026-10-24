@@ -1,0 +1,114 @@
+{
+  "name": "Comment",
+  "type": "object",
+  "title": "Comment",
+  "properties": {
+    "property_id": {
+      "type": "string",
+      "title": "Property ID"
+    },
+    "property_title": {
+      "type": "string",
+      "title": "Titlu proprietate"
+    },
+    "user_id": {
+      "type": "string",
+      "title": "User ID"
+    },
+    "user_name": {
+      "type": "string",
+      "title": "Nume utilizator"
+    },
+    "user_role": {
+      "type": "string",
+      "enum": [
+        "SUPER_ADMIN",
+        "ADMIN",
+        "AGENT",
+        "PROPRIETAR",
+        "SUPPORT",
+        "USER"
+      ],
+      "default": "USER",
+      "title": "Rol utilizator"
+    },
+    "avatar_url": {
+      "type": "string",
+      "title": "Avatar URL"
+    },
+    "content": {
+      "type": "string",
+      "title": "Con\u021binut"
+    },
+    "parent_id": {
+      "type": "string",
+      "title": "Comentariu p\u0103rinte (reply)"
+    },
+    "likes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "title": "Likes (user IDs)"
+    }
+  },
+  "required": [
+    "property_id",
+    "user_id",
+    "content"
+  ],
+  "rls": {
+    "create": null,
+    "read": null,
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    }
+  }
+}

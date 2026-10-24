@@ -1,0 +1,123 @@
+{
+  "name": "AuditLog",
+  "type": "object",
+  "title": "AuditLog",
+  "properties": {
+    "actor_id": {
+      "type": "string",
+      "title": "Actor ID"
+    },
+    "actor_name": {
+      "type": "string",
+      "title": "Nume actor"
+    },
+    "actor_role": {
+      "type": "string",
+      "title": "Rol actor"
+    },
+    "action": {
+      "type": "string",
+      "title": "Ac\u021biune (approve/reject/delete/moderate)"
+    },
+    "target_type": {
+      "type": "string",
+      "title": "Tip \u021bint (property/comment/user)"
+    },
+    "target_id": {
+      "type": "string",
+      "title": "ID \u021bint"
+    },
+    "detail": {
+      "type": "string",
+      "title": "Detaliu"
+    },
+    "description": {
+      "type": "string",
+      "title": "Descriere",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "actor_id",
+    "action",
+    "target_type"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "VerifiCasa",
+  "short_name": "VerifiCasa",
+  "description": "Chirii și vânzări verificate online, cu scor de încredere pentru fiecare anunț.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F8F6F1",
+  "theme_color": "#1F7048",
+  "lang": "ro",
+  "icons": [
+    {
+      "src": "/images/brand/verificasa-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/brand/verificasa-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -6,20 +6,28 @@
   "description": "Capture 360° panoramas, trace rooms, and share walkable 3D digital twins.",
   "scripts": {
     "dev": "node scripts/dev.js",
-    "build": "vite build --config web/vite.config.js",
-    "start": "node server/index.js",
+    "build": "npm run build:tours && npm run build:site",
+    "start": "node --env-file-if-exists=.env server/index.js",
     "test": "node --test \"test/*.test.js\"",
     "test:e2e": "node test-e2e/smoke.js",
     "sample:assets": "python3 scripts/make_sample.py assets/sample",
     "test:capture": "node test-e2e/capture.js",
     "phone": "node scripts/dev.js --phone",
-    "test:tour": "node test-e2e/tour.js"
+    "test:tour": "node test-e2e/tour.js",
+    "build:tours": "vite build --config web/vite.config.js",
+    "build:site": "npm --prefix site run build",
+    "dev:site": "npm --prefix site run dev",
+    "postinstall": "npm --prefix site ci --no-audit --no-fund",
+    "test:site": "node test-e2e/site.js",
+    "import:base44": "node scripts/import-base44.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.1.0",
+    "esbuild": "^0.28.2",
     "express": "^5.1.0",
     "image-size": "^2.0.2",
     "jpeg-js": "^0.4.4",
+    "jszip": "^3.10.1",
     "multer": "^2.0.2"
   },
   "devDependencies": {

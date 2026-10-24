@@ -477,10 +477,18 @@ export class Viewer {
     });
   }
 
-  /** Move to a capture point; walks there in inside mode, dives in from the dollhouse/plan. */
+  /**
+   * Move to a capture point; walks there in inside mode, dives in from the
+   * dollhouse/plan. Asked mid-move (Maria answering during a walk), it goes
+   * there as soon as the current move ends.
+   */
   async goToScan(id) {
     const target = this.scanById(id);
-    if (!target || this.transitioning) return;
+    if (!target) return;
+    if (this.transitioning) {
+      this.queuedScan = id;
+      return;
+    }
     await this.loadTexture(target);
     if (this.mode !== 'inside') {
       this.currentScanId = id;
@@ -1136,6 +1144,11 @@ export class Viewer {
         else tw.done?.();
       }
       this.tweens = this.tweens.filter((tw) => live.includes(tw));
+    }
+    if (this.queuedScan && !this.transitioning) {
+      const id = this.queuedScan;
+      this.queuedScan = null;
+      this.goToScan(id);
     }
     if (this.orbit.enabled && !this.transitioning) this.orbit.update();
     if (this.planControls.enabled) this.planControls.update();

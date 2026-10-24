@@ -8,3 +8,7 @@ ios/build/
 .DS_Store
 xcuserdata/
 __pycache__/
+site/dist/
+.env
+.env.*
+!.env.example

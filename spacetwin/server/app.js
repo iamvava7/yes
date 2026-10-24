@@ -10,7 +10,7 @@ import { toFloorPlanSvg, toObj } from './exporters.js';
 import { detectProStitch, proStitch } from './proStitch.js';
 import { capturedRoomToRooms } from './roomplan.js';
 import { validatePose } from './stitch.js';
-import { createVerificasaClient, distanceMeters } from './verificasa.js';
+import { createLocalVerificasaClient, createVerificasaClient, distanceMeters } from './verificasa.js';
 import { createAssistant, parseChat } from './assistant.js';
 import { newId, NotFoundError, Store } from './store.js';
 
@@ -155,7 +155,15 @@ function fromVerificasa(l) {
   };
 }
 
-export async function createApp({ dataDir, sampleDir, webDist, proStitch: allowPro = true, verificasa = createVerificasaClient(), assistant = createAssistant() } = {}) {
+// `platform` is the VerifiCasa website backend (server/platform); `siteDist`
+// its built pages. With both, one server runs the website at / and the tour
+// app at /tours and /3D/<code>.
+export async function createApp({ dataDir, sampleDir, webDist, siteDist, platform, proStitch: allowPro = true, verificasa, assistant } = {}) {
+  verificasa ??= platform ? createLocalVerificasaClient(platform) : createVerificasaClient();
+  // Maria's Claude key: the server's environment, else the one saved in the admin panel.
+  assistant ??= createAssistant(platform ? {
+    apiKey: () => process.env.ANTHROPIC_API_KEY || platform.secrets.get('ANTHROPIC_API_KEY'),
+  } : {});
   const store = new Store(dataDir);
   await store.init();
   const upload = multer({
@@ -165,6 +173,15 @@ export async function createApp({ dataDir, sampleDir, webDist, proStitch: allowP
 
   const app = express();
   app.disable('x-powered-by');
+  app.set('trust proxy', 'loopback'); // behind a reverse proxy (nginx, Caddy) on the same machine
+  if (platform) {
+    // Before the JSON parser: the Stripe webhook needs its exact bytes.
+    app.use('/api/platform', platform.router);
+    app.use('/files', express.static(platform.files.dir, {
+      immutable: true, maxAge: '365d', fallthrough: false,
+      setHeaders: (res) => res.setHeader('X-Content-Type-Options', 'nosniff'),
+    }));
+  }
   app.use(express.json({ limit: '25mb' })); // RoomPlan scans with many objects can be large
 
   const captureUpload = multer({
@@ -550,7 +567,15 @@ export async function createApp({ dataDir, sampleDir, webDist, proStitch: allowP
 
   app.use('/api', api);
 
-  if (webDist) {
+  if (siteDist) {
+    // The website at /, the tour app at /tours and /3D/<code>.
+    app.use(express.static(siteDist, { index: false }));
+    if (webDist) {
+      app.use(express.static(webDist, { index: false }));
+      app.get(/^\/(tours(\/.*)?|3d\/[^/]+\/?)$/i, (_req, res) => res.sendFile(path.join(webDist, 'index.html')));
+    }
+    app.get(/^\/(?!api\/).*/, (_req, res) => res.sendFile(path.join(siteDist, 'index.html')));
+  } else if (webDist) {
     app.use(express.static(webDist));
     app.get(/^\/(?!api\/).*/, (_req, res) => res.sendFile(path.join(webDist, 'index.html')));
   }

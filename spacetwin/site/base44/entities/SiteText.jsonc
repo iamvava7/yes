@@ -1,0 +1,50 @@
+{
+  "name": "SiteText",
+  "type": "object",
+  "title": "Text site (editat din Admin)",
+  "properties": {
+    "key": {
+      "type": "string",
+      "title": "Cheie (din src/i18n.js, ex. hero_title)"
+    },
+    "ro": {
+      "type": "string",
+      "title": "Text RO (gol = textul din cod)"
+    },
+    "en": {
+      "type": "string",
+      "title": "Text EN (gol = textul din cod)"
+    },
+    "updated_by_name": {
+      "type": "string",
+      "title": "Modificat de"
+    }
+  },
+  "required": [
+    "key"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        { "user_condition": { "role": "SUPER_ADMIN" } },
+        { "user_condition": { "role": "ADMIN" } },
+        { "user_condition": { "role": "admin" } }
+      ]
+    },
+    "read": null,
+    "update": {
+      "$or": [
+        { "user_condition": { "role": "SUPER_ADMIN" } },
+        { "user_condition": { "role": "ADMIN" } },
+        { "user_condition": { "role": "admin" } }
+      ]
+    },
+    "delete": {
+      "$or": [
+        { "user_condition": { "role": "SUPER_ADMIN" } },
+        { "user_condition": { "role": "ADMIN" } },
+        { "user_condition": { "role": "admin" } }
+      ]
+    }
+  }
+}

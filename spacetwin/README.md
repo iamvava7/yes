@@ -1,6 +1,68 @@
-# SpaceTwin
+# VerifiCasa (website + SpaceTwin 3D tours)
 
 > **Testing it for someone?** Start with [TESTING.md](TESTING.md).
+
+One Node server runs everything:
+
+- **the VerifiCasa website** at `/` (`site/`: React pages, accounts, listings,
+  messages, plans and payments, admin panel), with its backend in
+  `server/platform/` — no Base44, no outside database;
+- **the 3D tour app** at `/tours` and `/3D/<id>` (`web/`), described below.
+
+```
+npm install                  # also installs the website's packages
+cp .env.example .env         # then fill it in (see below)
+npm run build && npm start   # http://localhost:3000
+```
+
+### The website's backend (`server/platform/`)
+
+What Base44 used to do, now in this server:
+
+| Base44 | Here |
+|---|---|
+| Entities + row-level security | `site/base44/entities/*.jsonc`, enforced by `entities.js` / `query.js`, stored in one SQLite file (`DATA_DIR/verificasa.db`, Node's built-in `node:sqlite`) |
+| Login, sign-up code, password reset, Google | `auth.js` (scrypt passwords, signed session tokens) |
+| Backend functions | `site/base44/functions/*/entry.ts`, run unchanged by `functions.js` |
+| Workflows (daily boost expiry, plan sync) | `scheduler.js` |
+| Secrets | `.env` on the server, or Admin → Integrări & chei API (AES-GCM encrypted with `INTEGRATIONS_MASTER_KEY`) |
+| File uploads | `DATA_DIR/files`, served at `/files/…` |
+| Email | Resend (`RESEND_API_KEY`); without it, codes are printed in the server log |
+| Live updates | Server-Sent Events at `/api/platform/realtime` |
+
+`guards.js` adds rules Base44 could not express: owners can't approve,
+feature, verify or boost their own listings, a review's subject can reply but
+not edit it, and only media files can be uploaded.
+
+**Settings** (`.env`, see `.env.example`): `APP_URL`, `DATA_DIR`,
+`ADMIN_EMAILS` (those accounts become SUPER_ADMIN), `INTEGRATIONS_MASTER_KEY`,
+`RESEND_API_KEY` + `MAIL_FROM`, `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET`.
+Stripe, Google Maps, Anthropic (Maria) and Kiri keys go in `.env` or the admin
+panel. **Stripe webhook URL:** `https://<site>/api/platform/functions/StripeWebhook`
+(events: `invoice.paid`, `customer.subscription.updated`,
+`customer.subscription.deleted`).
+
+**Bringing data from Base44:** export each entity (Base44 → Data → Export) into
+one folder as `Property.csv`, `User.csv`, … then, with the server stopped:
+`npm run import:base44 -- <folder> --media` (`--media` copies the photos off
+Base44's storage). Imported users set a password with "Am uitat parola".
+
+**Deploying:** any machine with Node 24 (a €5 VPS is enough to start):
+`npm ci && npm run build && npm start` behind Caddy or nginx for HTTPS, or
+`docker build -t verificasa . && docker run -p 3000:3000 -v verificasa:/data --env-file .env verificasa`.
+Back up `DATA_DIR` (database + photos + tours) every day.
+
+**Developing the website:** `npm start` in one terminal and `npm run dev:site`
+in another (pages on http://localhost:5174 with hot reload).
+
+```
+npm test             # backend + tour unit tests
+npm run build && npm run test:site   # browser: sign-up with code, admin approval, integrations, tours
+```
+
+---
+
+# SpaceTwin
 
 Turn 360° panoramas into a walkable, measurable 3D tour, the way Matterport does,
 using only a photo per capture point and a few clicks to trace each room.

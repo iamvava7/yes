@@ -1,0 +1,153 @@
+{
+  "name": "Message",
+  "type": "object",
+  "title": "Message",
+  "properties": {
+    "conversation_id": {
+      "type": "string",
+      "title": "Conversation ID"
+    },
+    "sender_id": {
+      "type": "string",
+      "title": "Sender ID"
+    },
+    "sender_name": {
+      "type": "string",
+      "title": "Nume expeditor"
+    },
+    "recipient_id": {
+      "type": "string",
+      "title": "Destinatar (ID) \u2014 pentru RLS pe citire"
+    },
+    "content": {
+      "type": "string",
+      "title": "Mesaj"
+    },
+    "read_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Citit la (timestamp)"
+    },
+    "property_ref_id": {
+      "type": "string",
+      "title": "Card proprietate ata\u0219at \u2014 ID"
+    },
+    "property_ref_title": {
+      "type": "string",
+      "title": "Card proprietate ata\u0219at \u2014 titlu"
+    },
+    "property_ref_image": {
+      "type": "string",
+      "title": "Card proprietate ata\u0219at \u2014 thumbnail"
+    },
+    "property_ref_price": {
+      "type": "number",
+      "title": "Card proprietate ata\u0219at \u2014 pre\u021b"
+    },
+    "property_ref_currency": {
+      "type": "string",
+      "title": "Card proprietate ata\u0219at \u2014 moned\u0103"
+    },
+    "is_system": {
+      "type": "boolean",
+      "default": false,
+      "title": "Mesaj sistem (notificare automat\u0103)"
+    },
+    "system_type": {
+      "type": "string",
+      "title": "Tip mesaj sistem (ex: review_request)"
+    }
+  },
+  "required": [
+    "conversation_id",
+    "sender_id",
+    "content"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.sender_id": "{{user.id}}"
+        },
+        {
+          "created_by_id": "{{user.id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.sender_id": "{{user.id}}"
+        },
+        {
+          "data.recipient_id": "{{user.id}}"
+        },
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.sender_id": "{{user.id}}"
+        },
+        {
+          "data.recipient_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.sender_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    }
+  }
+}

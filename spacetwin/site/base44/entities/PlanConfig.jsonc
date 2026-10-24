@@ -1,0 +1,188 @@
+{
+  "name": "PlanConfig",
+  "type": "object",
+  "title": "PlanConfig",
+  "properties": {
+    "plan_id": {
+      "type": "string",
+      "enum": [
+        "none",
+        "basic",
+        "pro",
+        "agent"
+      ],
+      "title": "Plan"
+    },
+    "name": {
+      "type": "string",
+      "title": "Nume plan"
+    },
+    "description": {
+      "type": "string",
+      "title": "Descriere (RO)"
+    },
+    "description_en": {
+      "type": "string",
+      "title": "Descriere (EN)"
+    },
+    "monthly_ron": {
+      "type": "number",
+      "title": "Pre\u021b lunar (RON)"
+    },
+    "yearly_ron": {
+      "type": "number",
+      "title": "Pre\u021b anual (RON)"
+    },
+    "stripe_product_id": {
+      "type": "string",
+      "title": "Stripe Product ID"
+    },
+    "stripe_price_monthly_id": {
+      "type": "string",
+      "title": "Stripe Price ID (lunar)"
+    },
+    "stripe_price_yearly_id": {
+      "type": "string",
+      "title": "Stripe Price ID (anual)"
+    },
+    "active_listings": {
+      "type": "number",
+      "title": "Anun\u021buri active"
+    },
+    "tours_3d": {
+      "type": "number",
+      "title": "Tururi 3D"
+    },
+    "boosts_included": {
+      "type": "number",
+      "title": "Boost-uri incluse"
+    },
+    "verifications": {
+      "type": "number",
+      "default": 1,
+      "title": "Verific\u0103ri incluse"
+    },
+    "feat_verification_badge": {
+      "type": "boolean",
+      "default": false,
+      "title": "Verificare inclus\u0103 + badge"
+    },
+    "feat_priority_search": {
+      "type": "boolean",
+      "default": false,
+      "title": "Pozi\u021bionare prioritar\u0103 \u00een c\u0103utare"
+    },
+    "feat_dedicated_space": {
+      "type": "boolean",
+      "default": false,
+      "title": "Spa\u021biu dedicat \u00een list\u0103ri"
+    },
+    "feat_badge_pro": {
+      "type": "boolean",
+      "default": false,
+      "title": "Badge Pro pe anun\u021buri"
+    },
+    "feat_agency_panel": {
+      "type": "boolean",
+      "default": false,
+      "title": "Panou dedicat de agen\u021bie"
+    },
+    "feat_email_support": {
+      "type": "boolean",
+      "default": false,
+      "title": "Suport prin email"
+    },
+    "feat_search_visibility": {
+      "type": "boolean",
+      "default": false,
+      "title": "Vizibilitate \u00een c\u0103utare"
+    },
+    "feat_verified_badge": {
+      "type": "boolean",
+      "default": false,
+      "title": "Badge Verificat pe anun\u021b"
+    },
+    "feat_badge_verified_pro": {
+      "type": "boolean",
+      "default": false,
+      "title": "Badge Verificat Pro"
+    },
+    "feat_advanced_stats": {
+      "type": "boolean",
+      "default": false,
+      "title": "Statistici avansate"
+    },
+    "feat_priority_support": {
+      "type": "boolean",
+      "default": false,
+      "title": "Suport prioritar"
+    },
+    "tours_soon": {
+      "type": "boolean",
+      "default": false,
+      "title": "Tururi 3D \u2014 etichet\u0103 \u00ceN CUR\u00c2ND"
+    },
+    "agency_panel_soon": {
+      "type": "boolean",
+      "default": false,
+      "title": "Panou agen\u021bie \u2014 etichet\u0103 \u00ceN CUR\u00c2ND"
+    },
+    "custom_tag": {
+      "type": "string",
+      "title": "Etichet\u0103 custom (ex: Popular)"
+    }
+  },
+  "required": [
+    "plan_id"
+  ],
+  "rls": {
+    "read": null,
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    }
+  }
+}

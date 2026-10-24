@@ -113,7 +113,13 @@ npm test                                   # unit and API tests
 npm run build && npm run test:e2e          # browser walkthrough
 npm run build && npm run test:tour         # tour page features
 npm run build && npm run test:capture      # simulated phone capture + stitching accuracy
+npm run build && npm run test:site         # website: sign-up code, admin approval, integrations
 ```
+
+**The website** (listings, accounts, admin) runs on the same server:
+`npm run build && npm start`, then open http://localhost:3000. Put your email
+in `ADMIN_EMAILS` (in `.env`) before signing up to get the admin panel.
+Without `RESEND_API_KEY` the sign-up code is printed in the terminal.
 
 The browser tests use Chromium via `playwright-core`; set `CHROMIUM_PATH` to
 your Chrome/Chromium executable if it isn't found.

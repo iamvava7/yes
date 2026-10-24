@@ -101,6 +101,33 @@ export function createVerificasaClient({ config = verificasaConfig(), fetchImpl 
   };
 }
 
+/**
+ * The same listings read straight from the website's database, now that the
+ * website runs on this server. Only what a visitor may see: approved, active.
+ */
+export function createLocalVerificasaClient(platform, { site = process.env.APP_URL || '' } = {}) {
+  const base = site.replace(/\/$/, '');
+  const props = () => platform.entities.handler('Property', { user: null });
+  return {
+    config: { api: 'local', site: base },
+    off: false,
+    async listings({ search = '', limit = 60 } = {}) {
+      const rows = await props().filter({ approval_status: 'APPROVED', status: 'Activ' }, '-created_date', limit);
+      const list = rows.map((p) => toListing(p, base));
+      const needle = search.trim().toLowerCase();
+      return needle ? list.filter((l) => [l.title, l.city, l.zone, l.address].some((v) => v?.toLowerCase().includes(needle))) : list;
+    },
+    async listing(id) {
+      try {
+        return toListing(await props().get(id), base);
+      } catch (e) {
+        if (e.status === 404) return null;
+        throw e;
+      }
+    },
+  };
+}
+
 /** Distance in metres between two latitude/longitude points (haversine). */
 export function distanceMeters(a, b) {
   const R = 6371000, rad = Math.PI / 180;

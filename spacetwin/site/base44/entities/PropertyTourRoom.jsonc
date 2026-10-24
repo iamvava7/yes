@@ -1,0 +1,114 @@
+{
+  "name": "PropertyTourRoom",
+  "type": "object",
+  "title": "Camer\u0103 tur virtual 360\u00b0",
+  "properties": {
+    "property_id": {
+      "type": "string",
+      "title": "ID proprietate"
+    },
+    "room_name": {
+      "type": "string",
+      "title": "Nume camer\u0103"
+    },
+    "order_index": {
+      "type": "number",
+      "default": 0,
+      "title": "Ordine \u00een tur"
+    },
+    "frame_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "title": "Poze rota\u021bie (secven\u021b\u0103 360\u00b0)"
+    },
+    "panorama_url": {
+      "type": "string",
+      "title": "Panoram\u0103 lipit\u0103 (URL)"
+    },
+    "panorama_vfov_deg": {
+      "type": "number",
+      "title": "Unghi vertical panoram\u0103 (grade)"
+    },
+    "model_3d_status": {
+      "type": "string",
+      "enum": [
+        "none",
+        "uploading",
+        "queuing",
+        "processing",
+        "success",
+        "failed",
+        "expired"
+      ],
+      "default": "none",
+      "title": "Status scanare 3D"
+    },
+    "model_3d_serial": {
+      "type": "string",
+      "title": "Serial scanare Kiri Engine"
+    },
+    "model_3d_url": {
+      "type": "string",
+      "title": "Model 3D (.glb) URL"
+    },
+    "capture_video_url": {
+      "type": "string",
+      "title": "Video captur\u0103 scanare 3D (URL)"
+    }
+  },
+  "required": [
+    "property_id",
+    "room_name",
+    "frame_urls"
+  ],
+  "rls": {
+    "create": null,
+    "read": null,
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    }
+  }
+}

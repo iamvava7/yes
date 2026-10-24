@@ -13,8 +13,9 @@ export default defineConfig({
   server: {
     port: 5173,
     host: phone ? true : 'localhost',
-    proxy: { '/api': `http://localhost:${process.env.API_PORT ?? 3000}` },
+    proxy: { '/api': `http://localhost:${process.env.API_PORT ?? 3000}`, '/files': `http://localhost:${process.env.API_PORT ?? 3000}` },
     fs: { allow: [path.resolve(import.meta.dirname, '..')] },
   },
-  build: { outDir: 'dist', emptyOutDir: true, chunkSizeWarningLimit: 900 },
+  // Its own asset folder: the website's build uses /assets on the same server.
+  build: { outDir: 'dist', emptyOutDir: true, assetsDir: 'tour-assets', chunkSizeWarningLimit: 900 },
 });

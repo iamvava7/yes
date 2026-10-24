@@ -1,0 +1,39 @@
+{
+  "description": "Declan\u0219at la crearea sau actualizarea oric\u0103rui Subscription; apeleaz\u0103 SyncPosterPlans pentru a resincroniza planurile postatorilor.",
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "sync_poster_plans_on_subscription",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "sync_plans": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "SyncPosterPlans",
+            "args": {}
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Sincronizeaz\u0103 planuri",
+            "description": "Resincronizeaz\u0103 poster_plan"
+          }
+        }
+      }
+    ]
+  },
+  "name": "Sync Poster Plans on Subscription Change",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create",
+        "update"
+      ],
+      "entity_name": "Subscription"
+    }
+  }
+}

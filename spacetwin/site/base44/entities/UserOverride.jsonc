@@ -1,0 +1,117 @@
+{
+  "name": "UserOverride",
+  "type": "object",
+  "title": "UserOverride",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "title": "Utilizator"
+    },
+    "user_email": {
+      "type": "string",
+      "title": "Email utilizator"
+    },
+    "user_name": {
+      "type": "string",
+      "title": "Nume utilizator"
+    },
+    "extra_listings": {
+      "type": "number",
+      "default": 0,
+      "title": "Anun\u021buri active \u00een plus"
+    },
+    "extra_tours": {
+      "type": "number",
+      "default": 0,
+      "title": "Tururi 3D \u00een plus"
+    },
+    "note": {
+      "type": "string",
+      "title": "Not\u0103",
+      "maxLength": 300
+    },
+    "granted_by_name": {
+      "type": "string",
+      "title": "Acordat de"
+    }
+  },
+  "required": [
+    "user_id"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "data.user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    },
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    }
+  }
+}

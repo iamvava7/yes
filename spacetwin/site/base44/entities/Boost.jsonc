@@ -1,0 +1,110 @@
+{
+  "name": "Boost",
+  "type": "object",
+  "title": "Boost",
+  "properties": {
+    "property_id": {
+      "type": "string",
+      "title": "Anun\u021b"
+    },
+    "user_id": {
+      "type": "string",
+      "title": "Utilizator"
+    },
+    "starts_date": {
+      "type": "string",
+      "format": "date-time",
+      "title": "\u00cencepe"
+    },
+    "ends_date": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Expir\u0103"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "expired",
+        "cancelled"
+      ],
+      "default": "active",
+      "title": "Status"
+    },
+    "credits_spent": {
+      "type": "number",
+      "default": 1,
+      "title": "Credite consumate \u00een acest grup"
+    },
+    "warned": {
+      "type": "boolean",
+      "default": false,
+      "title": "Avertisment de expirare trimis pentru acest grup"
+    }
+  },
+  "required": [
+    "property_id",
+    "user_id",
+    "ends_date"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    },
+    "read": null,
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    }
+  }
+}

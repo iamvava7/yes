@@ -123,7 +123,7 @@ export function createViewerChrome(container, spaceId, {
   function openShare(e) {
     unlock();
     sfx.tap();
-    const link = `${location.origin}/#/view/${spaceId}`;
+    const link = `${location.origin}${location.pathname}#/view/${spaceId}`;
     // the short link shows the tour without the listing panel (the listing page has it)
     const short = `${location.origin}/3D/${spaceId}`;
     const embed = `<iframe src="${short}" width="100%" height="560" style="border:0" allow="fullscreen; accelerometer; gyroscope; xr-spatial-tracking" loading="lazy"></iframe>`;

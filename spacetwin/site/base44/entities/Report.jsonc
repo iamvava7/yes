@@ -1,0 +1,117 @@
+{
+  "name": "Report",
+  "type": "object",
+  "title": "Report",
+  "properties": {
+    "target_type": {
+      "type": "string",
+      "enum": [
+        "property",
+        "comment"
+      ],
+      "default": "property",
+      "title": "Tip \u021bint\u0103"
+    },
+    "target_id": {
+      "type": "string",
+      "title": "ID \u021bint\u0103"
+    },
+    "target_title": {
+      "type": "string",
+      "title": "Titlu \u021bint\u0103"
+    },
+    "reason": {
+      "type": "string",
+      "title": "Motiv"
+    },
+    "details": {
+      "type": "string",
+      "title": "Detalii"
+    },
+    "reporter_user_id": {
+      "type": "string",
+      "title": "ID utilizator reporter"
+    },
+    "reporter_name": {
+      "type": "string",
+      "title": "Nume reporter"
+    },
+    "reporter_email": {
+      "type": "string",
+      "format": "email",
+      "title": "Email reporter"
+    },
+    "is_anonymous": {
+      "type": "boolean",
+      "default": false,
+      "title": "Anonim"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "PENDING",
+        "RESOLVED",
+        "REJECTED"
+      ],
+      "default": "PENDING",
+      "title": "Status"
+    },
+    "resolution_note": {
+      "type": "string",
+      "title": "Not\u0103 rezolvare"
+    },
+    "resolved_by_id": {
+      "type": "string",
+      "title": "Rezolvat de (ID)"
+    },
+    "resolved_by_name": {
+      "type": "string",
+      "title": "Rezolvat de (nume)"
+    },
+    "resolved_date": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Data rezolv\u0103rii"
+    },
+    "auto_action": {
+      "type": "string",
+      "enum": [
+        "none",
+        "hide",
+        "pending_review"
+      ],
+      "default": "none",
+      "title": "Ac\u021biune automat\u0103"
+    }
+  },
+  "required": [
+    "target_type",
+    "target_id",
+    "reason"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "data.reporter_user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

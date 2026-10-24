@@ -1,0 +1,123 @@
+{
+  "name": "Coupon",
+  "type": "object",
+  "title": "Coupon",
+  "properties": {
+    "code": {
+      "type": "string",
+      "title": "Cod"
+    },
+    "bonus_boosts": {
+      "type": "number",
+      "default": 0,
+      "title": "Boost-uri bonus"
+    },
+    "max_uses": {
+      "type": "number",
+      "default": 0,
+      "title": "Utilizări maxime (0 = nelimitat)"
+    },
+    "uses_count": {
+      "type": "number",
+      "default": 0,
+      "title": "Utilizări"
+    },
+    "expires_date": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Expiră la"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true,
+      "title": "Activ"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Note",
+      "maxLength": 300
+    }
+  },
+  "required": [
+    "code",
+    "bonus_boosts"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    }
+  }
+}

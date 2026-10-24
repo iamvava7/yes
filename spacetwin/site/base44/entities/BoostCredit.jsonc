@@ -1,0 +1,126 @@
+{
+  "name": "BoostCredit",
+  "type": "object",
+  "title": "BoostCredit",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "title": "Utilizator"
+    },
+    "delta": {
+      "type": "number",
+      "title": "Modificare (+/-)"
+    },
+    "reason": {
+      "type": "string",
+      "enum": [
+        "purchase",
+        "coupon",
+        "plan_grant",
+        "spend",
+        "admin",
+        "refund"
+      ],
+      "title": "Motiv"
+    },
+    "source_id": {
+      "type": "string",
+      "title": "Sursă (sesiune Stripe, cupon, boost)"
+    },
+    "balance_after": {
+      "type": "number",
+      "title": "Sold după"
+    },
+    "note": {
+      "type": "string",
+      "title": "Notă",
+      "maxLength": 300
+    }
+  },
+  "required": [
+    "user_id",
+    "delta",
+    "reason"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    }
+  }
+}

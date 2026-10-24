@@ -1,0 +1,423 @@
+{
+  "name": "Property",
+  "type": "object",
+  "title": "Property",
+  "properties": {
+    "property_code": {
+      "type": "string",
+      "title": "Cod proprietate unic (6 cifre + 6 litere)"
+    },
+    "title": {
+      "type": "string",
+      "title": "Titlu"
+    },
+    "description": {
+      "type": "string",
+      "title": "Descriere"
+    },
+    "price_monthly": {
+      "type": "number",
+      "title": "Pre\u021b"
+    },
+    "transaction_type": {
+      "type": "string",
+      "enum": [
+        "RENT",
+        "SALE"
+      ],
+      "default": "RENT",
+      "title": "Tip tranzac\u021bie"
+    },
+    "currency": {
+      "type": "string",
+      "enum": [
+        "EUR",
+        "RON",
+        "GBP"
+      ],
+      "default": "EUR",
+      "title": "Moned\u0103"
+    },
+    "country": {
+      "type": "string",
+      "enum": [
+        "RO"
+      ],
+      "default": "RO",
+      "title": "\u021aar\u0103"
+    },
+    "county": {
+      "type": "string",
+      "title": "Jude\u021b"
+    },
+    "city": {
+      "type": "string",
+      "title": "Ora\u0219"
+    },
+    "zone": {
+      "type": "string",
+      "title": "Zona / Cartier"
+    },
+    "landmark": {
+      "type": "string",
+      "title": "Punct de reper / Strad\u0103"
+    },
+    "property_type": {
+      "type": "string",
+      "enum": [
+        "Garsonier\u0103",
+        "2 Camere",
+        "3 Camere",
+        "4+ Camere",
+        "Cas\u0103",
+        "Studio",
+        "Teren",
+        "Spa\u021biu Comercial"
+      ],
+      "title": "Tip proprietate"
+    },
+    "rooms": {
+      "type": "number",
+      "title": "Nr. camere"
+    },
+    "surface_sqm": {
+      "type": "number",
+      "title": "Suprafa\u021b\u0103 (mp)"
+    },
+    "floor": {
+      "type": "string",
+      "title": "Etaj"
+    },
+    "total_floors": {
+      "type": "number",
+      "title": "Total etaje cl\u0103dire"
+    },
+    "building_year": {
+      "type": "number",
+      "title": "An construc\u021bie"
+    },
+    "deposit": {
+      "type": "number",
+      "title": "Depozit"
+    },
+    "furnished": {
+      "type": "boolean",
+      "default": true,
+      "title": "Mobilat"
+    },
+    "pet_friendly": {
+      "type": "boolean",
+      "default": false,
+      "title": "Pet Friendly"
+    },
+    "parking": {
+      "type": "boolean",
+      "default": false,
+      "title": "Parcare"
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "title": "Facilit\u0103\u021bi"
+    },
+    "phone": {
+      "type": "string",
+      "title": "Telefon contact"
+    },
+    "whatsapp_phone": {
+      "type": "string",
+      "title": "WhatsApp (digital interna\u021bional)"
+    },
+    "seller_role": {
+      "type": "string",
+      "enum": [
+        "Proprietar",
+        "Agent"
+      ],
+      "default": "Proprietar",
+      "title": "Rol v\u00e2nz\u0103tor"
+    },
+    "available_from": {
+      "type": "string",
+      "format": "date",
+      "title": "Disponibil din"
+    },
+    "images": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "title": "Imagini"
+    },
+    "ai_video_url": {
+      "type": "string",
+      "title": "Tur AI / Video URL"
+    },
+    "tour_3d_url": {
+      "type": "string",
+      "title": "Link Tur 3D (Matterport \u2014 setat de admin)"
+    },
+    "latitude": {
+      "type": "number",
+      "title": "Latitudine"
+    },
+    "longitude": {
+      "type": "number",
+      "title": "Longitudine"
+    },
+    "owner_name": {
+      "type": "string",
+      "title": "Nume proprietar"
+    },
+    "posted_by_name": {
+      "type": "string",
+      "title": "Autor postare (cine a publicat)"
+    },
+    "owner_verified": {
+      "type": "boolean",
+      "default": false,
+      "title": "Proprietar verificat"
+    },
+    "ai_tour_verified": {
+      "type": "boolean",
+      "default": false,
+      "title": "Tur AI verificat"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Activ",
+        "Rezervat",
+        "\u00cenchis"
+      ],
+      "default": "Activ",
+      "title": "Status"
+    },
+    "approval_status": {
+      "type": "string",
+      "enum": [
+        "PENDING",
+        "APPROVED",
+        "REJECTED"
+      ],
+      "default": "PENDING",
+      "title": "Aprobare anun\u021b"
+    },
+    "approved_by_id": {
+      "type": "string",
+      "title": "Aprobat de (ID admin)"
+    },
+    "approved_by_name": {
+      "type": "string",
+      "title": "Aprobat de (nume admin)"
+    },
+    "approved_date": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Data aprob\u0103rii"
+    },
+    "featured": {
+      "type": "boolean",
+      "default": false,
+      "title": "Featured"
+    },
+    "views_count": {
+      "type": "number",
+      "default": 0,
+      "title": "Vizualiz\u0103ri"
+    },
+    "verification_level": {
+      "type": "string",
+      "enum": [
+        "unverified",
+        "video_ai",
+        "field_certified"
+      ],
+      "default": "unverified",
+      "title": "Nivel verificare"
+    },
+    "inspection_report_url": {
+      "type": "string",
+      "title": "Raport inspec\u021bie (PDF)"
+    },
+    "noise_db": {
+      "type": "number",
+      "title": "Zgomot ambiental (dB)"
+    },
+    "light_orientation": {
+      "type": "string",
+      "title": "Orientare lumin\u0103"
+    },
+    "water_pressure_ok": {
+      "type": "boolean",
+      "default": true,
+      "title": "Presiune ap\u0103 OK"
+    },
+    "internet_speed_mbps": {
+      "type": "number",
+      "title": "Vitez\u0103 internet (Mbps)"
+    },
+    "metro_distance_min": {
+      "type": "number",
+      "title": "Drum metrou (min)"
+    },
+    "deposit_option": {
+      "type": "string",
+      "enum": [
+        "standard",
+        "verificasa_guarantee"
+      ],
+      "default": "standard",
+      "title": "Op\u021biune garan\u021bie"
+    },
+    "monthly_utilities_estimate": {
+      "type": "number",
+      "title": "Estimare utilit\u0103\u021bi/lun\u0103"
+    },
+    "maintenance_fee": {
+      "type": "number",
+      "title": "\u00centre\u021binere/lun\u0103"
+    },
+    "price_fairness": {
+      "type": "string",
+      "enum": [
+        "sub_piata",
+        "corect",
+        "peste_medie"
+      ],
+      "title": "Corectitudine pre\u021b"
+    },
+    "commission_free": {
+      "type": "boolean",
+      "default": false,
+      "title": "F\u0103r\u0103 comision"
+    },
+    "reserve_instant": {
+      "type": "boolean",
+      "default": false,
+      "title": "Rezervare instant\u0103"
+    },
+    "is_swap_available": {
+      "type": "boolean",
+      "default": false,
+      "title": "Disponibil schimb de chirie"
+    },
+    "has_walkthrough_tour": {
+      "type": "boolean",
+      "default": false,
+      "title": "Are tur 360 (walkthrough)"
+    },
+    "trust_score": {
+      "type": "number",
+      "default": 0,
+      "title": "Scor de incredere (calculat automat)"
+    },
+    "external_inspection_pending": {
+      "type": "boolean",
+      "default": false,
+      "title": "Inspec\u021bie extern\u0103 \u00een curs"
+    },
+    "poster_plan": {
+      "type": "string",
+      "enum": [
+        "basic",
+        "pro",
+        "agent"
+      ],
+      "title": "Planul postatorului (denormalizat, scris doar server-side)"
+    },
+    "poster_plan_override": {
+      "type": "string",
+      "enum": [
+        "basic",
+        "pro",
+        "agent"
+      ],
+      "title": "Plan fortat manual (demo) - bate poster_plan"
+    },
+    "boost_active": {
+      "type": "boolean",
+      "default": false,
+      "title": "Boost activ (adev\u0103rat c\u00e2t timp exist\u0103 cel pu\u021bin un grup Boost cu status=active)"
+    },
+    "boost_ends_date": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Cea mai \u00eendep\u0103rtat\u0103 expirare dintre grupurile de boost active (informativ, pentru afi\u0219aj)"
+    },
+    "boost_count": {
+      "type": "number",
+      "default": 0,
+      "title": "C\u00e2te boost-uri active are anun\u021bul ACUM (23.08: scade c\u00e2nd fiecare grup expir\u0103 dup\u0103 21 de zile, nu mai e istoric)"
+    },
+    "tour_3d_set_date": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Cand a fost pus turul 3D (regula de 3 zile)"
+    },
+    "trust_breakdown": {
+      "type": "string",
+      "title": "Detaliere scor (JSON, scris server-side)",
+      "maxLength": 4000
+    }
+  },
+  "required": [
+    "title",
+    "price_monthly",
+    "country",
+    "city",
+    "property_type"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": null,
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    }
+  }
+}

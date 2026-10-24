@@ -1,0 +1,601 @@
+@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Chivo+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------------------------------------------------------------------
+   VerifiCasa — "Fișa de Inspecție" design tokens.
+   Registry bones: paper ground, ink text, verde for brand/actions/verdicts.
+   Marcaj (orange) is reserved for instrument marks ON photographs and map
+   pins — never as page decoration. Both themes come from this one token set.
+--------------------------------------------------------------------------- */
+
+@layer base {
+  :root {
+    /* ground */
+    --background: 43 33% 96%;            /* paper  #F8F6F1 */
+    --foreground: 221 30% 12%;           /* ink    #161C29 */
+    --card: 45 40% 98%;                  /* card, a breath lighter than paper */
+    --card-foreground: 221 30% 12%;
+    --popover: 45 40% 98%;
+    --popover-foreground: 221 30% 12%;
+
+    /* brand */
+    --primary: 150 57% 28%;              /* verde  #1F7048 */
+    --primary-foreground: 43 33% 96%;
+    --marcaj: 18 85% 47%;                /* marcaj #DE4E12 — photos + map pins only */
+    --marcaj-foreground: 43 33% 96%;
+
+    --secondary: 42 26% 92%;             /* paper-2 #F1EEE7 */
+    --secondary-foreground: 221 30% 12%;
+    --muted: 42 26% 92%;
+    --muted-foreground: 200 8% 38%;
+    --accent: 150 25% 90%;               /* verde-soft tint */
+    --accent-foreground: 150 57% 22%;
+    --destructive: 0 68% 42%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 43 14% 84%;                /* hairline: ink over paper */
+    --input: 43 14% 84%;
+    --ring: 150 57% 28%;
+
+    /* registry corners: squared, not pill */
+    --radius: 0.75rem;
+
+    /* exactly two faces + mono for on-photo instrument marks */
+    --font-heading: 'Hanken Grotesk', 'Helvetica Neue', Arial, sans-serif;
+    --font-body: 'Hanken Grotesk', 'Helvetica Neue', Arial, sans-serif;
+    --font-display: 'Hanken Grotesk', 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: 'Chivo Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* house motion */
+    --ease-house: cubic-bezier(0.16, 1, 0.3, 1);
+
+    /* ---- legacy aliases: every old consumer resolves to the new system ---- */
+    --navy: 221 30% 12%;                 /* old navy -> ink */
+    --navy-deep: 222 27% 8%;
+    --emerald: 150 57% 28%;              /* old emerald -> verde */
+    --emerald-soft: 150 25% 90%;
+    --mint: 150 57% 28%;
+    --mint-soft: 150 25% 90%;
+    --gold: 36 22% 46%;                  /* old gold -> quiet bronze, no metal */
+    --gold-soft: 42 26% 92%;
+    --gold-deep: 36 28% 34%;
+  }
+
+  .dark {
+    --background: 222 27% 10%;           /* night  #12161F */
+    --foreground: 44 24% 91%;            /* #EDEAE2 */
+    --card: 221 24% 13%;
+    --card-foreground: 44 24% 91%;
+    --popover: 221 24% 13%;
+    --popover-foreground: 44 24% 91%;
+
+    --primary: 150 49% 42%;              /* verde night #37A06B */
+    --primary-foreground: 222 27% 8%;
+    --marcaj: 19 100% 62%;               /* marcaj night #FF7A3D */
+    --marcaj-foreground: 222 27% 8%;
+
+    --secondary: 221 22% 16%;
+    --secondary-foreground: 44 24% 91%;
+    --muted: 221 22% 16%;
+    --muted-foreground: 44 10% 64%;
+    --accent: 150 30% 16%;
+    --accent-foreground: 150 45% 60%;
+    --destructive: 0 60% 44%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 221 16% 24%;
+    --input: 221 16% 24%;
+    --ring: 150 49% 42%;
+
+    --navy: 222 27% 10%;
+    --navy-deep: 222 30% 7%;
+    --emerald: 150 49% 42%;
+    --emerald-soft: 150 30% 16%;
+    --mint: 150 49% 42%;
+    --mint-soft: 150 30% 16%;
+    --gold: 38 24% 58%;
+    --gold-soft: 40 18% 20%;
+    --gold-deep: 38 28% 62%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  /* Gutter-ul scrollbarului stă rezervat mereu: altfel paginile scurte
+     (pașii mici din wizard) pierd scrollbarul și tot conținutul centrat
+     sare lateral cu ~15px la fiecare schimbare de pas. */
+  html { overflow-x: clip; scrollbar-gutter: stable; }
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+    overflow-x: clip;
+  }
+  h1, h2, h3, h4, h5 {
+    @apply font-heading;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.15;
+  }
+  /* numbers line up in ledgers by default wherever they are tabular data */
+  td, th { font-variant-numeric: tabular-nums; }
+  ::selection { background: hsl(var(--primary) / 0.18); }
+}
+
+@layer utilities {
+  /* ---- token utilities (legacy names kept; values now map to the system) ---- */
+  .text-navy { color: hsl(var(--navy)); }
+  .bg-navy { background-color: hsl(var(--navy)); }
+  .bg-navy-deep { background-color: hsl(var(--navy-deep)); }
+  .text-mint { color: hsl(var(--mint)); }
+  .bg-mint { background-color: hsl(var(--mint)); }
+  .bg-mint-soft { background-color: hsl(var(--mint-soft)); }
+  .border-mint { border-color: hsl(var(--mint)); }
+  .ring-mint { --tw-ring-color: hsl(var(--mint)); }
+  .text-gold { color: hsl(var(--gold)); }
+  .bg-gold { background-color: hsl(var(--gold)); }
+  .bg-gold-soft { background-color: hsl(var(--gold-soft)); }
+  .border-gold { border-color: hsl(var(--gold)); }
+  .text-gold-deep { color: hsl(var(--gold-deep)); }
+  .text-emerald { color: hsl(var(--emerald)); }
+  .bg-emerald { background-color: hsl(var(--emerald)); }
+  .bg-emerald-soft { background-color: hsl(var(--emerald-soft)); }
+  .border-emerald { border-color: hsl(var(--emerald)); }
+  .text-marcaj { color: hsl(var(--marcaj)); }
+  .bg-marcaj { background-color: hsl(var(--marcaj)); }
+  .border-marcaj { border-color: hsl(var(--marcaj)); }
+
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  /* Ținta de atingere de 44px NU se obține umflând butonul.
+     Antetul ajunsese să aibă pe telefon controale de 44px care pe desktop erau
+     de 36px — adică telefonul primea versiunea CEA MAI groasă a interfeței, iar
+     ecranul mare pe cea fină. Exact invers. Butonul se vede acum la 36px peste
+     tot, iar suprafața de atins rămâne 44x44 printr-un pseudo-element. */
+  /* 100vh on a phone is the height with the browser toolbars COLLAPSED, so
+     anything centred inside it sits partly under the toolbar until you
+     scroll. svh is the smallest viewport: it always fits, and it does not
+     resize under you the way dvh does. The vh line stays first as the
+     fallback for browsers that do not know svh. */
+  .min-h-screen-safe { min-height: 100vh; min-height: 100svh; }
+
+  .tap-44 { position: relative; }
+  .tap-44::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: max(100%, 44px);
+    height: 44px;
+    transform: translate(-50%, -50%);
+  }
+
+  /* ---- flattened legacy effects (names kept so old consumers compile;
+          every gradient/glass/glow is now a flat registry surface) ---- */
+  .gradient-navy { background-image: none; background-color: hsl(var(--navy-deep)); }
+  .gradient-gold { background-image: none; background-color: hsl(var(--gold)); }
+  .gradient-emerald { background-image: none; background-color: hsl(var(--emerald)); }
+  .gradient-mint { background-image: none; background-color: hsl(var(--emerald)); }
+  .text-gold-gradient {
+    background-image: none;
+    -webkit-background-clip: initial;
+    background-clip: initial;
+    color: hsl(var(--gold-deep));
+  }
+
+  .shadow-soft { box-shadow: 0 1px 2px rgb(22 28 41 / 0.06); }
+  .shadow-glow { box-shadow: 0 0 0 1px hsl(var(--primary) / 0.28); }
+  .shadow-gold { box-shadow: none; }
+  .glow-emerald { box-shadow: 0 0 0 1px hsl(var(--primary) / 0.3); }
+
+  .glass-panel {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    backdrop-filter: none;
+    box-shadow: 0 1px 2px rgb(22 28 41 / 0.06);
+  }
+  .surface-card {
+    background-image: none;
+    background-color: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    box-shadow: 0 1px 2px rgb(22 28 41 / 0.06);
+  }
+
+  /* auth background: crossfade between the viewing photographs, with a slow
+     drift so a held frame never looks like a stalled image */
+  .auth-shot {
+    transition: opacity 1.5s var(--ease-house);
+    transform: scale(1.06);
+    animation: auth-drift 24s var(--ease-house) infinite alternate;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .auth-shot {
+      transition: none;
+      transform: none;
+      animation: none;
+    }
+  }
+
+  /* verdict stamps replace the metallic badge + glow ring — no animation */
+  .premium-badge {
+    background: transparent;
+    background-image: none;
+    border: 1px solid hsl(var(--gold-deep));
+    color: hsl(var(--gold-deep));
+    box-shadow: none;
+    text-shadow: none;
+    animation: none;
+  }
+  .premium-glow { box-shadow: 0 0 0 1px hsl(var(--gold) / 0.4); animation: none; }
+
+  .animate-blob { animation: none; }
+  .animate-badge-fade { animation: none; }
+
+  .hero-fade { background-image: linear-gradient(to bottom, transparent, hsl(var(--background))); }
+
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* ---- registry primitives ---- */
+
+  /* bordered, dated verdict stamp — the only allowed "badge" shape */
+  .vc-stamp {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    border: 1.5px solid hsl(var(--primary));
+    color: hsl(var(--primary));
+    background: hsl(var(--primary) / 0.06);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    line-height: 1;
+    padding: 4px 8px 3px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+  .vc-stamp--gold { border-color: hsl(var(--gold-deep)); color: hsl(var(--gold-deep)); background: hsl(var(--gold) / 0.08); }
+  .vc-stamp--ink { border-color: hsl(var(--foreground)); color: hsl(var(--foreground)); background: transparent; }
+  .vc-stamp--marcaj { border-color: hsl(var(--marcaj)); color: hsl(var(--marcaj)); background: transparent; }
+
+  /* instrument marks drawn ON photographs — the only place mono lives */
+  .vc-photomark {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: #fff;
+    text-shadow: 0 1px 2px rgb(0 0 0 / 0.55);
+  }
+
+  /* ---- map: price bubbles ----
+     divIcon markup lives outside React, so the pins are classed here and read
+     the same tokens as the rest of the app (both themes for free). Bule
+     rotunjite, nu stampile patrate: harta e partea in care oamenii se joaca,
+     iar rama de fisa tehnica o facea sa para un formular.
+
+     DIMENSIUNE: bulele sunt MICI si dese, ca pe portalurile de imobiliare.
+     Erau la 12.5px cu 4/10px padding — pe un cartier intreg se acopereau una
+     pe alta si harta disparea sub ele. Pretul se citeste la 10.5px fara efort;
+     ce se castiga e cate strazi mai vezi in spate.
+
+     ASEZARE: invelisul markerului (.vc-pin-wrap) e un PUNCT fara dimensiune,
+     pus de Leaflet exact pe coordonata; bula se aseaza fata de el de aici, cu
+     translate. Asa, marimea de mai sus se poate schimba oricand fara sa mai
+     existe o formula de latime de tinut sincronizata in JS. */
+  /* Invelisurile sunt puncte: Leaflet le pune pe coordonata, atat. */
+  .vc-pin-wrap,
+  .vc-bundle-wrap,
+  .vc-county-label { width: 0; height: 0; }
+
+  /* Bula sta DEASUPRA punctului, centrata pe el, cu varful in coordonata.
+     `-3px` e cat coboara varful rotit sub marginea bulei. */
+  .vc-pin-wrap > .vc-pin {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform-origin: bottom center;
+    transform: translate(-50%, calc(-100% - 3px));
+  }
+  .vc-bundle-wrap > .vc-bundle,
+  .vc-county-label > .vc-maplabel {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform-origin: center;
+    transform: translate(-50%, -50%);
+  }
+
+  .vc-pin {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: hsl(var(--card));
+    color: hsl(var(--foreground));
+    border: 1.25px solid hsl(var(--card));
+    border-radius: 999px;
+    padding: 2px 6px;
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 10.5px;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.26);
+    transition: transform 0.18s ease, background-color 0.18s ease;
+  }
+  .vc-pin::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -2px;
+    width: 6px;
+    height: 6px;
+    background: inherit;
+    transform: translateX(-50%) rotate(45deg);
+  }
+  .vc-pin .vc-pin-tick { color: hsl(var(--primary)); font-weight: 900; }
+  /* Marirea se COMPUNE cu centrarea, nu o inlocuieste: `transform` e o singura
+     proprietate, iar un `scale()` singur ar arunca bula de pe coordonata ei. */
+  .vc-pin-wrap > .vc-pin--active {
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    border-color: hsl(var(--primary));
+    transform: translate(-50%, calc(-100% - 3px)) scale(1.12);
+  }
+  .vc-pin--active .vc-pin-tick { color: hsl(var(--primary-foreground)); }
+  .vc-pin--visited {
+    background: hsl(var(--secondary));
+    color: hsl(var(--muted-foreground));
+    border-color: hsl(var(--secondary));
+  }
+  /* promovat: bula inchisa cu cifre aurii, aceeasi pereche ca insigna de pe card */
+  .vc-pin--boosted {
+    background: #1e1608;
+    color: #f5ce7c;
+    border-color: #1e1608;
+  }
+  .vc-pin--boosted .vc-pin-tick { color: #f5ce7c; }
+  /* Cuvantul scris, nu doar culoarea: pastila aurie din bula intunecata spune
+     „Promovat" / „Promoted". Culoarea singura nu inseamna nimic pentru cine nu
+     stie codul, iar plata trebuie declarata, nu sugerata. */
+  .vc-pin-promo {
+    display: inline-block;
+    padding: 1.5px 4px;
+    border-radius: 4px;
+    background: #f5ce7c;
+    color: #1e1608;
+    font-size: 7px;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* Starea de sub cursor se face AICI, nu din React.
+     Daca survolarea ar trece prin stare, iconita s-ar reconstrui sub cursor,
+     `mouseout` nu s-ar mai produce si balonul cu titlu ar ramane agatat de
+     harta — vezi cachedIcon in MapSearch.jsx. Sub `(hover: hover)` ca sa nu se
+     lipeasca starea dupa o atingere pe telefon. */
+  @media (hover: hover) {
+    .vc-pin-wrap > .vc-pin:hover { transform: translate(-50%, calc(-100% - 3px)) scale(1.12); }
+    .vc-pin:not(.vc-pin--boosted):hover {
+      background: hsl(var(--primary));
+      color: hsl(var(--primary-foreground));
+      border-color: hsl(var(--primary));
+    }
+    .vc-pin:not(.vc-pin--boosted):hover .vc-pin-tick { color: hsl(var(--primary-foreground)); }
+    /* Bula promovata isi pastreaza aurul si sub cursor — altfel exact semnalul
+       pentru care s-a platit dispare cand te uiti la el. */
+    .vc-bundle-wrap > .vc-bundle:hover {
+      transform: translate(-50%, -50%) scale(1.1);
+      background: hsl(var(--foreground));
+      color: hsl(var(--background));
+    }
+    /* Ridicarea peste vecini se face pe INVELISUL markerului: Leaflet scrie
+       z-index inline pe .leaflet-marker-icon, iar un z-index pe <span>-ul din
+       interior nu iese din contextul lui de stivuire. */
+    .leaflet-marker-icon.vc-pin-wrap:hover,
+    .leaflet-marker-icon.vc-bundle-wrap:hover { z-index: 500 !important; }
+  }
+  .vc-bundle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    border: 2px solid hsl(var(--primary-foreground) / 0.85);
+    border-radius: 999px;
+    padding: 3.5px 7px;
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 10.5px;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    box-shadow: 0 1px 5px rgb(0 0 0 / 0.28);
+    transition: transform 0.18s ease;
+  }
+  /* .vc-bundle:hover — culoarea si ridicarea stau in blocul @media (hover: hover)
+     de mai sus, impreuna cu cele ale bulei de pret. Nu mai exista o clasa
+     `--active` pusa din React: starea de sub cursor e treaba CSS-ului. */
+  .vc-maplabel {
+    font-family: var(--f-body, var(--font-body));
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: hsl(var(--foreground) / 0.65);
+    white-space: nowrap;
+    pointer-events: none;
+    text-shadow: 0 0 3px hsl(var(--background)), 0 0 6px hsl(var(--background));
+  }
+  /* survey-sheet corner marks: mono is allowed here — the map is an instrument */
+  .vc-sheet-coord {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: hsl(var(--foreground) / 0.75);
+    background: hsl(var(--background) / 0.8);
+    padding: 2px 6px;
+  }
+  /* paper-toned tiles until the client's MapTiler key lands (CSS-filtered) */
+  .vc-tiles-plan { filter: saturate(1.05); }
+  .dark .vc-tiles-plan { filter: invert(1) hue-rotate(180deg) brightness(0.9) saturate(0.6); }
+  .vc-tiles-none { filter: none; }
+
+  /* Umbră de 2px sub textul din hero: fotografiile din spate variază, iar
+     titlul trebuie să rămână lizibil peste oricare dintre ele. */
+  /* Banda care se plimbă singură: fără bară de derulare vizibilă, altfel
+     mișcarea continuă arată ca un widget stricat. */
+  .vc-rail { scrollbar-width: none; -ms-overflow-style: none; }
+  .vc-rail::-webkit-scrollbar { display: none; }
+
+  .hero-ink {
+    text-shadow: 0 2px 4px rgb(0 0 0 / 0.55), 0 1px 2px rgb(0 0 0 / 0.4);
+  }
+
+  /* ---- meniul din antet ----
+     Regula casei: starea de REPAUS e cea VIZIBILĂ, iar animația doar o
+     precedă. Varianta pe framer-motion ținea panoul și fiecare rând la
+     `opacity: 0` până rula un cadru — măsurat, la o secundă după click, cu
+     bucla de cadre sugrumată, meniul era complet invizibil. Același tipar care
+     a ascuns secțiuni întregi (vezi ui/reveal.jsx).
+
+     Verificat: și o animație CSS ține primul keyframe cât timp nu apucă să
+     avanseze, deci `opacity: 0` în keyframe e la fel de periculos ca la framer —
+     măsurat, panoul rămânea la zero. Așa că NICIUNA dintre animațiile de aici nu
+     atinge opacitatea. Doar transform: în cel mai rău caz panoul e ușor micșorat
+     și rândurile împinse 7px, adică vizibile. */
+  @keyframes vc-menu-panel {
+    0%   { transform: translateY(-16px) scale(0.84); }
+    62%  { transform: translateY(3px) scale(1.025); }
+    100% { transform: none; }
+  }
+  @keyframes vc-menu-row {
+    0%   { transform: translate3d(26px, -12px, 0) scale(0.92); }
+    68%  { transform: translate3d(-3px, 2px, 0) scale(1.015); }
+    100% { transform: none; }
+  }
+  /* Scrimul e singurul lucru de aici care are voie sa porneasca de la
+     `opacity: 0`, pentru ca e decor, nu continut: daca animatia nu apuca sa
+     ruleze, pagina din spate ramane pur si simplu neintunecata. */
+  @keyframes vc-menu-scrim {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  .vc-menu-panel {
+    animation: vc-menu-panel 0.44s var(--ease-house);
+    transform-origin: top right;
+  }
+  .vc-menu-row {
+    animation: vc-menu-row 0.46s var(--ease-house) backwards;
+  }
+  .vc-menu-scrim {
+    animation: vc-menu-scrim 0.3s ease-out;
+  }
+
+  /* ---- selectoare native ----
+     Sageata desenata de browser sta lipita de marginea din dreapta si nu poate
+     fi mutata din CSS: `padding-right` muta textul, nu sageata. Asa ca o
+     stingem si desenam noi una, la 14px de margine, ca sa nu mai atinga rotunjirea
+     pastilei. Culoarea vine din doua imagini, una pe tema, fiindca `currentColor`
+     nu se poate folosi intr-un `data:` URI. */
+  .vc-select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23596369' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.875rem center;
+    background-size: 1rem 1rem;
+  }
+  .vc-select::-ms-expand { display: none; }
+  .dark .vc-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ABA69B' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  }
+  /* varianta compacta, pentru campurile de 12px din admin */
+  .vc-select-sm {
+    background-position: right 0.625rem center;
+    background-size: 0.875rem 0.875rem;
+  }
+  /* pentru selectoarele fara chenar propriu, asezate intr-un camp compus:
+     spatiul il da containerul, deci sageata sta lipita de marginea selectului */
+  .vc-select-flush {
+    background-position: right 0 center;
+  }
+
+  /* ---- banda de fotografii care se plimba (PhotoMarquee) ----
+     Pista contine lista de doua ori si se muta cu exact -50%: cand se termina
+     prima copie, a doua e fix unde era prima la inceput. Linear, nu ease-house:
+     o banda continua nu are voie sa accelereze si sa franeze la fiecare tura.
+     Doar transform, ca la meniu — daca animatia nu apuca sa ruleze, banda e o
+     fotografie oprita, nu o caseta goala. */
+  @keyframes vc-marquee {
+    from { transform: translate3d(0, 0, 0); }
+    to   { transform: translate3d(-50%, 0, 0); }
+  }
+  .vc-marquee {
+    animation: vc-marquee 42s linear infinite;
+  }
+
+  /* generated paper grain (SVG turbulence, no stock textures) */
+  .paper-grain { position: relative; }
+  .paper-grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.05;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ---- dark-mode compatibility (solid surfaces, no glass) ---- */
+  .dark .bg-white { background-color: hsl(var(--card)); }
+  .dark .text-navy { color: hsl(var(--foreground)); }
+  .dark .bg-gold.text-navy { color: hsl(var(--background)); }
+
+  .dark .bg-amber-100 { background-color: hsl(36 30% 20%); }
+  .dark .bg-amber-50  { background-color: hsl(36 26% 17%); }
+  .dark .text-amber-700 { color: hsl(38 60% 70%); }
+  .dark .bg-blue-50   { background-color: hsl(220 30% 18%); }
+  .dark .text-blue-700 { color: hsl(214 60% 72%); }
+  .dark .bg-emerald-soft, .dark .bg-mint-soft { background-color: hsl(var(--emerald-soft)); }
+
+  .dark select { color-scheme: dark; }
+  .dark select option { background-color: hsl(var(--card)); color: hsl(var(--foreground)); }
+  .dark input { color-scheme: dark; }
+  .dark textarea { color-scheme: dark; }
+
+  /* landing scope kept as a plain solid surface (was frosted glass) */
+  .dark .landing-dark { background-color: hsl(var(--background)); color: hsl(var(--foreground)); }
+  .dark .landing-dark .bg-white,
+  .dark .landing-dark .bg-card { background-color: hsl(var(--card)); backdrop-filter: none; }
+  .dark .landing-dark .text-navy { color: hsl(var(--foreground)); }
+  .dark .landing-dark .text-muted-foreground { color: hsl(var(--muted-foreground)); }
+  .dark .landing-dark .border-border { border-color: hsl(var(--border)); }
+  .dark .landing-dark .bg-emerald-soft { background-color: hsl(var(--emerald-soft)); }
+  .dark .landing-dark .shadow-soft { box-shadow: 0 1px 2px rgb(0 0 0 / 0.4); }
+  .dark .landing-dark .gradient-navy { background-image: none; background-color: hsl(var(--navy-deep)); }
+
+  .dark .gradient-mint.text-navy, .dark .gradient-emerald.text-navy { color: hsl(var(--primary-foreground)); }
+
+  /* motion discipline: nothing moves for people who asked it not to */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* slow drift for the auth background photographs */
+@keyframes auth-drift {
+  from { transform: scale(1.06) translate3d(0, 0, 0); }
+  to   { transform: scale(1.12) translate3d(-1.2%, -0.8%, 0); }
+}

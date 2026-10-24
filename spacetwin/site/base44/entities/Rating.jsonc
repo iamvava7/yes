@@ -1,0 +1,111 @@
+{
+  "name": "Rating",
+  "type": "object",
+  "title": "Rating",
+  "properties": {
+    "target_user_id": {
+      "type": "string",
+      "title": "ID utilizator evaluat"
+    },
+    "reviewer_user_id": {
+      "type": "string",
+      "title": "ID evaluator"
+    },
+    "reviewer_name": {
+      "type": "string",
+      "title": "Nume evaluator"
+    },
+    "reviewer_avatar_url": {
+      "type": "string",
+      "title": "Avatar evaluator"
+    },
+    "rating": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "title": "Scor (1-5 stele)"
+    },
+    "comment": {
+      "type": "string",
+      "title": "Comentariu",
+      "maxLength": 1000
+    },
+    "is_verified": {
+      "type": "boolean",
+      "default": false,
+      "title": "Recenzie verificat\u0103 (interac\u021biune confirmat\u0103)"
+    },
+    "owner_reply": {
+      "type": "string",
+      "title": "R\u0103spuns proprietar/agent",
+      "maxLength": 1000
+    },
+    "owner_reply_date": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Data r\u0103spunsului"
+    }
+  },
+  "required": [
+    "target_user_id",
+    "reviewer_user_id",
+    "rating"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.reviewer_user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "read": null,
+    "update": {
+      "$or": [
+        {
+          "data.target_user_id": "{{user.id}}"
+        },
+        {
+          "data.reviewer_user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.reviewer_user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "ADMIN"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "SUPER_ADMIN"
+          }
+        }
+      ]
+    }
+  }
+}
