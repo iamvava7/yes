@@ -18,7 +18,8 @@ const AIM_TOLERANCE = 3.5 * DEG; // how close to a ring dot counts as "on target
 const STEADY_MS = 350; // hold still this long before a shot
 const STEADY_MAX = 0.7 * DEG; // max wobble while holding still
 const GUIDE_VFOV = 65; // typical iPhone main camera in portrait; the stitcher calibrates the real value
-const MAX_PHOTO_SIDE = 1440;
+const MAX_PHOTO_SIDE = 1920; // keep the camera's full frame: every pixel ends up in the panorama
+const PRO_MAX_WIDTH = 6144; // 6144×3072: 1.5× the old detail, still light enough for phone browsers
 const BURST = 5; // frames grabbed per dot; the sharpest is kept (all 5 blurred is rare)
 const FAST_TURN = 30 * DEG; // per second; faster than this smears the photo
 const MAX_TILT = 10 * DEG; // sideways roll before we ask for an upright phone
@@ -188,7 +189,12 @@ export async function renderCapture(app, spaceId) {
           bar.firstChild.style.width = `${Math.round(100 * (0.5 + 0.47 * (1 - Math.exp(-2.5 * t))))}%`;
         }, 250);
         try {
-          result.blob = await api.proStitch(frames, result.quaternions, result.vfov, result.width);
+          // as wide as the photos' detail allows (the phone preview stays 4096):
+          // 2π × focal length in pixels, capped so phones can still open it
+          const f = frames[0].height / 2 / Math.tan((result.vfov * Math.PI) / 360);
+          const proWidth = Math.min(PRO_MAX_WIDTH, Math.max(result.width, Math.round((2 * Math.PI * f) / 512) * 512));
+          result.blob = await api.proStitch(frames, result.quaternions, result.vfov, proWidth);
+          result.width = proWidth;
           result.stitcher = 'opencv';
         } catch (err) {
           console.warn('pro stitch failed, keeping the phone panorama', err);
