@@ -19,7 +19,8 @@
     "dev:site": "npm --prefix site run dev",
     "postinstall": "npm --prefix site ci --no-audit --no-fund",
     "test:site": "node test-e2e/site.js",
-    "import:base44": "node scripts/import-base44.js"
+    "import:base44": "node scripts/import-base44.js",
+    "seed:demo": "node scripts/seed-demo.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.1.0",
