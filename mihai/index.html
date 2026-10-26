@@ -36,7 +36,10 @@ svg{overflow:visible}
 .kw .ul{position:absolute;left:0;right:0;bottom:-6px;height:10px;border-radius:5px;background:currentColor;transform:scaleX(0);transform-origin:left;opacity:.9}
 
 /* logo */
-#logo{position:absolute;left:56px;bottom:56px;width:250px;z-index:41}
+#logo{position:absolute;left:56px;bottom:56px;z-index:41}
+.lock{display:flex;align-items:center;gap:.32em;font-weight:900;letter-spacing:-.02em;color:#F9FAFB;white-space:nowrap}
+.lock img{height:1.25em;display:block}
+.lock b{color:#5BA374;font-weight:900}
 
 /* labels with connector line */
 .tag{position:absolute;padding:16px 26px;border-radius:14px;font-weight:900;font-size:34px;letter-spacing:.5px;white-space:nowrap;opacity:0;box-shadow:0 10px 30px rgba(0,0,0,.35)}
@@ -329,14 +332,14 @@ svg{overflow:visible}
     </svg>
     <div class="abs" id="mihaiH" style="left:180px;top:420px;width:720px"></div>
     <div class="abs" id="endH" style="inset:0;background:rgba(13,19,28,.0);z-index:25"></div>
-    <div class="abs" id="logoH" style="left:190px;top:560px;width:700px;opacity:0;z-index:26"><img src="assets/logo_light.png" style="width:700px;display:block"></div>
+    <div class="abs" id="logoH" style="left:0;right:0;top:560px;display:flex;justify-content:center;opacity:0;z-index:26"><div class="lock" style="font-size:110px"><img src="assets/mark_light.png"><span>Verifi<b>Casa</b></span></div></div>
     <div class="abs" id="urlH" style="left:0;right:0;top:800px;text-align:center;font-size:44px;font-weight:800;opacity:0;z-index:26">verificasa.ro</div>
     <div class="abs" id="ilH" style="left:0;right:0;top:880px;text-align:center;font-size:30px;color:var(--muted);opacity:0;z-index:26">Scenariu ilustrativ · personaj fictiv</div>
   </div>
 
   <div class="wipe" id="wipe"></div>
   <div id="kt"></div>
-  <img id="logo" src="assets/logo_light.png">
+  <div id="logo" class="lock" style="font-size:40px"><img src="assets/mark_light.png"><span>Verifi<b>Casa</b></span></div>
   <div id="play">▶ Redă</div>
   <audio id="aud" src="audio/mix.m4a" preload="auto"></audio>
 </div>

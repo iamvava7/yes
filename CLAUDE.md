@@ -1,7 +1,7 @@
 # VerifiCasa — note de brand (de ținut minte în orice material)
 
 - Logo: monograma „VC” cu o casă în interiorul lui C + wordmark „Verifi” (negru/bleumarin #1F2533) „Casa” (verde #41754F).
-  Variante extrase: `mihai/assets/logo_dark.png` (pe fundal deschis), `mihai/assets/logo_light.png` (pe fundal închis).
+  Variante extrase: `mihai/assets/mark_dark.png` / `mark_light.png` (monograma la rezoluție mare, din fișierul oficial).
   Logo-ul apare mereu în materiale video.
 - Site: verificasa.ro — „Chirii verificate online. Fără surprize neplăcute.” Fundal crem #F8F6F1, verde închis pe butoane.
 - Ce oferim și trebuie promovat: transparența e mereu pe primul loc.
