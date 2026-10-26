@@ -4,319 +4,607 @@
 <meta charset="utf-8">
 <title>Mihai și anunțul fals</title>
 <style>
-:root{--bg:#0D131C;--green:#22C55E;--text:#F9FAFB;--red:#E5484D;--panel:#162030;--panel2:#1E2A3D;--muted:#8A97AB}
+:root{--bg:#0D131C;--green:#22C55E;--brand:#41754F;--text:#F9FAFB;--red:#E5484D;--panel:#162030;--panel2:#1E2A3D;--muted:#8A97AB;--cream:#F8F6F1;--ink:#1F2533}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{width:1080px;height:1920px;overflow:hidden;background:var(--bg)}
 body{font-family:"Inter","Helvetica Neue",Arial,sans-serif;color:var(--text)}
-#stage{position:relative;width:1080px;height:1920px;overflow:hidden;background:var(--bg)}
+#stage{position:relative;width:1080px;height:1920px;overflow:hidden;background:radial-gradient(120% 80% at 50% 30%,#152238 0%,#0D131C 60%)}
 .abs{position:absolute}
-/* generic in/out */
-@keyframes in{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
-@keyframes fin{from{opacity:0}to{opacity:1}}
-@keyframes out{from{opacity:1}to{opacity:0}}
-@keyframes pop{0%{opacity:0;transform:scale(.6)}70%{opacity:1;transform:scale(1.06)}100%{opacity:1;transform:scale(1)}}
 .scene{position:absolute;inset:0;opacity:0}
+svg{overflow:visible}
+.fb{transform-box:fill-box;transform-origin:center}
+
+/* background particles */
+.dot{position:absolute;border-radius:50%;background:var(--green);opacity:.12}
 
 /* chapter bar */
-#chapters{position:absolute;top:70px;left:60px;right:60px;display:flex;gap:14px;z-index:23}
-.ch{flex:1;font-size:26px;font-weight:600;color:var(--muted);text-align:center}
+#chapters{position:absolute;top:70px;left:60px;right:60px;display:flex;gap:14px;z-index:40}
+.ch{flex:1;font-size:26px;font-weight:700;color:var(--muted);text-align:center}
 .ch .bar{height:8px;border-radius:4px;background:#26334A;margin-bottom:16px;overflow:hidden}
 .ch .bar i{display:block;height:100%;width:100%;background:var(--green);transform-origin:left;transform:scaleX(0)}
-@keyframes fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
-@keyframes hl{from{color:var(--muted)}to{color:var(--text)}}
-@keyframes unhl{from{color:var(--text)}to{color:var(--muted)}}
-#c1 i{animation:fill 20s linear 0s both}
-#c2 i{animation:fill 8s linear 20s both}
-#c3 i{animation:fill 8s linear 28s both}
-#c4 i{animation:fill 12s linear 36s both}
-#c1 span{animation:hl .3s 0s both,unhl .3s 20s forwards}
-#c2 span{animation:hl .3s 20s both,unhl .3s 28s forwards}
-#c3 span{animation:hl .3s 28s both,unhl .3s 36s forwards}
-#c4 span{animation:hl .3s 36s both}
 
-/* on-screen text (TE) */
-.te{position:absolute;z-index:5;top:200px;left:60px;right:60px;text-align:center;font-weight:800;font-size:58px;letter-spacing:1px;line-height:1.15}
-/* subtitles */
-.sub{position:absolute;left:70px;right:70px;top:1560px;text-align:center;font-size:44px;font-weight:600;line-height:1.3;color:var(--text);opacity:0;text-shadow:0 2px 8px rgba(0,0,0,.6)}
-.sub b{color:var(--green);font-weight:800}
+/* on-screen text */
+.te{position:absolute;top:180px;left:60px;right:60px;text-align:center;font-weight:900;font-size:50px;letter-spacing:2px;line-height:1.15;z-index:5;opacity:0}
+
+/* kinetic type */
+#kt{position:absolute;left:0;right:0;top:1330px;height:400px;z-index:30;pointer-events:none}
+#kt:before{content:"";position:absolute;left:0;right:0;top:-80px;bottom:-200px;background:linear-gradient(to bottom,rgba(13,19,28,0),rgba(13,19,28,.85) 35%,rgba(13,19,28,.95))}
+.kl{position:absolute;inset:0 60px;display:flex;flex-wrap:wrap;justify-content:center;align-content:center;gap:4px 22px;font-size:76px;font-weight:900;line-height:1.08;letter-spacing:-1px;opacity:0}
+.kw{display:inline-block;opacity:0;position:relative;text-shadow:0 6px 24px rgba(0,0,0,.5)}
+.kw.g{color:var(--green)}
+.kw.r{color:var(--red)}
+.kw .ul{position:absolute;left:0;right:0;bottom:-6px;height:10px;border-radius:5px;background:currentColor;transform:scaleX(0);transform-origin:left;opacity:.9}
+
 /* logo */
-#logo{position:absolute;left:60px;bottom:60px;display:flex;align-items:center;gap:16px;z-index:10;font-weight:700;font-size:32px}
+#logo{position:absolute;left:56px;bottom:56px;width:250px;z-index:41}
 
 /* labels with connector line */
-.tag{position:absolute;padding:16px 26px;border-radius:12px;font-weight:800;font-size:34px;letter-spacing:.5px;white-space:nowrap}
+.tag{position:absolute;padding:16px 26px;border-radius:14px;font-weight:900;font-size:34px;letter-spacing:.5px;white-space:nowrap;opacity:0;box-shadow:0 10px 30px rgba(0,0,0,.35)}
 .tag.red{background:var(--red);color:#fff}
 .tag.green{background:var(--green);color:#0D131C}
-.line{stroke-dasharray:600;stroke-dashoffset:600}
-@keyframes draw{to{stroke-dashoffset:0}}
-
-/* scene timings */
-#s1{animation:fin .4s 0s both,out .4s 2.8s forwards}
-#s2{animation:fin .4s 3s both,out .4s 7.8s forwards}
-#s3{animation:fin .4s 8s both,out .4s 19.8s forwards}
-#s5{animation:fin .4s 20s both,out .4s 27.8s forwards}
-#s6{animation:fin .4s 28s both,out .4s 35.8s forwards}
-#s7{animation:fin .4s 36s both,out .4s 41.8s forwards}
-#s8{animation:fin .5s 42s both}
 
 /* phone */
-.phone{position:absolute;border-radius:60px;background:#0A0F17;border:10px solid #2B3850;overflow:hidden}
-.screen{position:absolute;inset:0;background:var(--panel)}
+.phone{position:absolute;border-radius:70px;background:#05080D;padding:18px;box-shadow:0 40px 90px rgba(0,0,0,.55),inset 0 0 0 4px #2B3850}
+.phone .scr{position:relative;width:100%;height:100%;border-radius:54px;overflow:hidden;background:var(--panel)}
+.notch{position:absolute;top:14px;left:50%;width:150px;height:38px;margin-left:-75px;border-radius:20px;background:#05080D;z-index:5}
+.sbar{height:70px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 50px 6px;font-size:26px;font-weight:700}
 
-/* S1 zoom toward price */
-@keyframes zoom1{from{transform:scale(1)}to{transform:scale(1.55) translate(0,-150px)}}
-#s1 .cam{position:absolute;inset:0;transform-origin:540px 1150px;animation:zoom1 2.6s cubic-bezier(.5,0,.3,1) .3s both}
+.bub{position:absolute;left:30px;max-width:520px;background:var(--panel2);border-radius:30px 30px 30px 8px;padding:22px 28px;font-size:32px;line-height:1.3;opacity:0}
+.wipe{position:absolute;top:-200px;bottom:-200px;width:1500px;left:-1700px;background:var(--green);z-index:35;transform:skewX(-12deg)}
+.flash{position:absolute;inset:0;background:radial-gradient(80% 60% at 50% 50%,rgba(229,72,77,0) 40%,rgba(229,72,77,.45));opacity:0;z-index:20;pointer-events:none}
 
-/* S2 clock */
-@keyframes blink{0%,49%{opacity:1}50%,100%{opacity:.25}}
-
-/* chat */
-.bub{position:absolute;left:150px;max-width:640px;background:var(--panel2);border-radius:28px 28px 28px 6px;padding:24px 30px;font-size:34px;line-height:1.3}
-@keyframes grow{0%{transform:scale(1)}100%{transform:scale(1.45)}}
-.amt{display:inline-block;font-weight:800;color:var(--text);transform-origin:left center;animation:grow 1.4s ease-out 11.6s both}
-
-/* typing */
-@keyframes type{from{width:0}to{width:var(--w)}}
-.typed{display:inline-block;overflow:hidden;white-space:nowrap;vertical-align:bottom;width:0}
-
-/* doc unfold */
-@keyframes unfold{0%{transform:perspective(1400px) rotateX(-88deg) translateY(120px);opacity:0}100%{transform:perspective(1400px) rotateX(0) translateY(0);opacity:1}}
-
-/* key wobble */
-@keyframes jiggle{0%,100%{transform:translate(0,0) rotate(0)}25%{transform:translate(-6px,0) rotate(-6deg)}75%{transform:translate(6px,0) rotate(6deg)}}
-@keyframes keyin{from{transform:translate(-260px,0)}to{transform:translate(0,0)}}
+/* 3D room */
+.persp{position:absolute;perspective:1400px}
+.room{position:absolute;transform-origin:220px 220px;left:0;top:0;width:440px;height:440px;transform-style:preserve-3d}
+.room>div{position:absolute;width:440px;height:440px;backface-visibility:visible}
+#play{position:absolute;inset:0;z-index:99;display:flex;align-items:center;justify-content:center;background:rgba(13,19,28,.6);font-size:60px;font-weight:900;cursor:pointer}
 </style>
 </head>
 <body>
 <div id="stage">
+  <div id="bgdots"></div>
 
-<!-- chapter bar -->
-<div id="chapters">
-  <div class="ch" id="c1"><div class="bar"><i></i></div><span>Ce vede Mihai</span></div>
-  <div class="ch" id="c2"><div class="bar"><i></i></div><span>Ce verifici</span></div>
-  <div class="ch" id="c3"><div class="bar"><i></i></div><span>Semnale</span></div>
-  <div class="ch" id="c4"><div class="bar"><i></i></div><span>Ce faci</span></div>
-</div>
+  <div id="chapters">
+    <div class="ch" id="c1"><div class="bar"><i></i></div><span>Ce vede Mihai</span></div>
+    <div class="ch" id="c2"><div class="bar"><i></i></div><span>Ce verifici</span></div>
+    <div class="ch" id="c3"><div class="bar"><i></i></div><span>Semnale</span></div>
+    <div class="ch" id="c4"><div class="bar"><i></i></div><span>Ce faci</span></div>
+  </div>
 
-<!-- ============ S1 0-3s ============ -->
-<div class="scene" id="s1">
-  <div class="te" style="animation:in .5s .2s both">ANUNȚUL PREA BUN</div>
-  <div class="cam">
-    <div class="phone" style="left:240px;top:400px;width:600px;height:1080px">
-      <div class="screen">
-        <svg width="580" height="520" viewBox="0 0 580 520">
-          <!-- low-poly bright room photo -->
-          <polygon points="0,0 580,0 580,520 0,520" fill="#F4C66A"/>
-          <polygon points="0,0 290,0 0,260" fill="#F8D788"/>
-          <polygon points="290,0 580,0 580,240" fill="#EDB458"/>
-          <polygon points="0,260 290,0 580,240 580,360 0,360" fill="#F6CE7A"/>
-          <polygon points="60,60 250,60 250,300 60,300" fill="#BFE6FF"/>
-          <polygon points="60,60 250,60 60,300" fill="#D9F1FF"/>
-          <polygon points="155,60 155,300 150,300 150,60" fill="#F9FAFB"/>
-          <polygon points="0,360 580,360 580,520 0,520" fill="#B9834C"/>
-          <polygon points="0,360 300,360 0,520" fill="#C99460"/>
-          <polygon points="330,250 540,250 560,380 310,380" fill="#3F7F6B"/>
-          <polygon points="330,250 540,250 430,320" fill="#4E9680"/>
-          <polygon points="320,380 340,380 340,430 320,430" fill="#2E3B4E"/>
-          <polygon points="530,380 550,380 550,430 530,430" fill="#2E3B4E"/>
-          <polygon points="420,90 470,160 370,160" fill="#9FD27A"/>
-          <polygon points="410,160 430,160 430,240 410,240" fill="#7A5534"/>
-        </svg>
-        <div style="padding:30px 36px">
-          <div style="font-size:40px;font-weight:800">Garsonieră luminoasă</div>
-          <div style="font-size:28px;color:var(--muted);margin-top:10px">Central · mobilată · disponibilă imediat</div>
-          <div style="margin-top:50px;display:flex;align-items:baseline;gap:14px">
-            <div style="font-size:84px;font-weight:900;color:var(--green)">290 €</div>
-            <div style="font-size:32px;color:var(--muted)">/ lună</div>
+  <!-- A: listing -->
+  <div class="scene" id="sA">
+    <div class="te" id="teA">ANUNȚUL PREA BUN</div>
+    <div class="abs" id="camA" style="inset:0">
+      <div class="phone" id="phA" style="left:220px;top:300px;width:640px;height:1180px">
+        <div class="scr">
+          <div class="notch"></div>
+          <div class="sbar"><span>23:38</span><span>●●●</span></div>
+          <svg width="604" height="470" viewBox="0 0 604 470" style="display:block">
+            <defs>
+              <linearGradient id="aw" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FCE3A8"/><stop offset="1" stop-color="#EDB458"/></linearGradient>
+              <linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D6F0FF"/><stop offset="1" stop-color="#A8D8F5"/></linearGradient>
+              <linearGradient id="af" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#C99460"/><stop offset="1" stop-color="#A9743F"/></linearGradient>
+              <linearGradient id="as" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5BA58C"/><stop offset="1" stop-color="#2F6B58"/></linearGradient>
+            </defs>
+            <rect width="604" height="470" fill="url(#aw)"/>
+            <polygon points="0,0 300,0 0,240" fill="#fff" opacity=".18"/>
+            <rect x="60" y="50" width="200" height="250" rx="6" fill="url(#ag)"/>
+            <polygon points="60,50 260,50 60,300" fill="#fff" opacity=".35"/>
+            <rect x="156" y="50" width="8" height="250" fill="#F9FAFB"/>
+            <polygon id="sunbeam" points="60,300 260,300 420,470 120,470" fill="#fff" opacity=".18"/>
+            <rect x="0" y="330" width="604" height="140" fill="url(#af)"/>
+            <path d="M330,250 h210 a20,20 0 0 1 20,20 v110 h-250 v-110 a20,20 0 0 1 20,-20z" fill="url(#as)"/>
+            <rect x="320" y="300" width="250" height="40" rx="14" fill="#3F8A73"/>
+            <rect x="330" y="380" width="16" height="40" fill="#2E3B4E"/><rect x="535" y="380" width="16" height="40" fill="#2E3B4E"/>
+            <circle cx="440" cy="120" r="46" fill="#9FD27A"/><circle cx="415" cy="105" r="22" fill="#B7E192"/>
+            <rect x="433" y="160" width="14" height="80" rx="6" fill="#7A5534"/>
+            <ellipse cx="440" cy="245" rx="40" ry="10" fill="#000" opacity=".12"/>
+          </svg>
+          <div style="padding:30px 36px">
+            <div style="font-size:40px;font-weight:800">Garsonieră luminoasă</div>
+            <div style="font-size:28px;color:var(--muted);margin-top:10px">Central · mobilată · disponibilă imediat</div>
+            <div id="priceA" style="margin-top:44px;display:flex;align-items:baseline;gap:14px;transform-origin:left center">
+              <div style="font-size:92px;font-weight:900;color:var(--green)">290 €</div>
+              <div style="font-size:32px;color:var(--muted)">/ lună</div>
+            </div>
+            <div style="margin-top:36px;height:84px;border-radius:22px;background:var(--panel2);display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:700">Contactează proprietarul</div>
           </div>
-          <div style="margin-top:40px;height:80px;border-radius:20px;background:var(--panel2);display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:700">Contactează proprietarul</div>
+        </div>
+      </div>
+      <svg class="abs" style="left:0;top:0" width="1080" height="1920" id="sparkA"></svg>
+    </div>
+  </div>
+
+  <!-- B: Mihai at night -->
+  <div class="scene" id="sB">
+    <div class="te" id="teB">23:40 · a căutat 2 săptămâni</div>
+    <svg class="abs" style="left:60px;top:270px" width="960" height="760" viewBox="0 0 960 760">
+      <defs>
+        <linearGradient id="nsky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0B1426"/><stop offset="1" stop-color="#1B2A47"/></linearGradient>
+        <linearGradient id="bld" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22324D"/><stop offset="1" stop-color="#121C2E"/></linearGradient>
+      </defs>
+      <rect x="0" y="0" width="960" height="560" rx="18" fill="#1A2537"/>
+      <rect x="30" y="30" width="900" height="500" rx="8" fill="url(#nsky)"/>
+      <circle cx="800" cy="110" r="38" fill="#F3EBD2" opacity=".9"/><circle cx="785" cy="100" r="38" fill="#0F1A2E" opacity=".0"/>
+      <g fill="url(#bld)">
+        <path d="M50,530 V300 l80,-30 l80,30 V530z"/><path d="M220,530 V190 h170 V530z"/><path d="M400,530 V320 l70,-40 l70,40 V530z"/>
+        <path d="M550,530 V230 h180 V530z"/><path d="M740,530 V350 h170 V530z"/>
+      </g>
+      <g fill="#F6CE7A" id="winB">
+        <rect x="80" y="330" width="28" height="36" rx="3"/><rect x="150" y="400" width="28" height="36" rx="3"/>
+        <rect x="250" y="230" width="28" height="36" rx="3"/><rect x="330" y="300" width="28" height="36" rx="3"/><rect x="250" y="420" width="28" height="36" rx="3"/>
+        <rect x="430" y="360" width="28" height="36" rx="3"/><rect x="590" y="270" width="28" height="36" rx="3"/><rect x="670" y="340" width="28" height="36" rx="3"/>
+        <rect x="590" y="440" width="28" height="36" rx="3"/><rect x="790" y="400" width="28" height="36" rx="3"/><rect x="860" y="460" width="28" height="36" rx="3"/>
+      </g>
+      <rect x="474" y="30" width="12" height="500" fill="#1A2537"/>
+      <rect x="30" y="270" width="900" height="10" fill="#1A2537"/>
+      <g transform="translate(830,640)" id="clockB">
+        <rect x="-110" y="-56" width="220" height="112" rx="26" fill="#111A28" stroke="#2B3850" stroke-width="5"/>
+        <text x="0" y="22" text-anchor="middle" font-size="60" font-weight="900" fill="#F9FAFB" font-family="Arial">23<tspan id="colonB">:</tspan>40</text>
+      </g>
+    </svg>
+    <div class="abs" id="mihaiB" style="left:180px;top:420px;width:720px"></div>
+  </div>
+
+  <!-- C: chat + alarms -->
+  <div class="scene" id="sC">
+    <div class="te" id="teC1">1.500 € · transfer · azi</div>
+    <div class="te" id="teC2" style="color:var(--red);font-size:44px">PRESIUNE DE TIMP · BANI ÎNAINTE DE VIZIONARE</div>
+    <div class="phone" id="phC" style="left:170px;top:300px;width:740px;height:1000px">
+      <div class="scr">
+        <div class="notch"></div>
+        <div class="sbar"><span>23:41</span><span>●●●</span></div>
+        <div style="height:120px;background:var(--panel2);display:flex;align-items:center;gap:22px;padding:0 34px">
+          <svg width="80" height="80" viewBox="0 0 80 80"><circle cx="40" cy="40" r="40" fill="#2B3850"/><ellipse cx="40" cy="33" rx="14" ry="16" fill="#05080D"/><path d="M12,80 C14,60 26,54 40,54 C54,54 66,60 68,80z" fill="#05080D"/></svg>
+          <div><div style="font-size:34px;font-weight:800">„Proprietar”</div><div style="font-size:24px;color:var(--green)">online</div></div>
+        </div>
+        <div class="bub" id="b1" style="top:220px">Bună seara! Garsoniera e încă disponibilă.</div>
+        <div class="bub" id="b2" style="top:385px">Mai am doi cumpărători interesați.</div>
+        <div class="bub" id="b3" style="top:520px">Ca s-o rezerv, trimite azi un avans de <b id="amt" style="display:inline-block;transform-origin:left center;color:#fff">1.500 €</b></div>
+        <div class="bub" id="b4" style="top:720px">Prin transfer, înainte de vizionare.</div>
+        <div id="typingC" style="position:absolute;left:30px;top:850px;background:var(--panel2);border-radius:30px;padding:22px 30px;display:flex;gap:10px;opacity:0">
+          <i class="td" style="width:14px;height:14px;border-radius:50%;background:var(--muted);display:block"></i><i class="td" style="width:14px;height:14px;border-radius:50%;background:var(--muted);display:block"></i><i class="td" style="width:14px;height:14px;border-radius:50%;background:var(--muted);display:block"></i>
         </div>
       </div>
     </div>
+    <svg class="abs" style="left:0;top:0" width="1080" height="1920">
+      <path id="lnC1" d="M250,1250 V1180 Q250,1150 280,1150 H300" fill="none" stroke="#E5484D" stroke-width="6" stroke-linecap="round"/>
+      <circle id="dtC1" cx="300" cy="1150" r="0" fill="#E5484D"/>
+      <path id="lnC2" d="M830,1250 V760 Q830,720 790,720 H760" fill="none" stroke="#E5484D" stroke-width="6" stroke-linecap="round"/>
+      <circle id="dtC2" cx="760" cy="720" r="0" fill="#E5484D"/>
+    </svg>
+    <div class="tag red" id="tgC1" style="left:60px;top:1235px">PRESIUNE DE TIMP</div>
+    <div class="tag red" id="tgC2" style="right:40px;top:1235px">BANI ÎNAINTE DE VIZIONARE</div>
+    <div class="flash" id="flC"></div>
   </div>
-</div>
 
-<!-- ============ S2 3-8s ============ -->
-<div class="scene" id="s2">
-  <div class="te" style="animation:in .5s 3.3s both">23:40 · a căutat 2 săptămâni</div>
-  <!-- night window -->
-  <svg class="abs" style="left:90px;top:360px" width="900" height="1100" viewBox="0 0 900 1100">
-    <polygon points="0,0 900,0 900,620 0,620" fill="#101A28"/>
-    <polygon points="40,40 860,40 860,580 40,580" fill="#0A1220"/>
-    <!-- buildings outside, low-poly -->
-    <polygon points="60,580 60,300 220,260 220,580" fill="#1A2638"/>
-    <polygon points="220,580 220,200 400,230 400,580" fill="#15202F"/>
-    <polygon points="400,580 400,330 560,300 560,580" fill="#1C293C"/>
-    <polygon points="560,580 560,180 760,220 760,580" fill="#172334"/>
-    <polygon points="760,580 760,360 850,340 850,580" fill="#1A2638"/>
-    <g fill="#F6CE7A">
-      <rect x="100" y="340" width="34" height="40"/><rect x="160" y="420" width="34" height="40"/>
-      <rect x="260" y="280" width="34" height="40"/><rect x="330" y="380" width="34" height="40"/><rect x="260" y="470" width="34" height="40"/>
-      <rect x="440" y="390" width="34" height="40"/><rect x="600" y="260" width="34" height="40"/><rect x="680" y="340" width="34" height="40"/>
-      <rect x="600" y="440" width="34" height="40"/><rect x="790" y="420" width="30" height="40"/>
-    </g>
-    <polygon points="450,40 460,40 460,580 450,580" fill="#2B3850"/>
-    <!-- wall clock -->
-    <g transform="translate(760,700)">
-      <polygon points="0,-80 69,-40 69,40 0,80 -69,40 -69,-40" fill="#1E2A3D" stroke="#2B3850" stroke-width="6"/>
-      <text x="0" y="16" text-anchor="middle" font-size="44" font-weight="800" fill="#F9FAFB" font-family="Arial">23<tspan style="animation:blink 1s steps(1) infinite">:</tspan>40</text>
-    </g>
-    <!-- Mihai low-poly, jacket, phone in hand -->
-    <g transform="translate(300,640)">
-      <polygon points="40,0 120,0 140,60 120,120 40,120 20,60" fill="#C99A7A"/>
-      <polygon points="40,0 120,0 80,50" fill="#D7AB8B"/>
-      <polygon points="20,60 80,50 40,120" fill="#B98A6A"/>
-      <polygon points="30,-10 130,-10 145,40 120,15 40,15 15,40" fill="#2A1E17"/>
-      <polygon points="50,120 110,120 105,150 55,150" fill="#B98A6A"/>
-      <!-- jacket -->
-      <polygon points="-40,170 200,170 240,460 -80,460" fill="#2F5D8C"/>
-      <polygon points="-40,170 80,170 80,460 -80,460" fill="#3A6EA3"/>
-      <polygon points="80,170 200,170 120,280" fill="#284F78"/>
-      <polygon points="40,150 120,150 80,230" fill="#D9E2EC"/>
-      <!-- arm + phone -->
-      <polygon points="180,200 250,250 230,340 160,300" fill="#284F78"/>
-      <polygon points="230,340 160,300 100,330 150,380" fill="#3A6EA3"/>
-      <polygon points="80,300 160,280 175,400 95,420" fill="#0A0F17" stroke="#2B3850" stroke-width="4"/>
-      <polygon points="92,312 152,296 164,388 104,404" fill="#22C55E" opacity=".35"/>
-    </g>
-  </svg>
-</div>
-
-<!-- ============ S3/S4 8-20s ============ -->
-<div class="scene" id="s3">
-  <div class="te" style="animation:in .5s 8.3s both,out .3s 14s forwards">1.500 € · transfer · azi</div>
-  <div class="te" style="color:var(--red);font-size:52px;animation:in .5s 14.3s both">PRESIUNE DE TIMP · BANI<br>ÎNAINTE DE VIZIONARE</div>
-  <div class="phone" style="left:140px;top:420px;width:800px;height:1060px">
-    <div class="screen">
-      <div style="height:130px;background:var(--panel2);display:flex;align-items:center;gap:22px;padding:0 34px">
-        <svg width="80" height="80" viewBox="0 0 80 80"><circle cx="40" cy="40" r="40" fill="#2B3850"/><polygon points="40,14 54,26 54,42 40,52 26,42 26,26" fill="#05080D"/><polygon points="14,80 22,58 40,54 58,58 66,80" fill="#05080D"/></svg>
-        <div><div style="font-size:34px;font-weight:700">„Proprietar”</div><div style="font-size:24px;color:var(--muted)">online</div></div>
+  <!-- D: Mihai opens VerifiCasa -->
+  <div class="scene" id="sD">
+    <div class="te" id="teD">Caută adresa înainte să plătești</div>
+    <div class="abs" id="camD" style="inset:0">
+      <div class="abs" id="mihaiD" style="left:180px;top:300px;width:720px"></div>
+    </div>
+    <div class="phone" id="phD" style="left:162px;top:280px;width:756px;height:1060px;opacity:0">
+      <div class="scr" style="background:var(--cream)">
+        <div class="notch"></div>
+        <div class="sbar" style="color:var(--ink);background:var(--cream)"><span>23:43</span><span>●●●</span></div>
+        <div style="position:relative;width:720px;height:715px">
+          <img src="assets/site_home.png" style="position:absolute;left:0;top:0;width:720px;height:715px">
+          <!-- typed address over the real search field placeholder -->
+          <div id="srchD" style="position:absolute;left:62px;top:493px;width:460px;height:60px;background:#F7F5F0;display:flex;align-items:center;font-size:30px;color:var(--ink);opacity:0">
+            <span id="typD" style="white-space:pre"></span><i id="carD" style="display:inline-block;width:3px;height:36px;background:var(--brand);margin-left:2px"></i>
+          </div>
+          <div id="tapD" style="position:absolute;left:630px;top:523px;width:90px;height:90px;margin:-45px 0 0 -45px;border-radius:50%;border:6px solid #fff;opacity:0"></div>
+        </div>
+        <div style="padding:30px 28px;display:flex;flex-direction:column;gap:22px">
+          <div style="height:120px;border-radius:28px;background:linear-gradient(120deg,#41754F,#2E5A3B)"></div>
+          <div style="height:120px;border-radius:28px;background:linear-gradient(120deg,#D9D3C5,#C7BFAE)"></div>
+        </div>
       </div>
-      <div class="bub" style="left:34px;top:180px;animation:pop .45s 8.6s both">Bună seara! Garsoniera e încă disponibilă.</div>
-      <div class="bub" style="left:34px;top:350px;animation:pop .45s 9.8s both">Mai am doi cumpărători interesați.</div>
-      <div class="bub" id="b3" style="left:34px;top:520px;animation:pop .45s 11s both">Ca s-o rezerv, trimite azi un avans de <span class="amt">1.500 €</span></div>
-      <div class="bub" id="b4" style="left:34px;top:740px;animation:pop .45s 12.6s both">Prin transfer, înainte de vizionare.</div>
+    </div>
+    <div class="abs" id="fingerD" style="left:0;top:0;opacity:0"><svg width="150" height="230" viewBox="0 0 150 230"><defs><radialGradient id="fg" cx=".4" cy=".3" r=".8"><stop offset="0" stop-color="#F6D2B3"/><stop offset="1" stop-color="#C98763"/></radialGradient></defs><path d="M40,230 V60 a35,35 0 0 1 70,0 V230z" fill="url(#fg)"/><ellipse cx="75" cy="50" rx="24" ry="26" fill="#F9E1CF" opacity=".7"/></svg></div>
+  </div>
+
+  <!-- E: verification result -->
+  <div class="scene" id="sE">
+    <div class="phone" id="phE" style="left:110px;top:200px;width:860px;height:800px">
+      <div class="scr" style="background:var(--cream);color:var(--ink)">
+        <div class="notch"></div>
+        <div style="height:60px"></div>
+        <img src="assets/site_header.png" style="display:block;width:720px;height:95px;margin-left:52px">
+        <div style="margin:20px 36px;background:#fff;border-radius:28px;padding:30px 34px;box-shadow:0 8px 30px rgba(31,37,51,.08)">
+          <div style="font-size:36px;font-weight:900">Verificare proprietate</div>
+          <div style="font-size:24px;color:#6B7280;margin-top:6px">Str. Exemplului 7, ap. 12</div>
+          <div class="rowE" style="display:flex;justify-content:space-between;font-size:30px;padding:20px 0;border-bottom:2px solid #EEE9DF;margin-top:12px;opacity:0"><span style="color:#6B7280">Proprietar înregistrat</span><b>Persoana A</b></div>
+          <div class="rowE" style="display:flex;justify-content:space-between;font-size:30px;padding:20px 0;border-bottom:2px solid #EEE9DF;opacity:0"><span style="color:#6B7280">Cine cere banii</span><b>Persoana B</b></div>
+          <div class="rowE" style="display:flex;justify-content:space-between;align-items:center;font-size:30px;padding:20px 0;opacity:0"><span style="color:#6B7280">Potrivire</span><b style="color:var(--red)">Nu corespunde</b></div>
+          <div id="payE" style="position:relative;margin-top:14px;height:90px;border-radius:22px;background:#E8E3D8;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;color:#6B7280;opacity:0">
+            Trimite avansul 1.500 €
+            <svg class="abs" style="left:0;top:0" width="716" height="90"><path id="xE1" d="M30,15 L686,75" stroke="#E5484D" stroke-width="8" stroke-linecap="round"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+    <svg class="abs" style="left:190px;top:1010px" width="700" height="330" viewBox="0 0 700 330" id="doorE">
+      <defs>
+        <linearGradient id="dw" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2A3A55"/><stop offset="1" stop-color="#18243A"/></linearGradient>
+        <linearGradient id="dd" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7A5236"/><stop offset="1" stop-color="#4A3020"/></linearGradient>
+        <linearGradient id="kg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset=".5" stop-color="#E5B84C"/><stop offset="1" stop-color="#A8802A"/></linearGradient>
+      </defs>
+      <rect x="40" y="0" width="300" height="330" rx="10" fill="url(#dw)"/>
+      <rect x="100" y="40" width="180" height="290" rx="8" fill="url(#dd)"/>
+      <rect x="112" y="52" width="156" height="120" rx="6" fill="#fff" opacity=".06"/>
+      <circle cx="250" cy="200" r="18" fill="#C9A24A"/><circle cx="250" cy="200" r="7" fill="#1A1108"/><rect x="247" y="200" width="6" height="18" fill="#1A1108"/>
+      <g id="keyE"><g id="keyJ" class="fb">
+        <circle cx="560" cy="200" r="46" fill="url(#kg)"/><circle cx="560" cy="200" r="16" fill="#0D131C"/>
+        <rect x="290" y="186" width="230" height="28" rx="8" fill="url(#kg)"/>
+        <rect x="300" y="214" width="22" height="34" rx="4" fill="url(#kg)"/><rect x="340" y="214" width="16" height="24" rx="4" fill="url(#kg)"/><rect x="372" y="214" width="20" height="30" rx="4" fill="url(#kg)"/>
+      </g></g>
+    </svg>
+    <svg class="abs" style="left:0;top:0" width="1080" height="1920"><path id="lnE" d="M540,1010 V930 Q540,900 600,900 H640" fill="none" stroke="#E5484D" stroke-width="6" stroke-linecap="round"/></svg>
+    <div class="tag red" id="tgE" style="left:50%;top:1010px;margin-left:-280px;font-size:42px">PROPRIETAR: NU CORESPUNDE</div>
+    <div class="flash" id="flE"></div>
+  </div>
+
+  <!-- F: transparency features -->
+  <div class="scene" id="sF">
+    <div class="te" id="teF">TRANSPARENȚA E MEREU PRIMA</div>
+    <div class="persp" style="left:320px;top:330px;width:440px;height:440px">
+      <div class="room" id="roomF">
+        <div style="transform:translateZ(-220px);background:linear-gradient(160deg,#F3E7CF,#D9C6A3)">
+          <div style="position:absolute;left:150px;top:70px;width:140px;height:170px;border-radius:6px;background:linear-gradient(160deg,#D6F0FF,#9CCFEF);border:8px solid #fff"></div>
+          <div style="position:absolute;left:90px;top:290px;width:260px;height:100px;border-radius:24px 24px 10px 10px;background:linear-gradient(#5BA58C,#2F6B58)"></div>
+        </div>
+        <div style="transform:rotateY(90deg) translateZ(-220px);background:linear-gradient(160deg,#E9DBBE,#C8B48D)">
+          <div style="position:absolute;left:120px;top:90px;width:200px;height:140px;border:8px solid #fff;background:linear-gradient(135deg,#F6CE7A,#E5484D)"></div>
+        </div>
+        <div style="transform:rotateY(-90deg) translateZ(-220px);background:linear-gradient(160deg,#E2D1AE,#BCA67C)">
+          <div style="position:absolute;left:160px;top:120px;width:120px;height:300px;background:linear-gradient(#7A5236,#4A3020);border-radius:6px"></div>
+        </div>
+        <div style="transform:rotateX(90deg) translateZ(-220px);background:linear-gradient(135deg,#C99460,#8E6338)"></div>
+      </div>
+    </div>
+    <svg class="abs" style="left:0;top:0" width="1080" height="1920">
+      <ellipse id="orbF" cx="540" cy="560" rx="330" ry="90" fill="none" stroke="#22C55E" stroke-width="5" stroke-dasharray="14 14" opacity="0"/>
+      <path id="lnF1" d="M300,860 V780 Q300,740 340,720" fill="none" stroke="#22C55E" stroke-width="5" stroke-linecap="round"/>
+      <path id="lnF2" d="M780,860 V780 Q780,740 740,720" fill="none" stroke="#22C55E" stroke-width="5" stroke-linecap="round"/>
+    </svg>
+    <div class="tag green" id="tgF0" style="left:50%;top:250px;margin-left:-100px;font-size:40px">Tur 3D</div>
+    <div class="abs cardF" id="cF1" style="left:60px;top:860px;width:460px;height:200px;border-radius:28px;background:var(--panel2);padding:26px;opacity:0">
+      <div style="font-size:32px;font-weight:900;margin-bottom:16px">Comentarii</div>
+      <div class="cm" style="height:34px;width:85%;border-radius:17px;background:#2B3850;margin-bottom:14px"></div>
+      <div class="cm" style="height:34px;width:60%;border-radius:17px;background:#2B3850"></div>
+    </div>
+    <div class="abs cardF" id="cF2" style="left:560px;top:860px;width:460px;height:200px;border-radius:28px;background:var(--panel2);padding:26px;opacity:0">
+      <div style="font-size:32px;font-weight:900;margin-bottom:22px">Feedback</div>
+      <svg width="400" height="70" viewBox="0 0 400 70" id="starsF">
+        <g fill="#22C55E">
+          <polygon class="st fb" points="35,2 44,24 68,26 50,42 55,66 35,53 15,66 20,42 2,26 26,24"/>
+          <g transform="translate(80 0)"><polygon class="st fb" points="35,2 44,24 68,26 50,42 55,66 35,53 15,66 20,42 2,26 26,24"/></g>
+          <g transform="translate(160 0)"><polygon class="st fb" points="35,2 44,24 68,26 50,42 55,66 35,53 15,66 20,42 2,26 26,24"/></g>
+          <g transform="translate(240 0)"><polygon class="st fb" points="35,2 44,24 68,26 50,42 55,66 35,53 15,66 20,42 2,26 26,24"/></g>
+          <g transform="translate(320 0)"><polygon class="st fb" points="35,2 44,24 68,26 50,42 55,66 35,53 15,66 20,42 2,26 26,24"/></g>
+        </g>
+      </svg>
+    </div>
+    <div class="abs cardF" id="cF3" style="left:60px;top:1090px;width:960px;height:200px;border-radius:28px;background:var(--panel2);padding:28px 32px;display:flex;align-items:center;gap:28px;opacity:0">
+      <svg width="110" height="130" viewBox="0 0 110 130" style="flex:none"><path d="M55,4 L104,22 V62 C104,96 82,118 55,126 C28,118 6,96 6,62 V22z" fill="#22C55E"/><path id="chkF" d="M30,66 L48,84 L82,46" fill="none" stroke="#0D131C" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div style="flex:1">
+        <div style="font-size:26px;color:var(--muted);font-weight:700">Partener verificare proprietate</div>
+        <div style="font-size:44px;font-weight:900;margin-top:4px">Residence Vertical</div>
+      </div>
+      <div id="codeF" style="flex:none;border:4px dashed var(--green);border-radius:18px;padding:18px 22px;font-size:34px;font-weight:900;letter-spacing:3px;color:var(--green);opacity:0"><span id="codeT"></span></div>
     </div>
   </div>
-  <!-- red labels with connector lines -->
-  <svg class="abs" style="left:0;top:0" width="1080" height="1920">
-    <polyline class="line" points="300,1400 300,1290 330,1240" fill="none" stroke="#E5484D" stroke-width="6" style="animation:draw .6s 15s forwards"/>
-    <circle cx="330" cy="1240" r="12" fill="#E5484D" style="opacity:0;animation:fin .2s 15.5s both"/>
-    <polyline class="line" points="790,1460 790,1050 740,1000" fill="none" stroke="#E5484D" stroke-width="6" style="animation:draw .6s 17.2s forwards"/>
-    <circle cx="740" cy="1000" r="12" fill="#E5484D" style="opacity:0;animation:fin .2s 17.7s both"/>
-  </svg>
-  <div class="tag red" style="left:120px;top:1395px;animation:pop .4s 15.4s both">PRESIUNE DE TIMP</div>
-  <div class="tag red" style="right:60px;top:1455px;animation:pop .4s 17.6s both">BANI ÎNAINTE DE VIZIONARE</div>
+
+  <!-- G: land registry extract -->
+  <div class="scene" id="sG">
+    <div class="te" id="teG" style="font-size:44px">Extras carte funciară · verifică pe ancpi.ro</div>
+    <div class="phone" style="left:110px;top:1080px;width:860px;height:240px;border-radius:44px"><div class="scr" style="border-radius:30px;background:linear-gradient(#1E2A3D,#162030)"></div></div>
+    <div class="abs" id="docG" style="left:190px;top:300px;width:700px;height:820px;background:#F9FAFB;color:#0D131C;border-radius:16px;padding:46px;transform-origin:center bottom;box-shadow:0 30px 70px rgba(0,0,0,.45)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div style="font-size:32px;font-weight:900;letter-spacing:2px">ANCPI</div>
+        <div style="font-size:22px;text-align:right;color:#4B5563">Cod de verificare<br><b style="font-size:30px;color:#0D131C;letter-spacing:3px">XXXX-XXXX</b></div>
+      </div>
+      <div style="margin-top:44px;font-size:38px;font-weight:900;line-height:1.2">Extras de carte funciară pentru informare</div>
+      <div style="margin-top:44px;font-size:26px;color:#4B5563">Imobil</div>
+      <div class="lnG" style="height:18px;background:#D1D5DB;border-radius:9px;margin-top:14px;width:90%;transform-origin:left"></div>
+      <div class="lnG" style="height:18px;background:#D1D5DB;border-radius:9px;margin-top:14px;width:70%;transform-origin:left"></div>
+      <div style="margin-top:44px;font-size:26px;color:#4B5563">Proprietar înregistrat</div>
+      <div id="ownG" style="margin-top:14px;padding:16px 22px;border:5px solid var(--green);border-radius:14px;font-size:34px;font-weight:900;opacity:0">Persoana A</div>
+      <div class="lnG" style="height:18px;background:#D1D5DB;border-radius:9px;margin-top:40px;width:85%;transform-origin:left"></div>
+      <div class="lnG" style="height:18px;background:#D1D5DB;border-radius:9px;margin-top:14px;width:60%;transform-origin:left"></div>
+    </div>
+  </div>
+
+  <!-- H: natural outro -->
+  <div class="scene" id="sH">
+    <svg class="abs" style="left:60px;top:270px" width="960" height="560" viewBox="0 0 960 560">
+      <defs><linearGradient id="dsky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F6CE7A"/><stop offset=".6" stop-color="#F3A96A"/><stop offset="1" stop-color="#C9786A"/></linearGradient></defs>
+      <rect x="0" y="0" width="960" height="560" rx="18" fill="#1A2537"/>
+      <rect x="30" y="30" width="900" height="500" rx="8" fill="url(#dsky)"/>
+      <circle id="sunH" cx="700" cy="520" r="80" fill="#FFF3D1"/>
+      <g fill="#7C5E6E" opacity=".8"><path d="M50,530 V300 l80,-30 l80,30 V530z"/><path d="M220,530 V190 h170 V530z"/><path d="M400,530 V320 l70,-40 l70,40 V530z"/><path d="M550,530 V230 h180 V530z"/><path d="M740,530 V350 h170 V530z"/></g>
+      <rect x="474" y="30" width="12" height="500" fill="#1A2537"/><rect x="30" y="270" width="900" height="10" fill="#1A2537"/>
+    </svg>
+    <div class="abs" id="mihaiH" style="left:180px;top:420px;width:720px"></div>
+    <div class="abs" id="endH" style="inset:0;background:rgba(13,19,28,.0);z-index:25"></div>
+    <div class="abs" id="logoH" style="left:190px;top:560px;width:700px;opacity:0;z-index:26"><img src="assets/logo_light.png" style="width:700px;display:block"></div>
+    <div class="abs" id="urlH" style="left:0;right:0;top:800px;text-align:center;font-size:44px;font-weight:800;opacity:0;z-index:26">verificasa.ro</div>
+    <div class="abs" id="ilH" style="left:0;right:0;top:880px;text-align:center;font-size:30px;color:var(--muted);opacity:0;z-index:26">Scenariu ilustrativ · personaj fictiv</div>
+  </div>
+
+  <div class="wipe" id="wipe"></div>
+  <div id="kt"></div>
+  <img id="logo" src="assets/logo_light.png">
+  <div id="play">▶ Redă</div>
+  <audio id="aud" src="audio/mix.m4a" preload="auto"></audio>
 </div>
 
-<!-- ============ S5 20-28s ============ -->
-<div class="scene" id="s5">
-  <div class="te" style="animation:in .5s 20.3s both">Caută adresa înainte să plătești</div>
-  <div class="phone" style="left:140px;top:420px;width:800px;height:1060px">
-    <div class="screen">
-      <div style="padding:50px 40px;display:flex;align-items:center;gap:18px">
-        <svg width="70" height="70" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#22C55E"/><polygon points="32,12 54,30 48,30 48,52 16,52 16,30 10,30" fill="#0D131C"/><text x="32" y="47" text-anchor="middle" font-size="17" font-weight="900" fill="#22C55E" font-family="Arial">VC</text></svg>
-        <div style="font-size:42px;font-weight:800">VerifiCasa</div>
-      </div>
-      <div style="padding:0 40px;font-size:30px;color:var(--muted)">Adresa locuinței</div>
-      <div style="margin:20px 40px;height:110px;border-radius:22px;border:4px solid var(--green);background:var(--bg);display:flex;align-items:center;padding:0 30px;font-size:34px;animation:pop .4s 21s both">
-        <svg width="40" height="40" viewBox="0 0 40 40" style="margin-right:20px;flex:none"><circle cx="17" cy="17" r="12" fill="none" stroke="#8A97AB" stroke-width="4"/><line x1="26" y1="26" x2="36" y2="36" stroke="#8A97AB" stroke-width="5"/></svg>
-        <span class="typed" style="--w:560px;animation:type 2.4s steps(26) 22s forwards">Str. Exemplului 7, ap. 12</span>
-      </div>
-      <div style="margin:40px 40px;height:100px;border-radius:22px;background:var(--green);color:var(--bg);display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:800;animation:pop .4s 24.8s both">Verifică</div>
-    </div>
-  </div>
-</div>
+<script src="timeline.js"></script>
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const TL=window.TL, SEG=TL.segs, T=TL.total;
+const SFX=[]; const sfx=(type,t,v=1)=>SFX.push({type,t:+t.toFixed(3),v});
+const EO='cubic-bezier(.2,.8,.2,1)', BK='cubic-bezier(.2,1.5,.4,1)';
+function A(el,kf,t,d,o={}){ if(typeof el==='string') el=$(el); if(!el) return;
+  return el.animate(kf,{delay:t*1000,duration:Math.max(d,.001)*1000,fill:o.fill||'forwards',easing:o.ease||EO,iterations:o.it||1,direction:o.dir||'normal'}); }
+const IN=(el,t,d=.45,from='translateY(30px)',o={})=>A(el,[{opacity:0,transform:from},{opacity:1,transform:'none'}],t,d,{fill:'both',...o});
+const OUT=(el,t,d=.3)=>A(el,[{opacity:1},{opacity:0}],t,d);
+const POP=(el,t,d=.45)=>A(el,[{opacity:0,transform:'scale(.5)'},{opacity:1,transform:'scale(1)'}],t,d,{fill:'both',ease:BK});
+function DRAW(el,t,d=.5){ if(typeof el==='string') el=$(el); const L=el.getTotalLength(); el.style.strokeDasharray=L;
+  A(el,[{strokeDashoffset:L},{strokeDashoffset:0}],t,d,{fill:'both'}); }
 
-<!-- ============ S6 28-36s ============ -->
-<div class="scene" id="s6">
-  <div class="phone" style="left:90px;top:220px;width:900px;height:620px">
-    <div class="screen" style="padding:40px">
-      <div style="font-size:38px;font-weight:800;margin-bottom:26px">Istoricul locuinței</div>
-      <div style="display:flex;justify-content:space-between;font-size:30px;padding:18px 0;border-bottom:2px solid #26334A;animation:in .4s 28.6s both"><span style="color:var(--muted)">Adresă</span><span>Str. Exemplului 7, ap. 12</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:30px;padding:18px 0;border-bottom:2px solid #26334A;animation:in .4s 29.2s both"><span style="color:var(--muted)">Proprietar înregistrat</span><span>Persoana A</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:30px;padding:18px 0;border-bottom:2px solid #26334A;animation:in .4s 29.8s both"><span style="color:var(--muted)">Cine cere banii</span><span>Persoana B</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:30px;padding:18px 0;animation:in .4s 30.4s both"><span style="color:var(--muted)">Verificare proprietar</span><span style="color:var(--red);font-weight:800">Nu corespunde</span></div>
-    </div>
-  </div>
-  <!-- block with door, key that does not fit -->
-  <svg class="abs" style="left:140px;top:900px" width="800" height="560" viewBox="0 0 800 560">
-    <polygon points="120,40 520,40 520,560 120,560" fill="#1E2A3D"/>
-    <polygon points="120,40 520,40 120,300" fill="#24324A"/>
-    <polygon points="520,40 520,560 380,560" fill="#1A2537"/>
-    <g fill="#2B3850"><rect x="160" y="80" width="70" height="70"/><rect x="290" y="80" width="70" height="70"/><rect x="410" y="80" width="70" height="70"/><rect x="160" y="200" width="70" height="70"/><rect x="410" y="200" width="70" height="70"/></g>
-    <polygon points="250,330 390,330 390,560 250,560" fill="#3B2A1E"/>
-    <polygon points="250,330 390,330 250,450" fill="#4A3526"/>
-    <!-- keyhole (narrow) -->
-    <circle cx="365" cy="440" r="9" fill="#05080D"/><rect x="362" y="440" width="6" height="22" fill="#05080D"/>
-    <!-- key (too wide) -->
-    <g style="animation:keyin 1s ease-out 30.8s both">
-      <g style="transform-origin:600px 450px;animation:jiggle .35s ease-in-out 31.9s 4">
-        <polygon points="560,425 620,405 680,425 680,475 620,495 560,475" fill="#E5B84C"/>
-        <polygon points="560,425 620,405 620,450" fill="#F1CC6A"/>
-        <circle cx="620" cy="450" r="16" fill="#0D131C"/>
-        <polygon points="560,435 400,435 400,465 560,465" fill="#E5B84C"/>
-        <polygon points="400,435 390,425 390,475 400,465" fill="#E5B84C"/>
-        <polygon points="430,465 450,465 450,495 430,495" fill="#E5B84C"/>
-        <polygon points="470,465 485,465 485,488 470,488" fill="#E5B84C"/>
-      </g>
+/* ---------- Mihai: stylised 3D character (SVG with volumetric shading) ---------- */
+let MID=0;
+function mihai(expr, glow){ const p='m'+(MID++);
+  const brow = expr==='worried' ? ['M205,372 Q240,362 276,350','M324,350 Q360,362 395,372']
+             : expr==='happy'   ? ['M205,362 Q240,342 276,356','M324,356 Q360,342 395,362']
+             : ['M205,368 Q240,356 276,364','M324,364 Q360,356 395,368'];
+  const mouth = expr==='happy' ? '<path d="M258,532 Q300,585 342,532 Q300,556 258,532Z" fill="#8E3E32"/><path d="M270,538 Q300,552 330,538 L328,546 Q300,556 272,546Z" fill="#fff" opacity=".9"/>'
+              : expr==='worried' ? '<path d="M272,556 Q300,540 328,556" stroke="#8E4A3A" stroke-width="8" fill="none" stroke-linecap="round"/>'
+              : '<path d="M272,548 Q300,554 328,548" stroke="#8E4A3A" stroke-width="8" fill="none" stroke-linecap="round"/>';
+  const look = expr==='happy' ? 0 : 10, lid = expr==='tired' ? 22 : expr==='worried' ? 8 : 4;
+  const eye=(cx,s)=>`<clipPath id="${p}e${s}"><ellipse cx="${cx}" cy="420" rx="27" ry="31"/></clipPath>
+    <g clip-path="url(#${p}e${s})"><ellipse cx="${cx}" cy="420" rx="27" ry="31" fill="url(#${p}ew)"/>
+      <circle cx="${cx}" cy="${424+look}" r="18" fill="url(#${p}ir)"/><circle cx="${cx}" cy="${424+look}" r="8" fill="#120A06"/>
+      <circle cx="${cx+6}" cy="${416+look}" r="5" fill="#fff"/>
+      <g class="lid fb" style="transform-origin:50% 0%"><rect x="${cx-32}" y="385" width="64" height="${lid+4}" fill="#E7B08D"/><path d="M${cx-30},${389+lid} Q${cx},${381+lid} ${cx+30},${389+lid}" stroke="#3A2418" stroke-width="5" fill="none"/></g>
+    </g>`;
+  return `<svg viewBox="0 0 600 1000" width="100%" style="display:block">
+  <defs>
+    <radialGradient id="${p}sk" cx=".42" cy=".36" r=".72"><stop offset="0" stop-color="#F8D9BE"/><stop offset=".55" stop-color="#E7B08D"/><stop offset="1" stop-color="#B9785A"/></radialGradient>
+    <linearGradient id="${p}nk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9A6247"/><stop offset=".6" stop-color="#D59B78"/></linearGradient>
+    <radialGradient id="${p}hr" cx=".35" cy=".25" r=".8"><stop offset="0" stop-color="#6A4A36"/><stop offset="1" stop-color="#24170F"/></radialGradient>
+    <linearGradient id="${p}jk" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4A86C4"/><stop offset=".5" stop-color="#2E5E93"/><stop offset="1" stop-color="#17365B"/></linearGradient>
+    <linearGradient id="${p}sl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3C74AE"/><stop offset="1" stop-color="#1B3C63"/></linearGradient>
+    <linearGradient id="${p}te" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EEF2F6"/><stop offset="1" stop-color="#AEB9C6"/></linearGradient>
+    <radialGradient id="${p}ew" cx=".45" cy=".4" r=".7"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#DCD5CE"/></radialGradient>
+    <radialGradient id="${p}ir" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#8A6240"/><stop offset="1" stop-color="#2E1C10"/></radialGradient>
+    <radialGradient id="${p}gl" cx=".5" cy=".9" r=".7"><stop offset="0" stop-color="${glow||'#BFE3FF'}" stop-opacity=".22"/><stop offset="1" stop-color="${glow||'#BFE3FF'}" stop-opacity="0"/></radialGradient>
+    <linearGradient id="${p}ph" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2B3850"/><stop offset="1" stop-color="#0A0F17"/></linearGradient>
+  </defs>
+  <g class="body">
+    <path d="M90,1000 C95,850 118,760 188,722 C228,700 262,690 300,690 C338,690 372,700 412,722 C482,760 505,850 510,1000Z" fill="url(#${p}jk)"/>
+    <path d="M196,712 C228,652 372,652 404,712 C372,742 228,742 196,712Z" fill="#1F4673"/>
+    <path d="M252,702 L300,800 L348,702Z" fill="url(#${p}te)"/>
+    <path d="M300,800 V1000" stroke="#12294A" stroke-width="6"/>
+    <path d="M210,760 C225,840 230,920 228,1000" stroke="#fff" stroke-opacity=".08" stroke-width="18" fill="none"/>
+    <g class="head fb" style="transform-origin:50% 100%">
+      <path d="M254,590 L346,590 L352,708 C330,736 270,736 248,708Z" fill="url(#${p}nk)"/>
+      <ellipse cx="152" cy="445" rx="25" ry="40" fill="#D9997A"/><ellipse cx="156" cy="447" rx="12" ry="22" fill="#B9785A"/>
+      <ellipse cx="448" cy="445" rx="25" ry="40" fill="#C98A6A"/><ellipse cx="444" cy="447" rx="12" ry="22" fill="#A86A4E"/>
+      <path d="M150,420 C150,300 220,255 300,255 C380,255 450,300 450,420 C450,525 400,602 300,612 C200,602 150,525 150,420Z" fill="url(#${p}sk)"/>
+      <path d="M170,330 C220,360 380,360 430,330 L430,380 C380,400 220,400 170,380Z" fill="#8A5A40" opacity=".18"/>
+      <path d="M138,430 C116,300 190,214 300,210 C424,206 490,300 462,430 C456,380 442,346 422,330 C392,352 330,342 292,320 C262,346 212,352 180,336 C160,360 146,396 138,430Z" fill="url(#${p}hr)"/>
+      <path d="M210,250 C250,228 320,226 360,240" stroke="#fff" stroke-opacity=".16" stroke-width="14" fill="none" stroke-linecap="round"/>
+      <path d="${brow[0]}" stroke="#2A1B13" stroke-width="13" fill="none" stroke-linecap="round"/>
+      <path d="${brow[1]}" stroke="#2A1B13" stroke-width="13" fill="none" stroke-linecap="round"/>
+      ${eye(240,'l')}${eye(360,'r')}
+      <path d="M302,440 C294,468 286,486 294,494 C300,500 312,500 318,494" stroke="#B0704F" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <ellipse cx="306" cy="468" rx="6" ry="12" fill="#fff" opacity=".22"/>
+      <ellipse cx="212" cy="500" rx="30" ry="17" fill="#EE8E7A" opacity=".32"/><ellipse cx="388" cy="500" rx="30" ry="17" fill="#EE8E7A" opacity=".32"/>
+      ${mouth}
+      <path d="M150,420 C150,525 200,602 300,612 C400,602 450,525 450,420 C430,560 170,560 150,420Z" fill="url(#${p}gl)" class="glow"/>
     </g>
-  </svg>
-  <svg class="abs" style="left:0;top:0" width="1080" height="1920">
-    <polyline class="line" points="540,1420 540,1380 505,1350" fill="none" stroke="#E5484D" stroke-width="6" style="animation:draw .5s 33s forwards"/>
-  </svg>
-  <div class="tag red" style="left:50%;top:1410px;transform:translateX(-50%);font-size:44px;opacity:0;animation:fin .4s 33.4s both">PROPRIETAR: NU CORESPUNDE</div>
-</div>
+  </g>
+  <g class="arms">
+    <path d="M118,780 C104,880 156,935 242,910 L266,862 C212,862 186,832 186,770Z" fill="url(#${p}sl)"/>
+    <path d="M482,780 C496,880 444,935 358,910 L334,862 C388,862 414,832 414,770Z" fill="url(#${p}sl)"/>
+    <g class="phoneM fb">
+      <rect x="244" y="770" width="112" height="190" rx="20" fill="url(#${p}ph)" stroke="#3A4A66" stroke-width="3"/>
+      <circle cx="272" cy="796" r="9" fill="#05080D" stroke="#3A4A66" stroke-width="2"/>
+      <ellipse cx="300" cy="770" rx="70" ry="16" fill="${glow||'#BFE3FF'}" opacity=".35" class="glow"/>
+    </g>
+    <ellipse cx="252" cy="890" rx="34" ry="30" fill="url(#${p}sk)"/><ellipse cx="348" cy="890" rx="34" ry="30" fill="url(#${p}sk)"/>
+    <path d="M232,872 Q246,862 262,868" stroke="#B9785A" stroke-width="4" fill="none"/><path d="M368,872 Q354,862 338,868" stroke="#B9785A" stroke-width="4" fill="none"/>
+  </g>
+</svg>`; }
+function idle(root,t0,t1){ const b=root.querySelector('.body'), h=root.querySelector('.head');
+  b.style.transformBox='fill-box'; b.style.transformOrigin='50% 100%';
+  A(b,[{transform:'translateY(0) scaleY(1)'},{transform:'translateY(-5px) scaleY(1.008)'}],t0,1.6,{it:Math.ceil((t1-t0)/1.6)+1,dir:'alternate',ease:'ease-in-out'});
+  A(h,[{transform:'rotate(-1.5deg)'},{transform:'rotate(1.5deg)'}],t0,2.4,{it:Math.ceil((t1-t0)/2.4)+1,dir:'alternate',ease:'ease-in-out'});
+  for(let t=t0+1.1;t<t1;t+=2.7) root.querySelectorAll('.lid').forEach(l=>A(l,[{transform:'scaleY(1)'},{transform:'scaleY(9)'},{transform:'scaleY(1)'}],t,.18,{ease:'linear'}));
+}
 
-<!-- ============ S7 36-42s ============ -->
-<div class="scene" id="s7">
-  <div class="te" style="font-size:50px;animation:in .5s 36.3s both">Extras carte funciară · verifică pe ancpi.ro</div>
-  <!-- tablet -->
-  <div class="phone" style="left:100px;top:1180px;width:880px;height:300px;border-radius:40px"><div class="screen"></div></div>
-  <!-- document unfolding -->
-  <div class="abs" style="left:170px;top:380px;width:740px;height:880px;background:#F9FAFB;color:#0D131C;border-radius:14px;padding:50px;transform-origin:center bottom;animation:unfold 1.1s cubic-bezier(.3,.7,.3,1) 36.6s both">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start">
-      <div style="font-size:30px;font-weight:900;letter-spacing:2px">ANCPI</div>
-      <div style="font-size:22px;text-align:right;color:#4B5563">Cod de verificare<br><b style="font-size:30px;color:#0D131C;letter-spacing:3px">XXXX-XXXX</b></div>
-    </div>
-    <div style="margin-top:50px;font-size:38px;font-weight:800;line-height:1.2">Extras de carte funciară pentru informare</div>
-    <div style="margin-top:50px;font-size:26px;color:#4B5563">Imobil</div>
-    <div style="height:18px;background:#D1D5DB;border-radius:9px;margin-top:14px;width:90%"></div>
-    <div style="height:18px;background:#D1D5DB;border-radius:9px;margin-top:14px;width:70%"></div>
-    <div style="margin-top:50px;font-size:26px;color:#4B5563">Proprietar înregistrat</div>
-    <div style="margin-top:14px;padding:16px 22px;border:4px solid var(--green);border-radius:12px;font-size:32px;font-weight:800;opacity:0;animation:fin .4s 38.4s both">Persoana A</div>
-    <div style="height:18px;background:#D1D5DB;border-radius:9px;margin-top:40px;width:85%"></div>
-    <div style="height:18px;background:#D1D5DB;border-radius:9px;margin-top:14px;width:60%"></div>
-  </div>
-</div>
+/* ---------- timing helpers ---------- */
+const words=SEG.map(s=>{ const out=[]; const ph=s.text.split('|').map(x=>x.trim());
+  let tot=0; ph.forEach((p,pi)=>p.split(/\s+/).forEach((w,wi)=>{ const clean=w.replace(/[*!]/g,''); const wt=clean.length+2+(wi===0&&pi>0?4:0); out.push({w,clean,pi,wt}); tot+=wt; }));
+  let c=0; out.forEach(o=>{ c+=o.wt; o.t=s.t0+(c-o.wt+(o.wt>o.clean.length+2?4:0))/tot*(s.t1-s.t0); }); return {ph,out}; });
+const W=(i,sub)=>{ const o=words[i].out.find(o=>o.clean.toLowerCase().includes(sub.toLowerCase())); return o?o.t:SEG[i].t0; };
+const sceneSegs={A:[0],B:[1],C:[2,3],D:[4],E:[5],F:[6],G:[7],H:[8]};
+const keys=Object.keys(sceneSegs), S={}, E={};
+keys.forEach((k,i)=>{ S[k]= i===0?0:SEG[sceneSegs[k][0]].t0-.35; });
+keys.forEach((k,i)=>{ E[k]= i<keys.length-1?S[keys[i+1]]:T; });
 
-<!-- ============ S8 42-48s ============ -->
-<div class="scene" id="s8" style="z-index:20;background:var(--bg)">
-  <div class="abs" style="left:0;right:0;top:600px;text-align:center;animation:pop .6s 42.3s both">
-    <svg width="260" height="260" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#22C55E"/><polygon points="32,12 54,30 48,30 48,52 16,52 16,30 10,30" fill="#0D131C"/><text x="32" y="47" text-anchor="middle" font-size="17" font-weight="900" fill="#22C55E" font-family="Arial">VC</text></svg>
-    <div style="font-size:76px;font-weight:900;margin-top:40px">VerifiCasa</div>
-  </div>
-  <div class="abs" style="left:60px;right:60px;top:1060px;text-align:center;font-size:64px;font-weight:800;animation:in .5s 43s both">Verifică înainte<br>să <span style="color:var(--green)">plătești</span>.</div>
-  <div class="abs" style="left:0;right:0;top:1300px;text-align:center;font-size:40px;color:var(--muted);animation:in .5s 43.6s both">verificasa.ro</div>
-  <div class="abs" style="left:0;right:0;top:1400px;text-align:center;font-size:30px;color:var(--muted);animation:in .5s 44s both">Scenariu ilustrativ</div>
-</div>
+/* ---------- background motion ---------- */
+for(let i=0;i<26;i++){ const d=document.createElement('div'); d.className='dot'; const r=6+((i*37)%18);
+  Object.assign(d.style,{width:r+'px',height:r+'px',left:((i*211)%1080)+'px',top:((i*397)%1920)+'px'}); $('#bgdots').appendChild(d);
+  A(d,[{transform:'translate(0,0)'},{transform:`translate(${(i%2?1:-1)*40}px,-${120+(i*13)%160}px)`}],0,6+(i%5),{it:20,dir:'alternate',ease:'ease-in-out'}); }
 
-<!-- subtitles (burned in, from VO script) -->
-<div class="sub" style="animation:fin .2s .1s both,out .2s 2.9s forwards">Ai văzut vreodată un anunț <b>prea bun</b> ca să fie adevărat?</div>
-<div class="sub" style="animation:fin .2s 3.1s both,out .2s 5.4s forwards">Mihai caută de <b>două săptămâni</b>.</div>
-<div class="sub" style="animation:fin .2s 5.5s both,out .2s 7.9s forwards">Când a găsit anunțul perfect, nu a mai stat pe <b>gânduri</b>.</div>
-<div class="sub" style="animation:fin .2s 8.1s both,out .2s 13.9s forwards">Proprietarul cere un avans de <b>1.500 de euro</b>, prin transfer, azi, înainte de vizionare.</div>
-<div class="sub" style="animation:fin .2s 14.1s both,out .2s 19.9s forwards">Două semne de alarmă: grabă și <b>bani</b> înainte de orice verificare.</div>
-<div class="sub" style="animation:fin .2s 20.1s both,out .2s 27.9s forwards">Mihai deschide <b>VerifiCasa</b> și caută adresa locuinței.</div>
-<div class="sub" style="animation:fin .2s 28.1s both,out .2s 32.4s forwards">Datele de proprietate <b>nu corespund</b> cu cel care cere banii.</div>
-<div class="sub" style="animation:fin .2s 32.5s both,out .2s 35.9s forwards">Mihai <b>nu plătește</b>.</div>
-<div class="sub" style="animation:fin .2s 36.1s both,out .2s 41.9s forwards">Extrasul de carte funciară arată <b>proprietarul oficial</b> al imobilului.</div>
-<div class="sub" style="z-index:21;animation:fin .2s 42.1s both">Verifică înainte să <b>plătești</b>.</div>
+/* ---------- chapters ---------- */
+const chap=[[0,S.D],[S.D,S.E],[S.E,S.F],[S.F,T]];
+chap.forEach(([a,b],i)=>{ const c=$('#c'+(i+1));
+  A(c.querySelector('i'),[{transform:'scaleX(0)'},{transform:'scaleX(1)'}],a,b-a,{fill:'both',ease:'linear'});
+  A(c.querySelector('span'),[{color:'#8A97AB'},{color:'#F9FAFB'}],a,.3,{fill:'both'});
+  if(i<3) A(c.querySelector('span'),[{color:'#F9FAFB'},{color:'#8A97AB'}],b,.3); });
 
-<!-- logo bottom-left on every scene -->
-<div id="logo" style="z-index:22">
-  <svg width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#22C55E"/><polygon points="32,12 54,30 48,30 48,52 16,52 16,30 10,30" fill="#0D131C"/><text x="32" y="47" text-anchor="middle" font-size="17" font-weight="900" fill="#22C55E" font-family="Arial">VC</text></svg>
-  VerifiCasa
-</div>
-</div>
+/* ---------- scenes ---------- */
+function scene(k){ const el=$('#s'+k); A(el,[{opacity:0},{opacity:1}],S[k],.35,{fill:'both'}); if(k!=='H') A(el,[{opacity:1},{opacity:0}],E[k]-.2,.3); }
+keys.forEach(scene);
+function wipe(t){ A('#wipe',[{transform:'skewX(-12deg) translateX(0)'},{transform:'skewX(-12deg) translateX(4300px)'}],t-.35,.7,{ease:'cubic-bezier(.7,0,.3,1)'}); sfx('whoosh',t-.35); }
+wipe(S.C); wipe(S.E); wipe(S.F); wipe(S.H);
+[S.B,S.D,S.G].forEach(t=>sfx('swish',t-.1,.7));
+
+function te(id,t,t1){ A(id,[{opacity:0,letterSpacing:'14px',filter:'blur(8px)'},{opacity:1,letterSpacing:'2px',filter:'blur(0)'}],t,.6,{fill:'both'}); if(t1) OUT(id,t1-.3); }
+
+// A — listing, camera pushes into the price
+(()=>{ const s=S.A, e=E.A;
+  te('#teA',s+.2);
+  IN('#phA',s,.7,'translateY(160px) rotate(-6deg) scale(.9)',{ease:BK}); sfx('swish',s+.05,.8);
+  A('#camA',[{transform:'scale(1)'},{transform:'scale(1.5) translateY(-170px)'}],s+.9,e-s-.9,{ease:'cubic-bezier(.5,0,.3,1)',fill:'both'});
+  A('#priceA',[{transform:'scale(1)'},{transform:'scale(1.12)'}],W(0,'prea'),.25,{dir:'alternate',it:2});
+  sfx('sparkle',W(0,'prea'));
+  const sp=$('#sparkA'); for(let i=0;i<8;i++){ const c=document.createElementNS('http://www.w3.org/2000/svg','path');
+    const x=330+((i*73)%300), y=940+((i*41)%120); c.setAttribute('d',`M${x},${y-18} L${x+5},${y-5} L${x+18},${y} L${x+5},${y+5} L${x},${y+18} L${x-5},${y+5} L${x-18},${y} L${x-5},${y-5}Z`);
+    c.setAttribute('fill','#F9FAFB'); c.setAttribute('class','fb'); sp.appendChild(c);
+    A(c,[{opacity:0,transform:'scale(0) rotate(0)'},{opacity:1,transform:'scale(1.2) rotate(90deg)'},{opacity:0,transform:'scale(0) rotate(180deg)'}],W(0,'prea')+i*.08,.7,{fill:'both'}); }
+})();
+
+// B — Mihai at night
+(()=>{ const s=S.B, e=E.B; const m=$('#mihaiB'); m.innerHTML=mihai('tired');
+  te('#teB',s+.3);
+  IN(m,s+.1,.7,'translateY(120px)'); idle(m,s,e);
+  A('#colonB',[{opacity:1},{opacity:.15}],s,.5,{it:12,dir:'alternate',ease:'steps(1)'});
+  for(let t=s+.5;t<e;t+=1) sfx('tick',t,.5);
+  $$('#winB rect').forEach((r,i)=>A(r,[{opacity:1},{opacity:.35}],s+.3+i*.37,.6,{it:6,dir:'alternate',ease:'ease-in-out'}));
+  A(m.querySelector('.phoneM'),[{transform:'rotate(0)'},{transform:'rotate(-3deg) translateY(-6px)'}],W(1,'perfect'),.4,{dir:'alternate',it:2});
+  A(m.querySelectorAll('.glow')[0],[{opacity:.6},{opacity:1}],W(1,'perfect'),.3,{dir:'alternate',it:4});
+})();
+
+// C — chat + alarm signals
+(()=>{ const s=S.C, e=E.C;
+  te('#teC1',s+.3,SEG[3].t0); te('#teC2',SEG[3].t0+.1);
+  IN('#phC',s,.6,'translateY(200px) scale(.92)',{ease:BK});
+  const bt=[s+.6, W(2,'avans')-.2, W(2,'1.500'), W(2,'transfer')+.1];
+  ['#b1','#b2','#b3','#b4'].forEach((b,i)=>{ A(b,[{opacity:0,transform:'translateY(30px) scale(.85)'},{opacity:1,transform:'none'}],bt[i],.4,{fill:'both',ease:BK}); sfx('ding',bt[i]); });
+  A('#typingC',[{opacity:0},{opacity:1}],bt[0]+.5,.2,{fill:'both'}); OUT('#typingC',bt[3]-.1,.1);
+  $$('#typingC .td').forEach((d,i)=>A(d,[{transform:'translateY(0)'},{transform:'translateY(-10px)'}],s+.6+i*.15,.3,{it:24,dir:'alternate'}));
+  A('#amt',[{transform:'scale(1)',color:'#fff'},{transform:'scale(1.55)',color:'#E5484D'}],W(2,'1.500')+.3,.7,{ease:BK,fill:'both'}); sfx('rise',W(2,'1.500')+.2);
+  const alarm=(ln,dt,tg,t)=>{ DRAW(ln,t,.45); A(dt,[{r:0},{r:14}],t+.4,.2,{fill:'both'}); POP(tg,t+.35);
+    A('#flC',[{opacity:0},{opacity:1},{opacity:0}],t+.3,.7); A('#phC',[{transform:'translateX(0)'},{transform:'translateX(-12px)'},{transform:'translateX(12px)'},{transform:'translateX(0)'}],t+.35,.3);
+    sfx('alarm',t+.35); };
+  alarm('#lnC1','#dtC1','#tgC1',W(3,'grabă')-.1);
+  alarm('#lnC2','#dtC2','#tgC2',W(3,'bani')-.1);
+  A('#phC',[{transform:'scale(1)'},{transform:'scale(.97)'}],W(3,'verificare'),.8,{fill:'forwards'});
+})();
+
+// D — Mihai opens VerifiCasa on his phone (the real site)
+(()=>{ const s=S.D, e=E.D; const m=$('#mihaiD'); m.innerHTML=mihai('worried','#9BE7B5');
+  te('#teD',s+.3);
+  IN(m,s,.5,'translateY(80px)'); idle(m,s,e);
+  const z=s+.9; // camera dives into the phone
+  A('#camD',[{transform:'scale(1)',opacity:1},{transform:'scale(4.2)',opacity:0}],z,.7,{ease:'cubic-bezier(.7,0,.3,1)'}); sfx('rise',z-.1,.8);
+  A('#phD',[{opacity:0,transform:'scale(.25) translateY(800px)'},{opacity:1,transform:'none'}],z+.25,.6,{fill:'both',ease:'cubic-bezier(.2,.9,.2,1)'});
+  const ty=z+1.0; const addr='Str. Exemplului 7, ap. 12';
+  A('#fingerD',[{opacity:0,transform:'translate(480px,1300px)'},{opacity:1,transform:'translate(330px,840px)'}],ty-.35,.35,{fill:'both'});
+  A('#srchD',[{opacity:0},{opacity:1}],ty,.15,{fill:'both'}); sfx('tap',ty);
+  A('#carD',[{opacity:1},{opacity:0}],ty,.4,{it:20,dir:'alternate',ease:'steps(1)'});
+  const tEnd=Math.min(e-1.0, ty+1.6), step=(tEnd-ty)/addr.length;
+  // typed text is driven by a CSS custom property through a stepped animation of width
+  const span=$('#typD'); span.textContent=addr; span.style.display='inline-block'; span.style.overflow='hidden';
+  const full=addr.length*16.2; A(span,[{width:'0px'},{width:full+'px'}],ty,tEnd-ty,{fill:'both',ease:`steps(${addr.length})`});
+  for(let i=0;i<addr.length;i++) sfx('key',ty+i*step,.6);
+  A('#fingerD',[{transform:'translate(330px,840px)'},{transform:'translate(740px,840px)'}],tEnd+.05,.3,{fill:'forwards'});
+  const tap=tEnd+.45; sfx('tap',tap);
+  A('#tapD',[{opacity:1,transform:'scale(.3)'},{opacity:0,transform:'scale(1.6)'}],tap,.45,{fill:'forwards'});
+  A('#fingerD',[{transform:'translate(740px,840px) scale(1)'},{transform:'translate(740px,840px) scale(.9)'}],tap,.12,{dir:'alternate',it:2});
+})();
+
+// E — result: owner does not match, Mihai does not pay
+(()=>{ const s=S.E, e=E.E;
+  IN('#phE',s,.5,'translateY(80px) scale(.95)');
+  $$('.rowE').forEach((r,i)=>{ const t=[W(5,'Datele'),W(5,'proprietate'),W(5,'nu')][i]+.1; IN(r,t,.35,'translateX(-40px)'); sfx('pop',t,.7); });
+  IN('#doorE',s+.4,.5,'translateY(60px)');
+  A('#keyE',[{transform:'translateX(260px)'},{transform:'translateX(0)'}],W(5,'nu')-.4,.6,{fill:'both',ease:'cubic-bezier(.3,1.3,.5,1)'});
+  A('#keyJ',[{transform:'rotate(0)'},{transform:'rotate(-7deg)'},{transform:'rotate(6deg)'},{transform:'rotate(0)'}],W(5,'nu')+.25,.35,{it:3}); sfx('rattle',W(5,'nu')+.25);
+  DRAW('#lnE',W(5,'corespund')+.1,.35); POP('#tgE',W(5,'corespund')+.35); sfx('error',W(5,'corespund')+.35);
+  A('#flE',[{opacity:0},{opacity:1},{opacity:0}],W(5,'corespund')+.3,.7);
+  IN('#payE',W(5,'cel')-.2,.35); DRAW('#xE1',W(5,'plătește')-.15,.3); sfx('stamp',W(5,'plătește')-.1);
+  A('#payE',[{transform:'scale(1)'},{transform:'scale(.92)'}],W(5,'plătește')-.1,.15,{dir:'alternate',it:2});
+})();
+
+// F — transparency: 3D tour, comments, feedback, partner + code
+(()=>{ const s=S.F, e=E.F;
+  te('#teF',s+.3);
+  A('#roomF',[{transform:'rotateX(-18deg) rotateY(-40deg) scale(.01)'},{transform:'rotateX(-18deg) rotateY(-30deg) scale(1)'}],s,.8,{fill:'both',ease:BK});
+  A('#roomF',[{transform:'rotateX(-18deg) rotateY(-30deg)'},{transform:'rotateX(-14deg) rotateY(250deg)'}],s+.8,e-s-.8,{ease:'ease-in-out'});
+  A('#orbF',[{opacity:0},{opacity:.8}],W(6,'turul'),.4,{fill:'both'}); A('#orbF',[{strokeDashoffset:0},{strokeDashoffset:-280}],s,e-s,{ease:'linear',fill:'both'});
+  POP('#tgF0',W(6,'turul')); sfx('pop',W(6,'turul'));
+  DRAW('#lnF1',W(6,'comentariile')-.2,.4); IN('#cF1',W(6,'comentariile'),.4,'translateY(40px) scale(.9)',{ease:BK}); sfx('pop',W(6,'comentariile'));
+  $$('#cF1 .cm').forEach((c,i)=>A(c,[{transform:'scaleX(0)'},{transform:'scaleX(1)'}],W(6,'comentariile')+.25+i*.2,.35,{fill:'both'}));
+  $$('#cF1 .cm').forEach(c=>c.style.transformOrigin='left');
+  DRAW('#lnF2',W(6,'feedback')-.2,.4); IN('#cF2',W(6,'feedback'),.4,'translateY(40px) scale(.9)',{ease:BK}); sfx('pop',W(6,'feedback'));
+  $$('#starsF .st').forEach((st,i)=>{ A(st,[{transform:'scale(0) rotate(-90deg)'},{transform:'scale(1) rotate(0)'}],W(6,'feedback')+.2+i*.1,.35,{fill:'both',ease:BK}); sfx('blip',W(6,'feedback')+.2+i*.1,.4); });
+  IN('#cF3',W(6,'Residence')-.1,.45,'translateY(40px) scale(.9)',{ease:BK}); sfx('pop',W(6,'Residence'));
+  const ck=$('#chkF'); DRAW(ck,W(6,'Residence')+.4,.4);
+  POP('#codeF',W(6,'codul'));
+  const code='VERIFICASA', tc=W(6,'VERIFICASA'); const ct=$('#codeT'); ct.textContent=code; ct.style.display='inline-block'; ct.style.overflow='hidden'; ct.style.verticalAlign='bottom';
+  A(ct,[{width:'0px'},{width:'232px'}],tc-.2,.6,{fill:'both',ease:`steps(${code.length})`}); for(let i=0;i<code.length;i++) sfx('key',tc-.2+i*.06,.6);
+  A('#codeF',[{boxShadow:'0 0 0 0 rgba(34,197,94,.6)'},{boxShadow:'0 0 0 24px rgba(34,197,94,0)'}],W(6,'complet'),.7); sfx('chime',W(6,'complet'),.6);
+})();
+
+// G — land registry extract unfolds from the tablet
+(()=>{ const s=S.G;
+  te('#teG',s+.3);
+  A('#docG',[{transform:'perspective(1400px) rotateX(-90deg) translateY(200px)',opacity:0},{transform:'perspective(1400px) rotateX(0) translateY(0)',opacity:1}],s+.2,.9,{fill:'both',ease:'cubic-bezier(.3,.7,.3,1)'}); sfx('paper',s+.2);
+  $$('.lnG').forEach((l,i)=>A(l,[{transform:'scaleX(0)'},{transform:'scaleX(1)'}],s+.8+i*.12,.4,{fill:'both'}));
+  A('#ownG',[{opacity:0,transform:'scale(1.3)'},{opacity:1,transform:'scale(1)'}],W(7,'proprietarul'),.35,{fill:'both',ease:BK}); sfx('ding',W(7,'proprietarul'),.8);
+})();
+
+// H — natural outro: next morning, Mihai calm; the logo settles in softly
+(()=>{ const s=S.H, e=T; const m=$('#mihaiH'); m.innerHTML=mihai('happy','#9BE7B5');
+  IN(m,s+.1,.8,'translateY(60px)'); idle(m,s,e);
+  A('#sunH',[{transform:'translateY(0)'},{transform:'translateY(-260px)'}],s,e-s,{ease:'ease-out',fill:'both'});
+  const tl=W(8,'transparența')-.3;
+  A('#endH',[{background:'rgba(13,19,28,0)'},{background:'rgba(13,19,28,.82)'}],tl,1.0,{fill:'both'});
+  A('#logoH',[{opacity:0,transform:'translateY(30px)',filter:'blur(10px)'},{opacity:1,transform:'none',filter:'blur(0)'}],tl+.3,1.0,{fill:'both'});
+  A('#urlH',[{opacity:0},{opacity:1}],tl+.9,.6,{fill:'both'}); A('#ilH',[{opacity:0},{opacity:1}],tl+1.2,.6,{fill:'both'});
+  A('#logo',[{opacity:1},{opacity:0}],tl+.2,.5);
+  sfx('chime',tl+.3,.8);
+})();
+
+/* ---------- kinetic typography (from the voice-over script) ---------- */
+SEG.forEach((s,i)=>{ const ph=words[i].ph;
+  ph.forEach((p,pi)=>{ const line=document.createElement('div'); line.className='kl'; $('#kt').appendChild(line);
+    const ws=words[i].out.filter(o=>o.pi===pi); let inKey=null;
+    ws.forEach((o,wi)=>{ let w=o.w, cls='';
+      if(/^\*/.test(w)) inKey='g'; if(/^!/.test(w)) inKey='r';
+      cls=inKey||''; if(/[*!][.,:?…]*$/.test(w)) inKey=null;
+      const sp=document.createElement('span'); sp.className='kw '+cls; sp.textContent=o.clean; line.appendChild(sp);
+      const rot=((wi*47)%13)-6;
+      A(sp,[{opacity:0,transform:`translateY(70px) scale(.5) rotate(${rot}deg)`,filter:'blur(12px)'},{opacity:1,transform:'none',filter:'blur(0)'}],o.t-.06,.42,{fill:'both',ease:BK});
+      if(cls){ const ul=document.createElement('i'); ul.className='ul'; sp.appendChild(ul);
+        A(ul,[{transform:'scaleX(0)'},{transform:'scaleX(1)'}],o.t+.2,.35,{fill:'both'});
+        A(sp,[{transform:'scale(1)'},{transform:'scale(1.12)'},{transform:'scale(1)'}],o.t+.36,.35); }
+    });
+    const tIn=ws[0].t-.1; const next=(ph[pi+1]!==undefined)?words[i].out.find(o=>o.pi===pi+1).t-.12:(i<SEG.length-1?Math.min(s.t1+.5,SEG[i+1].t0-.1):T+1);
+    A(line,[{opacity:0},{opacity:1}],tIn,.01,{fill:'both'});
+    if(next<T) A(line,[{opacity:1,transform:'none',filter:'blur(0)'},{opacity:0,transform:'translateY(-60px) scale(.95)',filter:'blur(8px)'}],next,.28);
+  });
+});
+
+/* ---------- logo bottom-left on every scene ---------- */
+A('#logo',[{opacity:0,transform:'translateX(-30px)'},{opacity:1,transform:'none'}],.2,.5,{fill:'both'});
+
+/* ---------- playback / render control ---------- */
+window.SFX=SFX; window.DURATION=T;
+const anims=document.getAnimations();
+window.seek=t=>{ anims.forEach(a=>{ a.pause(); a.currentTime=t*1000; }); };
+seek(0);
+if(window.RENDER){ $('#play').remove(); }
+else { $('#play').onclick=()=>{ $('#play').style.display='none'; const au=$('#aud'); au.currentTime=0; au.play().catch(()=>{});
+  anims.forEach(a=>{ a.currentTime=0; a.play(); }); }; }
+</script>
 </body>
 </html>
