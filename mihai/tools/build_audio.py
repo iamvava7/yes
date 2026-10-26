@@ -67,7 +67,7 @@ def stamp():
 def rattle():
     out = np.zeros(int(0.9 * SR))
     for k in range(7):
-        s = int(k * 0.11 * SR); c = tone(3200 + 300 * (k % 2), 0.05, 0.01) * 0.25 + key() * 0.4
+        s = int(k * 0.11 * SR); c = tone(3200 + 300 * (k % 2), 0.03, 0.01) * 0.25 + key() * 0.4
         out[s:s + len(c)] += c[:len(out) - s]
     return out
 
