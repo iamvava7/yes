@@ -87,6 +87,7 @@
       for (const el of sc.elemente || []) {
         const timpi = [el.t];
         for (const sub of el.bare || el.puncte || []) timpi.push(sub.t);
+        if (el.diferenta) timpi.push(el.diferenta.t);
         for (const tt of new Set(timpi)) {
           if (typeof tt !== 'number') continue;
           out.push({ t: start + unwarp(tt, sc.speed_ramp), scena: sc.id, ce: el.tip });
@@ -110,11 +111,15 @@
         if (el.tip === 'marcaj') out.push({ t: t(el.t), sunet: 'click' });
         for (const p of el.puncte || []) out.push({ t: t(p.t), sunet: 'click' });
         for (const b of el.bare || []) out.push({ t: t(b.t), sunet: 'whoosh' });
+        if (el.diferenta) out.push({ t: t(el.diferenta.t + 0.25), sunet: 'click' });
       }
       start += sc.durata;
     }
     return out.sort((a, b) => a.t - b.t);
   }
 
-  return { clamp, lerp, ease, prog, warp, unwarp, faza_rapida, intrare_scena, DURATA_TRANZITIE, batai, sunete };
+  // Easing-uri GSAP permise în scenarii (câmpul "ease"); parametrii între paranteze sunt opționali.
+  const EASE_PERMISE = /^(none|(power[1-4]|sine|expo|circ|back|elastic|bounce)\.(in|out|inOut)(\([\d., ]*\))?)$/;
+
+  return { EASE_PERMISE, clamp, lerp, ease, prog, warp, unwarp, faza_rapida, intrare_scena, DURATA_TRANZITIE, batai, sunete };
 });

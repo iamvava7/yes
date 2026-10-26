@@ -24,10 +24,16 @@ function argumente(argv) {
   return a;
 }
 
+// Logo-ul oficial, dacă a fost pus în media/brand/; altfel șablonul folosește doar wordmark-ul tipografic.
+function logoOficial() {
+  const f = path.join(RADACINA, 'media', 'brand', 'logo.svg');
+  return fs.existsSync(f) ? 'data:image/svg+xml;base64,' + fs.readFileSync(f).toString('base64') : null;
+}
+
 // Deschide șablonul cu scenariul injectat; folosit și de teste.
 async function deschideSablon(browser, scenariu) {
   const page = await browser.newPage({ viewport: { width: 1080, height: 1920 }, deviceScaleFactor: 1 });
-  await page.addInitScript((sc) => { window.__SCENARIU = sc; }, scenariu);
+  await page.addInitScript(([sc, logo]) => { window.__SCENARIU = sc; window.__LOGO = logo; }, [scenariu, logoOficial()]);
   await page.goto('file://' + path.join(RADACINA, 'sablon', 'index.html'));
   await page.waitForFunction(() => window.__gata === true, null, { timeout: 30000 });
   return page;
@@ -54,6 +60,22 @@ async function deseneazaCadre(scenariu, dir, { panaLa, paralel }) {
     await browser.close();
   }
   return total;
+}
+
+// Coperta: o scenă statică randată o singură dată, la final de animație.
+async function exportCoperta(scenariu, iesire) {
+  if (!scenariu.coperta) return false;
+  const c = scenariu.coperta;
+  const mini = { ...scenariu, scene: [{ id: 'coperta', durata: 1, fundal: c.fundal, tranzitie: 'taiere', elemente: c.elemente }] };
+  const browser = await chromium.launch();
+  try {
+    const page = await deschideSablon(browser, mini);
+    await page.evaluate(() => window.render(0.999));
+    await page.screenshot({ path: iesire, type: 'png' });
+  } finally {
+    await browser.close();
+  }
+  return true;
 }
 
 // Pista de efecte: fiecare sunet pus la momentul lui, apoi amestecate.
@@ -116,11 +138,13 @@ async function main() {
     IESIRE: iesire,
   };
   execFileSync(path.join(__dirname, 'asambleaza.sh'), { stdio: 'inherit', env });
+  const coperta = path.join(RADACINA, 'preview', `${scenariu.id}-coperta.png`);
+  if (await exportCoperta(scenariu, coperta)) console.log(`  copertă: ${path.relative(RADACINA, coperta)}`);
   if (!a.pastreaza) fs.rmSync(dir, { recursive: true, force: true });
   console.log(`Preview: ${path.relative(RADACINA, iesire)} (nepublicat – așteaptă aprobarea)`);
 }
 
-module.exports = { deschideSablon };
+module.exports = { deschideSablon, exportCoperta };
 
 if (require.main === module) {
   main().catch((e) => {

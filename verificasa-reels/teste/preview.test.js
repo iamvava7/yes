@@ -17,6 +17,8 @@ test('preview-ul există și are specificațiile din ghid', { skip: !fs.existsSy
   assert.strictEqual(v.width, 1080);
   assert.strictEqual(v.height, 1920);
   assert.strictEqual(v.pix_fmt, 'yuv420p');
+  assert.strictEqual(v.color_space, 'bt709', 'culorile trebuie convertite în Rec.709');
+  assert.strictEqual(v.color_primaries, 'bt709');
   assert.strictEqual(v.r_frame_rate, `${sc.fps}/1`);
   assert.ok(a, 'lipsește pista audio');
   const durata = parseFloat(p.format.duration);
@@ -31,4 +33,12 @@ test('vocea se aude pe tot parcursul (fără goluri lungi de liniște până la 
     .map((l) => parseFloat(l.split(': ')[1]))
     .filter((t) => t < sc.durata - 3);
   assert.deepStrictEqual(goluri, [], `goluri de liniște la: ${goluri.join(', ')}`);
+});
+
+test('coperta există și are 1080 × 1920', { skip: !fs.existsSync(mp4) && 'fără preview' }, () => {
+  const png = mp4.replace(/\.mp4$/, '-coperta.png');
+  assert.ok(fs.existsSync(png), 'lipsește coperta');
+  const p = JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-show_streams', '-of', 'json', png]).toString());
+  assert.strictEqual(p.streams[0].width, 1080);
+  assert.strictEqual(p.streams[0].height, 1920);
 });

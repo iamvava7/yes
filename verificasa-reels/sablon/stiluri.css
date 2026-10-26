@@ -7,17 +7,17 @@
 :root {
   --bleumarin: #0b1b3a;
   --inchis: #0a1020;
-  --negru: #000000;
+  --negru: #05070c; /* off-black, nu negru pur */
   --galben: #facc15;
   --verde: #22c55e;
   --rosu: #ef4444;
-  --rosu-pe-galben: #b91c1c;
+  --rosu-pe-galben: #a3161a; /* 5,1:1 pe galben */
   --alb: #f8fafc;
   --gri: #cbd5e1;
   --zona: 120px; /* marginea de siguranță sus și jos */
 }
 
-html, body { margin: 0; padding: 0; background: #000; }
+html, body { margin: 0; padding: 0; background: var(--negru); }
 body { width: 1080px; height: 1920px; overflow: hidden; }
 
 #scena {
@@ -45,13 +45,14 @@ body { width: 1080px; height: 1920px; overflow: hidden; }
   background: repeating-linear-gradient(-45deg, #facc15 0 70px, #f5c400 70px 140px);
   background-position: var(--dungi, 0px) 0;
 }
-.fundal.negru { background: radial-gradient(500px 500px at 50% 40%, rgba(255, 255, 255, 0.05), transparent 70%), #000; }
+.fundal.negru { background: radial-gradient(500px 500px at 50% 40%, rgba(255, 255, 255, 0.05), transparent 70%), var(--negru); }
 
-.strat { position: absolute; inset: 0; transform-origin: 50% 45%; will-change: transform; }
+.strat { position: absolute; inset: 0; transform-origin: 50% 47%; will-change: transform; }
 
 .text {
   position: absolute; left: 60px; width: 960px; text-align: center;
   line-height: 1.06; letter-spacing: -0.02em; white-space: normal;
+  text-wrap: balance; /* rânduri echilibrate, fără un cuvânt singur pe ultimul rând */
 }
 .text .rand { display: inline-block; }
 .text.cifre { font-feature-settings: 'tnum' 1; }
@@ -65,7 +66,7 @@ body { width: 1080px; height: 1920px; overflow: hidden; }
 .marcaj { position: absolute; overflow: visible; pointer-events: none; }
 .marcaj path, .marcaj ellipse { fill: none; stroke-linecap: round; }
 
-.bara { position: absolute; bottom: 0; border-radius: 18px 18px 6px 6px; }
+.bara { position: absolute; bottom: 0; border-radius: 18px 18px 6px 6px; will-change: transform; }
 .bara.gri { background: linear-gradient(#94a3b8, #64748b); }
 .bara.rosu { background: linear-gradient(#f87171, #dc2626); }
 .bara.verde { background: linear-gradient(#4ade80, #16a34a); }
@@ -83,3 +84,4 @@ body { width: 1080px; height: 1920px; overflow: hidden; }
 .logo { position: absolute; left: 0; width: 1080px; display: flex; justify-content: center; align-items: center; gap: 26px; }
 .logo .nume { font-weight: 900; font-size: 96px; letter-spacing: -0.03em; }
 .logo .nume b { color: var(--verde); font-weight: 900; }
+.logo img { display: block; }

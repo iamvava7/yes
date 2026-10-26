@@ -15,7 +15,8 @@ fi
 mix="$mix;[a0]atrim=0:$DURATA,afade=t=out:st=$(echo "$DURATA - 0.4" | bc):d=0.4,alimiter=limit=0.95[a]"
 
 ffmpeg -hide_banner -loglevel error -y "${intrari[@]}" \
-  -filter_complex "$mix" -map 0:v -map "[a]" \
-  -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p -r "$FPS" -profile:v high \
+  -filter_complex "[0:v]scale=out_color_matrix=bt709:out_range=tv:flags=lanczos,format=yuv420p[vid];$mix" -map "[vid]" -map "[a]" \
+  -c:v libx264 -preset medium -crf 18 -r "$FPS" -profile:v high \
+  -colorspace bt709 -color_primaries bt709 -color_trc bt709 -color_range tv \
   -c:a aac -b:a 192k -ar 48000 -movflags +faststart -t "$DURATA" "$IESIRE"
 echo "  MP4: $IESIRE"

@@ -16,8 +16,10 @@ const REGULI = {
   durata_max: 50,
   scene_min: 4,
   scene_max: 20,
-  zona_sus: 120,
-  zona_jos: 1920 - 120,
+  // Ghidul cere minimum 120 px; folosim zonele Instagram Reels, mai stricte: ~250 px sus (nume cont),
+  // ~350 px jos (descriere + butoane).
+  zona_sus: 250,
+  zona_jos: 1920 - 350,
   stanga_jos: { x_max: 540, y_min: 1500 }, // butoanele/descrierea Instagram
   latime_text: 960,
   text_min: 48,
@@ -26,7 +28,30 @@ const REGULI = {
   respiratii_max: 2,
   respiratie_max: 2.5, // o „respirație” lasă cadrul nemișcat cel mult încă o secundă
   hook_secunde: 10,
+  contrast_min: 4.5, // WCAG AA pentru text normal; tot textul nostru e „mare”, dar pe telefon vrem marjă
+  coperta_text_min: 60,
+  coperta_zona: [240, 1680], // centrul 3:4 (1080 × 1440) care rămâne vizibil în grila profilului
 };
+
+// Culorile șablonului (aceleași ca în sablon/stiluri.css) pentru verificarea de contrast.
+const PALETA = {
+  fundal: { inchis: '#0a1020', galben: '#facc15', negru: '#05070c' },
+  text: { alb: '#f8fafc', gri: '#cbd5e1', galben: '#facc15', verde: '#22c55e', rosu: '#ef4444', bleumarin: '#0b1b3a' },
+  rosu_pe_galben: '#a3161a',
+};
+function luminanta(hex) {
+  const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+}
+function contrast(a, b) {
+  const x = luminanta(a), y = luminanta(b);
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+}
+function culoareText(culoare, fundal) {
+  if (culoare === 'rosu' && fundal === 'galben') return PALETA.rosu_pe_galben;
+  return PALETA.text[culoare || 'alb'];
+}
 
 const PERMISE = {
   tip: ['text', 'contor', 'marcaj', 'bare', 'lista', 'punct', 'logo'],
@@ -38,6 +63,8 @@ const PERMISE = {
 };
 
 const areCifre = (s) => /\d/.test(String(s ?? ''));
+// Pe ecran: fără em-dash și fără en-dash ca separator. Minusul matematic (−, U+2212) e permis.
+const areLiniuteInterzise = (s) => /[\u2013\u2014]/.test(String(s ?? ''));
 
 // Estimare (fără browser) a numărului de rânduri; testul din teste/ verifică apoi casetele reale.
 function randuriEstimate(text, marime, greutate) {
@@ -106,6 +133,14 @@ function valideaza(sc, { radacina = RADACINA, verificaFisiere = true } = {}) {
       if (typeof e.t !== 'number' || e.t < 0 || e.t >= s.durata) E(`${u}: t=${e.t} în afara scenei (0–${s.durata})`);
       if (e.culoare && !PERMISE.culoare.includes(e.culoare)) E(`${u}: culoarea „${e.culoare}” nu e în șablon`);
       if (e.intrare && !PERMISE.intrare.includes(e.intrare)) E(`${u}: intrarea „${e.intrare}” nu e în șablon`);
+      if (e.ease && !T.EASE_PERMISE.test(e.ease)) E(`${u}: easing-ul „${e.ease}” nu e un ease GSAP permis`);
+      for (const tx of [e.text, ...(e.puncte || []).map((p) => p.text), ...(e.bare || []).map((b) => b.eticheta)])
+        if (areLiniuteInterzise(tx)) E(`${u}: „${tx}” conține em-dash/en-dash; folosește cratimă (-) sau minus (−)`);
+      // Culorile/fundalurile necunoscute au deja eroarea lor; contrastul se verifică doar pentru cele din paletă.
+      if ((e.tip === 'text' || e.tip === 'contor') && PALETA.text[e.culoare || 'alb'] && PALETA.fundal[s.fundal || 'inchis']) {
+        const r = contrast(culoareText(e.culoare, s.fundal || 'inchis'), PALETA.fundal[s.fundal || 'inchis']);
+        if (r < REGULI.contrast_min) E(`${u}: contrast ${r.toFixed(2)}:1 pe fundal ${s.fundal || 'inchis'} (minimum ${REGULI.contrast_min}:1)`);
+      }
 
       if (e.tip === 'text' || e.tip === 'contor') {
         const text = e.tip === 'text' ? e.text : `${e.prefix || ''}${e.la}${e.sufix || ''}`;
@@ -128,6 +163,7 @@ function valideaza(sc, { radacina = RADACINA, verificaFisiere = true } = {}) {
         cereSursa(u, e.sursa);
         if (e.y < REGULI.zona_sus || e.y + e.inaltime > REGULI.stanga_jos.y_min) E(`${u}: graficul iese din zona sigură`);
         for (const b of e.bare || []) if (b.t < e.t || b.t >= s.durata) E(`${u}: bara „${b.eticheta}” are t în afara intervalului`);
+        if (e.diferenta && (e.diferenta.t < e.t || e.diferenta.t >= s.durata)) E(`${u}: diferenta.t în afara intervalului`);
       }
       if (e.tip === 'lista') {
         if (!(e.marime >= REGULI.text_min)) E(`${u}: mărimea ${e.marime}px sub minimul de ${REGULI.text_min}px`);
@@ -167,6 +203,26 @@ function valideaza(sc, { radacina = RADACINA, verificaFisiere = true } = {}) {
   const restul = batai.filter((b) => b >= REGULI.hook_secunde).length / Math.max(1, suma - REGULI.hook_secunde);
   if (inHook < restul) W(`hook-ul are ${inHook.toFixed(2)} schimbări/s, mai puțin decât restul (${restul.toFixed(2)}/s)`);
 
+  // Coperta: text ≥60 px în centrul 3:4, ca să se citească și în grila profilului.
+  if (!sc.coperta) W('lipsește coperta (câmpul "coperta"); Instagram nu permite schimbarea ei după publicare');
+  else {
+    const c = sc.coperta;
+    if (c.fundal && !PERMISE.fundal.includes(c.fundal)) E(`coperta: fundal „${c.fundal}” nu e în șablon`);
+    for (const e of c.elemente || []) {
+      if (e.tip !== 'text') continue;
+      const u = `coperta „${e.text}”`;
+      if (e.marime < REGULI.coperta_text_min) E(`${u}: ${e.marime}px sub ${REGULI.coperta_text_min}px`);
+      const jos = e.y + randuriEstimate(e.text, e.marime, e.greutate || 700) * e.marime * 1.1;
+      if (e.y < REGULI.coperta_zona[0] || jos > REGULI.coperta_zona[1]) E(`${u}: iese din centrul 3:4 al grilei`);
+      if (areCifre(e.text)) cereSursa(u, e.sursa);
+      if (areLiniuteInterzise(e.text)) E(`${u}: conține em-dash/en-dash`);
+      if (PALETA.text[e.culoare || 'alb'] && PALETA.fundal[c.fundal || 'inchis']) {
+        const r = contrast(culoareText(e.culoare, c.fundal || 'inchis'), PALETA.fundal[c.fundal || 'inchis']);
+        if (r < REGULI.contrast_min) E(`${u}: contrast ${r.toFixed(2)}:1`);
+      }
+    }
+  }
+
   // Audio și licențe
   const abs = (p) => path.resolve(radacina, p);
   if (!sc.voce || !sc.voce.fisier) E('lipsește vocea (voce.fisier)');
@@ -202,7 +258,7 @@ function valideaza(sc, { radacina = RADACINA, verificaFisiere = true } = {}) {
   return { erori, avertismente: avert, durata: suma, batai: batai.length };
 }
 
-module.exports = { valideaza, REGULI, PERMISE };
+module.exports = { valideaza, REGULI, PERMISE, PALETA, contrast };
 
 if (require.main === module) {
   const f = process.argv[2];

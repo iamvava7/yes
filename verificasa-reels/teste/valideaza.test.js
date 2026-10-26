@@ -68,3 +68,28 @@ test('stiluri din afara șablonului sunt respinse', () => {
   assert.match(e, /fundal „roz”/);
   assert.match(e, /intrarea „rotire”/);
 });
+
+test('em-dash sau en-dash în textul de pe ecran e respins (minusul − e permis)', () => {
+  const sc = copie(); sc.scene[1].elemente[3].text = 'București–Ilfov · trimestrul III 2026';
+  assert.match(erori(sc), /em-dash\/en-dash/);
+  assert.doesNotMatch(erori(copie()), /em-dash/);
+});
+
+test('contrast sub 4,5:1 e respins', () => {
+  const sc = copie(); sc.scene[0].elemente[1].culoare = 'alb'; // alb pe galben ≈ 1,5:1
+  assert.match(erori(sc), /contrast/);
+});
+
+test('easing-ul trebuie să fie un ease GSAP valid', () => {
+  const sc = copie(); sc.scene[0].elemente[0].ease = 'wobbly.out';
+  assert.match(erori(sc), /ease GSAP/);
+  const ok = copie(); ok.scene[0].elemente[0].ease = 'elastic.out(1, 0.5)';
+  assert.doesNotMatch(erori(ok), /ease GSAP/);
+});
+
+test('coperta: text sub 60 px sau în afara centrului 3:4 e respins', () => {
+  const sc = copie(); sc.coperta.elemente[0].marime = 50; sc.coperta.elemente[1].y = 1600;
+  const e = erori(sc);
+  assert.match(e, /coperta „ATENȚIE”: 50px/);
+  assert.match(e, /centrul 3:4/);
+});

@@ -1,10 +1,13 @@
 {
   "id": "ancpi-h1",
-  "titlu": "Atacul de la cadastru: vânzările de locuințe din București–Ilfov, −33%",
+  "titlu": "Atacul de la cadastru: vânzările de locuințe din București-Ilfov, −33%",
   "hook": "H1",
-  "stare": "propunere – așteaptă aprobarea lui Andrei",
+  "stare": "propunere, așteaptă aprobarea lui Andrei",
   "fps": 24,
-  "rezolutie": [1080, 1920],
+  "rezolutie": [
+    1080,
+    1920
+  ],
   "durata": 40.0,
   "voce": {
     "fisier": "audio/voce/ancpi-h1.wav",
@@ -15,10 +18,15 @@
     "voce_nume": "Eva - Calm, Warm and Friendly",
     "model": "eleven_multilingual_v2",
     "text": "Atenție: de la atacul de la cadastru, vânzările de locuințe din București și Ilfov au scăzut cu peste o treime. Pe paisprezece iulie, un atac ransomware a oprit sistemele ANCPI. Fără extras de carte funciară, notarii nu au mai putut autentifica acte. Aproape o lună, piața a stat pe loc. În trimestrul trei, vânzările au scăzut cu treizeci și trei la sută față de anul trecut, arată datele SVN România. Pentru cumpărători, asta înseamnă întârzieri la acte și la credite. Dacă ești în plină tranzacție, cere un extras de carte funciară actualizat înainte să semnezi. Urmărește VerifiCasa pentru ce urmează.",
-    "surse": ["svn-cotidianul", "ancpi-atac"]
+    "surse": [
+      "svn-cotidianul",
+      "ancpi-atac"
+    ]
   },
   "muzica": null,
-  "sfx": { "licenta": "audio/sfx/LICENTA.md" },
+  "sfx": {
+    "licenta": "audio/sfx/LICENTA.md"
+  },
   "dezvaluire_ai": "Voce generată cu AI",
   "surse": {
     "svn-cotidianul": {
@@ -41,10 +49,57 @@
         "https://hotnews.ro/atacul-cibernetic-asupra-ancpi-cine-plateste-factura-pietei-imobiliare-blocate-2319549",
         "https://blog.napocaimobiliare.ro/2026/07/27/atacul-cibernetic-asupra-ancpi-ce-trebuie-sa-stie-proprietarii-si-cumparatorii-de-imobile/"
       ],
-      "afirmatie": "Atac ransomware asupra ANCPI pe 14 iulie 2026; e-Terra și emiterea extraselor de carte funciară oprite; e-Terra repornită etapizat pe 11–12 august, după 28 de zile.",
+      "afirmatie": "Atac ransomware asupra ANCPI pe 14 iulie 2026; e-Terra și emiterea extraselor de carte funciară oprite; e-Terra repornită etapizat pe 11-12 august, după 28 de zile.",
       "verificat": "partial",
       "nota": "Data confirmată de mai multe surse în rezultatele căutării; paginile nu au putut fi deschise direct din container."
     }
+  },
+  "coperta": {
+    "fundal": "galben",
+    "nota": "Copertă custom (nu un cadru din video): Instagram nu o mai lasă schimbată după publicare; textul stă în centrul 3:4 al grilei.",
+    "elemente": [
+      {
+        "tip": "text",
+        "text": "ATENȚIE",
+        "t": 0,
+        "y": 420,
+        "marime": 150,
+        "greutate": 900,
+        "intrare": "sus",
+        "culoare": "bleumarin"
+      },
+      {
+        "tip": "text",
+        "text": "Cadastrul s-a blocat",
+        "t": 0,
+        "y": 620,
+        "marime": 120,
+        "greutate": 900,
+        "intrare": "sus",
+        "culoare": "bleumarin"
+      },
+      {
+        "tip": "text",
+        "text": "−33%",
+        "t": 0,
+        "y": 930,
+        "marime": 260,
+        "greutate": 900,
+        "intrare": "sus",
+        "culoare": "rosu",
+        "sursa": "svn-cotidianul"
+      },
+      {
+        "tip": "text",
+        "text": "vânzări de locuințe în București-Ilfov",
+        "t": 0,
+        "y": 1240,
+        "marime": 64,
+        "greutate": 700,
+        "intrare": "sus",
+        "culoare": "bleumarin"
+      }
+    ]
   },
   "scene": [
     {
@@ -53,9 +108,36 @@
       "fundal": "galben",
       "tranzitie": "taiere",
       "elemente": [
-        { "tip": "text", "text": "ATENȚIE", "t": 0.05, "y": 560, "marime": 210, "greutate": 900, "intrare": "slam", "culoare": "bleumarin" },
-        { "tip": "text", "text": "Cadastrul", "t": 0.75, "y": 860, "marime": 140, "greutate": 800, "intrare": "sus", "culoare": "bleumarin" },
-        { "tip": "text", "text": "s-a blocat", "t": 1.25, "y": 1030, "marime": 140, "greutate": 900, "intrare": "slam", "culoare": "rosu" }
+        {
+          "tip": "text",
+          "text": "ATENȚIE",
+          "t": 0.0,
+          "y": 600,
+          "marime": 210,
+          "greutate": 900,
+          "intrare": "slam",
+          "culoare": "bleumarin"
+        },
+        {
+          "tip": "text",
+          "text": "Cadastrul",
+          "t": 0.75,
+          "y": 870,
+          "marime": 140,
+          "greutate": 800,
+          "intrare": "sus",
+          "culoare": "bleumarin"
+        },
+        {
+          "tip": "text",
+          "text": "s-a blocat",
+          "t": 1.25,
+          "y": 1030,
+          "marime": 140,
+          "greutate": 900,
+          "intrare": "slam",
+          "culoare": "rosu"
+        }
       ]
     },
     {
@@ -64,11 +146,60 @@
       "fundal": "inchis",
       "tranzitie": "zoom",
       "elemente": [
-        { "tip": "text", "text": "Vânzări de locuințe", "t": 0.0, "y": 400, "marime": 72, "greutate": 700, "intrare": "cuvinte", "culoare": "alb" },
-        { "tip": "contor", "de": 0, "la": 33, "prefix": "−", "sufix": "%", "t": 0.2, "durata_anim": 1.4, "y": 620, "marime": 250, "culoare": "galben", "sursa": "svn-cotidianul" },
-        { "tip": "marcaj", "forma": "cerc", "tinta": 1, "t": 1.6, "culoare": "verde" },
-        { "tip": "text", "text": "București–Ilfov · trimestrul III 2026", "t": 2.6, "y": 1010, "marime": 56, "greutate": 600, "intrare": "sus", "culoare": "gri", "sursa": "svn-cotidianul" },
-        { "tip": "text", "text": "peste o treime", "t": 3.7, "y": 1160, "marime": 100, "greutate": 800, "intrare": "slam", "culoare": "alb", "accent": ["treime"] }
+        {
+          "tip": "text",
+          "text": "Vânzări de locuințe",
+          "t": 0.0,
+          "y": 520,
+          "marime": 72,
+          "greutate": 700,
+          "intrare": "cuvinte",
+          "culoare": "alb"
+        },
+        {
+          "tip": "contor",
+          "de": 0,
+          "la": 33,
+          "prefix": "−",
+          "sufix": "%",
+          "t": 0.2,
+          "durata_anim": 1.0,
+          "y": 650,
+          "marime": 250,
+          "culoare": "galben",
+          "sursa": "svn-cotidianul"
+        },
+        {
+          "tip": "marcaj",
+          "forma": "cerc",
+          "tinta": 1,
+          "t": 1.6,
+          "culoare": "verde"
+        },
+        {
+          "tip": "text",
+          "text": "București-Ilfov · trimestrul III 2026",
+          "t": 2.6,
+          "y": 1010,
+          "marime": 56,
+          "greutate": 600,
+          "intrare": "sus",
+          "culoare": "gri",
+          "sursa": "svn-cotidianul"
+        },
+        {
+          "tip": "text",
+          "text": "peste o treime",
+          "t": 3.7,
+          "y": 1120,
+          "marime": 100,
+          "greutate": 800,
+          "intrare": "slam",
+          "culoare": "alb",
+          "accent": [
+            "treime"
+          ]
+        }
       ]
     },
     {
@@ -77,11 +208,60 @@
       "fundal": "inchis",
       "tranzitie": "glisare",
       "elemente": [
-        { "tip": "text", "text": "14 iulie 2026", "t": 0.1, "y": 460, "marime": 150, "greutate": 900, "intrare": "slam", "culoare": "alb", "sursa": "ancpi-atac" },
-        { "tip": "text", "text": "atac ransomware", "t": 1.1, "y": 700, "marime": 110, "greutate": 800, "intrare": "cuvinte", "culoare": "alb", "accent": ["ransomware"] },
-        { "tip": "text", "text": "pe sistemele ANCPI", "t": 2.3, "y": 900, "marime": 90, "greutate": 700, "intrare": "sus", "culoare": "gri", "accent": ["ANCPI"] },
-        { "tip": "marcaj", "forma": "subliniere", "tinta": 2, "t": 3.2, "culoare": "verde" },
-        { "tip": "text", "text": "e-Terra: oprită", "t": 4.2, "y": 1130, "marime": 84, "greutate": 700, "intrare": "litere", "culoare": "rosu" }
+        {
+          "tip": "text",
+          "text": "14 iulie 2026",
+          "t": 0.1,
+          "y": 540,
+          "marime": 150,
+          "greutate": 900,
+          "intrare": "slam",
+          "culoare": "alb",
+          "sursa": "ancpi-atac"
+        },
+        {
+          "tip": "text",
+          "text": "atac ransomware",
+          "t": 1.1,
+          "y": 760,
+          "marime": 110,
+          "greutate": 800,
+          "intrare": "cuvinte",
+          "culoare": "alb",
+          "accent": [
+            "ransomware"
+          ]
+        },
+        {
+          "tip": "text",
+          "text": "pe sistemele ANCPI",
+          "t": 2.3,
+          "y": 940,
+          "marime": 90,
+          "greutate": 700,
+          "intrare": "sus",
+          "culoare": "gri",
+          "accent": [
+            "ANCPI"
+          ]
+        },
+        {
+          "tip": "marcaj",
+          "forma": "subliniere",
+          "tinta": 2,
+          "t": 3.2,
+          "culoare": "verde"
+        },
+        {
+          "tip": "text",
+          "text": "e-Terra: oprită",
+          "t": 4.2,
+          "y": 1150,
+          "marime": 84,
+          "greutate": 700,
+          "intrare": "litere",
+          "culoare": "rosu"
+        }
       ]
     },
     {
@@ -90,10 +270,43 @@
       "fundal": "inchis",
       "tranzitie": "zoom",
       "elemente": [
-        { "tip": "text", "text": "Fără extras de carte funciară", "t": 0.1, "y": 480, "marime": 92, "greutate": 800, "intrare": "litere", "culoare": "alb" },
-        { "tip": "text", "text": "notarii nu pot lucra", "t": 1.4, "y": 760, "marime": 80, "greutate": 600, "intrare": "cuvinte", "culoare": "gri" },
-        { "tip": "text", "text": "tranzacții blocate", "t": 2.7, "y": 1000, "marime": 120, "greutate": 900, "intrare": "slam", "culoare": "rosu" },
-        { "tip": "marcaj", "forma": "cerc", "tinta": 2, "t": 3.8, "culoare": "verde" }
+        {
+          "tip": "text",
+          "text": "Fără extras de carte funciară",
+          "t": 0.1,
+          "y": 560,
+          "marime": 92,
+          "greutate": 800,
+          "intrare": "litere",
+          "culoare": "alb"
+        },
+        {
+          "tip": "text",
+          "text": "notarii nu pot lucra",
+          "t": 1.4,
+          "y": 830,
+          "marime": 80,
+          "greutate": 600,
+          "intrare": "cuvinte",
+          "culoare": "gri"
+        },
+        {
+          "tip": "text",
+          "text": "tranzacții blocate",
+          "t": 2.7,
+          "y": 1010,
+          "marime": 120,
+          "greutate": 900,
+          "intrare": "slam",
+          "culoare": "rosu"
+        },
+        {
+          "tip": "marcaj",
+          "forma": "cerc",
+          "tinta": 2,
+          "t": 3.8,
+          "culoare": "verde"
+        }
       ]
     },
     {
@@ -102,9 +315,31 @@
       "fundal": "negru",
       "tranzitie": "estompare",
       "elemente": [
-        { "tip": "punct", "t": 0.0, "y": 700 },
-        { "tip": "text", "text": "aproape o lună", "t": 0.1, "y": 860, "marime": 120, "greutate": 500, "intrare": "litere", "culoare": "alb" },
-        { "tip": "text", "text": "piața a stat pe loc", "t": 1.2, "y": 1050, "marime": 72, "greutate": 500, "intrare": "sus", "culoare": "gri" }
+        {
+          "tip": "punct",
+          "t": 0.0,
+          "y": 760
+        },
+        {
+          "tip": "text",
+          "text": "aproape o lună",
+          "t": 0.1,
+          "y": 880,
+          "marime": 120,
+          "greutate": 500,
+          "intrare": "litere",
+          "culoare": "alb"
+        },
+        {
+          "tip": "text",
+          "text": "piața a stat pe loc",
+          "t": 1.2,
+          "y": 1060,
+          "marime": 72,
+          "greutate": 500,
+          "intrare": "sus",
+          "culoare": "gri"
+        }
       ]
     },
     {
@@ -113,14 +348,73 @@
       "fundal": "inchis",
       "tranzitie": "glisare",
       "elemente": [
-        { "tip": "text", "text": "Vânzări locuințe · București–Ilfov", "t": 0.0, "y": 300, "marime": 64, "greutate": 700, "intrare": "cuvinte", "culoare": "alb" },
-        { "tip": "bare", "t": 0.6, "y": 480, "inaltime": 760, "sursa": "svn-cotidianul", "bare": [
-          { "eticheta": "T3 2025", "valoare": 100, "t": 0.6, "culoare": "gri" },
-          { "eticheta": "T3 2026", "valoare": 67, "t": 1.8, "culoare": "rosu" }
-        ] },
-        { "tip": "text", "text": "−33%", "t": 3.0, "y": 640, "x": 830, "marime": 130, "greutate": 900, "intrare": "slam", "culoare": "galben", "sursa": "svn-cotidianul" },
-        { "tip": "text", "text": "schematic · T3 2025 = 100", "t": 4.2, "y": 1300, "marime": 48, "greutate": 500, "intrare": "sus", "culoare": "gri", "sursa": "svn-cotidianul" },
-        { "tip": "text", "text": "Date: SVN România", "t": 5.6, "y": 1380, "marime": 52, "greutate": 600, "intrare": "sus", "culoare": "verde" }
+        {
+          "tip": "text",
+          "text": "Vânzări locuințe · București-Ilfov",
+          "t": 0.0,
+          "y": 420,
+          "marime": 64,
+          "greutate": 700,
+          "intrare": "cuvinte",
+          "culoare": "alb"
+        },
+        {
+          "tip": "bare",
+          "t": 0.6,
+          "y": 560,
+          "inaltime": 760,
+          "sursa": "svn-cotidianul",
+          "bare": [
+            {
+              "eticheta": "T3 2025",
+              "valoare": 100,
+              "t": 0.6,
+              "culoare": "gri"
+            },
+            {
+              "eticheta": "T3 2026",
+              "valoare": 67,
+              "t": 1.8,
+              "culoare": "rosu"
+            }
+          ],
+          "diferenta": {
+            "t": 2.8
+          }
+        },
+        {
+          "tip": "text",
+          "text": "−33%",
+          "t": 3.1,
+          "y": 600,
+          "x": 830,
+          "marime": 130,
+          "greutate": 900,
+          "intrare": "slam",
+          "culoare": "galben",
+          "sursa": "svn-cotidianul"
+        },
+        {
+          "tip": "text",
+          "text": "schematic · T3 2025 = 100",
+          "t": 4.3,
+          "y": 1350,
+          "marime": 48,
+          "greutate": 500,
+          "intrare": "sus",
+          "culoare": "gri",
+          "sursa": "svn-cotidianul"
+        },
+        {
+          "tip": "text",
+          "text": "Date: SVN România",
+          "t": 5.6,
+          "y": 1420,
+          "marime": 52,
+          "greutate": 600,
+          "intrare": "sus",
+          "culoare": "verde"
+        }
       ]
     },
     {
@@ -129,13 +423,43 @@
       "fundal": "inchis",
       "tranzitie": "zoom",
       "elemente": [
-        { "tip": "text", "text": "Pentru cumpărători", "t": 0.0, "y": 420, "marime": 96, "greutate": 800, "intrare": "slam", "culoare": "alb" },
-        { "tip": "lista", "t": 0.6, "y": 680, "marime": 72, "puncte": [
-          { "text": "acte amânate", "t": 0.6 },
-          { "text": "credite întârziate", "t": 1.6 },
-          { "text": "mutare amânată", "t": 2.6 }
-        ] },
-        { "tip": "marcaj", "forma": "subliniere", "tinta": 0, "t": 3.6, "culoare": "verde" }
+        {
+          "tip": "text",
+          "text": "Pentru cumpărători",
+          "t": 0.0,
+          "y": 620,
+          "marime": 96,
+          "greutate": 800,
+          "intrare": "slam",
+          "culoare": "alb"
+        },
+        {
+          "tip": "lista",
+          "t": 0.6,
+          "y": 840,
+          "marime": 72,
+          "puncte": [
+            {
+              "text": "acte amânate",
+              "t": 0.6
+            },
+            {
+              "text": "credite întârziate",
+              "t": 1.6
+            },
+            {
+              "text": "mutare amânată",
+              "t": 2.6
+            }
+          ]
+        },
+        {
+          "tip": "marcaj",
+          "forma": "subliniere",
+          "tinta": 0,
+          "t": 3.6,
+          "culoare": "verde"
+        }
       ]
     },
     {
@@ -143,13 +467,62 @@
       "durata": 5.6,
       "fundal": "inchis",
       "tranzitie": "glisare",
-      "speed_ramp": { "de": 0.9, "la": 2.0, "lent": 0.3 },
+      "speed_ramp": {
+        "de": 0.9,
+        "la": 2.0,
+        "lent": 0.3
+      },
       "elemente": [
-        { "tip": "text", "text": "Ești în plină tranzacție?", "t": 0.05, "y": 480, "marime": 84, "greutate": 700, "intrare": "cuvinte", "culoare": "alb" },
-        { "tip": "text", "text": "Cere extras de carte funciară", "t": 1.0, "y": 720, "marime": 92, "greutate": 800, "intrare": "sus", "culoare": "alb" },
-        { "tip": "text", "text": "actualizat", "t": 2.0, "y": 940, "marime": 170, "greutate": 900, "intrare": "slam", "culoare": "verde" },
-        { "tip": "text", "text": "înainte să semnezi", "t": 3.2, "y": 1180, "marime": 96, "greutate": 800, "intrare": "cuvinte", "culoare": "alb", "accent": ["înainte"] },
-        { "tip": "marcaj", "forma": "subliniere", "tinta": 3, "t": 4.3, "culoare": "galben" }
+        {
+          "tip": "text",
+          "text": "Ești în plină tranzacție?",
+          "t": 0.05,
+          "y": 560,
+          "marime": 84,
+          "greutate": 700,
+          "intrare": "cuvinte",
+          "culoare": "alb"
+        },
+        {
+          "tip": "text",
+          "text": "Cere extras de carte funciară",
+          "t": 1.0,
+          "y": 740,
+          "marime": 92,
+          "greutate": 800,
+          "intrare": "sus",
+          "culoare": "alb"
+        },
+        {
+          "tip": "text",
+          "text": "actualizat",
+          "t": 2.0,
+          "y": 990,
+          "marime": 170,
+          "greutate": 900,
+          "intrare": "slam",
+          "culoare": "verde"
+        },
+        {
+          "tip": "text",
+          "text": "înainte să semnezi",
+          "t": 3.2,
+          "y": 1220,
+          "marime": 96,
+          "greutate": 800,
+          "intrare": "cuvinte",
+          "culoare": "alb",
+          "accent": [
+            "înainte"
+          ]
+        },
+        {
+          "tip": "marcaj",
+          "forma": "subliniere",
+          "tinta": 3,
+          "t": 4.3,
+          "culoare": "galben"
+        }
       ]
     },
     {
@@ -158,11 +531,52 @@
       "fundal": "inchis",
       "tranzitie": "zoom",
       "elemente": [
-        { "tip": "logo", "t": 0.05, "y": 420 },
-        { "tip": "text", "text": "Urmărește pentru ce urmează", "t": 0.05, "y": 600, "marime": 80, "greutate": 800, "intrare": "cuvinte", "culoare": "alb" },
-        { "tip": "text", "text": "@verificasaro", "t": 0.9, "y": 850, "marime": 64, "greutate": 700, "intrare": "sus", "culoare": "verde" },
-        { "tip": "text", "text": "Surse: SVN România (via Cotidianul), ANCPI, extrasul.ro", "t": 1.6, "y": 1120, "marime": 48, "greutate": 500, "intrare": "sus", "culoare": "gri" },
-        { "tip": "text", "text": "Voce generată cu AI", "t": 2.4, "y": 1330, "marime": 48, "greutate": 500, "intrare": "sus", "culoare": "gri", "rol": "dezvaluire" }
+        {
+          "tip": "logo",
+          "t": 0.05,
+          "y": 560
+        },
+        {
+          "tip": "text",
+          "text": "Urmărește pentru ce urmează",
+          "t": 0.05,
+          "y": 740,
+          "marime": 80,
+          "greutate": 800,
+          "intrare": "cuvinte",
+          "culoare": "alb"
+        },
+        {
+          "tip": "text",
+          "text": "@verificasaro",
+          "t": 0.9,
+          "y": 960,
+          "marime": 64,
+          "greutate": 700,
+          "intrare": "sus",
+          "culoare": "verde"
+        },
+        {
+          "tip": "text",
+          "text": "Surse: SVN România (via Cotidianul), ANCPI, extrasul.ro",
+          "t": 1.6,
+          "y": 1150,
+          "marime": 48,
+          "greutate": 500,
+          "intrare": "sus",
+          "culoare": "gri"
+        },
+        {
+          "tip": "text",
+          "text": "Voce generată cu AI",
+          "t": 2.4,
+          "y": 1330,
+          "marime": 48,
+          "greutate": 500,
+          "intrare": "sus",
+          "culoare": "gri",
+          "rol": "dezvaluire"
+        }
       ]
     }
   ]

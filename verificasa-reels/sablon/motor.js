@@ -1,8 +1,8 @@
-// Motorul de randare: construiește DOM-ul o singură dată, apoi render(t) setează starea fiecărui element
-// strict în funcție de timp (fără animații CSS), ca fiecare cadru să fie determinist.
+// Motorul de randare. Fiecare scenă are un gsap.timeline({ paused: true }) construit o singură dată;
+// render(t) alege scena și face tl.time(t), deci fiecare cadru e determinist (fără ceas, fără requestAnimationFrame).
 (function () {
   const T = window.Tranzitii;
-  const { clamp, lerp, ease, prog } = T;
+  const { clamp } = T;
 
   const el = (tag, cls, parent) => {
     const n = document.createElement(tag);
@@ -17,7 +17,18 @@
     if (parent) parent.appendChild(n);
     return n;
   };
-  const CULORI = { verde: '#22c55e', galben: '#facc15', rosu: '#ef4444', alb: '#f8fafc' };
+  const CULORI = { verde: '#22c55e', galben: '#facc15', rosu: '#ef4444', alb: '#f8fafc', gri: '#cbd5e1' };
+
+  // Easing-ul implicit pentru fiecare intrare; un element îl poate suprascrie cu "ease" (validat în valideaza.js).
+  const EASE = {
+    slam: 'back.out(2.2)',
+    sus: 'power3.out',
+    cuvinte: 'power3.out',
+    litere: 'power2.out',
+    contor: 'expo.out',
+    marcaj: 'power2.inOut',
+    bara: 'elastic.out(1, 0.75)',
+  };
 
   // Caseta reală a textului (unirea bucăților inline), în coordonatele scenei.
   function caseta(nodes) {
@@ -32,16 +43,14 @@
     return r;
   }
 
-  // ---------- elemente ----------
+  // ---------- elemente: fiecare adaugă tween-uri în timeline-ul scenei ----------
 
-  function textNou(def, strat, peGalben) {
+  function text(def, strat, tl) {
     const box = el('div', `text c-${def.culoare || 'alb'}`, strat);
     box.dataset.text = def.text;
     if (def.rol) box.dataset.rol = def.rol;
-    box.style.top = def.y + 'px';
-    box.style.fontSize = def.marime + 'px';
-    box.style.fontWeight = def.greutate || 700;
-    if (def.x != null) { box.style.left = (def.x - 480) + 'px'; }
+    Object.assign(box.style, { top: def.y + 'px', fontSize: def.marime + 'px', fontWeight: def.greutate || 700 });
+    if (def.x != null) box.style.left = (def.x - 480) + 'px';
     const accent = new Set((def.accent || []).map((w) => w.toLowerCase()));
     const bucati = [];
     const cuvinte = def.text.split(' ');
@@ -55,75 +64,58 @@
       }
       if (i < cuvinte.length - 1) box.appendChild(document.createTextNode(' '));
     });
-    return {
-      def, nod: box, tinta: () => caseta(bucati),
-      update(a) {
-        const s = a - def.t;
-        if (s < 0) { box.style.visibility = 'hidden'; return; }
-        box.style.visibility = 'visible';
-        if (def.intrare === 'slam') {
-          const p = clamp(s / 0.2);
-          const sc = s < 0.2 ? lerp(1.9, 0.96, ease.outCubic(p)) : lerp(0.96, 1, prog(s, 0.2, 0.12));
-          box.style.transform = `scale(${sc})`;
-          box.style.opacity = clamp(s / 0.06);
-          box.style.filter = s < 0.12 ? `blur(${lerp(8, 0, s / 0.12)}px)` : 'none';
-        } else if (def.intrare === 'sus') {
-          const p = prog(s, 0, 0.38);
-          box.style.transform = `translateY(${lerp(70, 0, p)}px)`;
-          box.style.opacity = p;
-        } else {
-          const pas = def.intrare === 'litere' ? 0.03 : 0.09;
-          const dur = def.intrare === 'litere' ? 0.2 : 0.3;
-          bucati.forEach((b, k) => {
-            const sk = s - k * pas;
-            const p = prog(sk, 0, dur);
-            b.style.opacity = clamp(sk / (dur * 0.6));
-            b.style.transform = `translateY(${lerp(def.intrare === 'litere' ? 28 : 60, 0, p)}px) scale(${lerp(0.9, 1, p)})`;
-          });
-        }
-      },
-    };
+
+    // Caseta se măsoară acum, înainte ca fromTo să aplice starea inițială (scale, y) pe element.
+    const cutie = caseta(bucati);
+    const ease = def.ease || EASE[def.intrare];
+    if (def.intrare === 'slam') {
+      tl.fromTo(box, { autoAlpha: 0, scale: 1.9, filter: 'blur(10px)' },
+        { autoAlpha: 1, scale: 1, filter: 'blur(0px)', duration: 0.32, ease }, def.t);
+    } else if (def.intrare === 'sus') {
+      tl.fromTo(box, { autoAlpha: 0, y: 70 }, { autoAlpha: 1, y: 0, duration: 0.4, ease }, def.t);
+    } else {
+      const litere = def.intrare === 'litere';
+      tl.fromTo(box, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.01 }, def.t);
+      tl.fromTo(bucati, { autoAlpha: 0, y: litere ? 28 : 60, scale: 0.9 },
+        { autoAlpha: 1, y: 0, scale: 1, duration: litere ? 0.22 : 0.34, ease, stagger: litere ? 0.03 : 0.09 }, def.t);
+    }
+    return { def, tinta: () => cutie };
   }
 
-  function contorNou(def, strat) {
+  function contor(def, strat, tl) {
     const box = el('div', `text cifre c-${def.culoare || 'alb'}`, strat);
-    box.style.top = def.y + 'px';
-    box.style.fontSize = def.marime + 'px';
-    box.style.fontWeight = 900;
-    const final = `${def.prefix || ''}${def.la}${def.sufix || ''}`;
-    box.dataset.text = final;
+    Object.assign(box.style, { top: def.y + 'px', fontSize: def.marime + 'px', fontWeight: 900 });
+    const format = (v) => `${def.prefix || ''}${v}${def.sufix || ''}`;
+    box.dataset.text = format(def.la);
     const span = el('span', 'bucata', box);
-    span.textContent = final;
+    span.textContent = format(def.la);
+    const cutie = caseta([span]);
     const dur = def.durata_anim ?? 1.2;
-    return {
-      def, nod: box, tinta: () => caseta([span]),
-      update(a) {
-        const s = a - def.t;
-        if (s < 0) { box.style.visibility = 'hidden'; return; }
-        box.style.visibility = 'visible';
-        const p = prog(s, 0, dur, ease.outExpo);
-        const v = Math.round(lerp(def.de, def.la, p));
-        span.textContent = `${def.prefix || ''}${v}${def.sufix || ''}`;
-        const pop = s > dur ? 1 + 0.08 * Math.max(0, 1 - (s - dur) / 0.25) : lerp(0.85, 1, prog(s, 0, 0.3));
-        box.style.transform = `scale(${pop})`;
-        box.style.opacity = clamp(s / 0.1);
-      },
-    };
+    const val = { v: def.de };
+    tl.fromTo(box, { autoAlpha: 0, scale: 0.85 }, { autoAlpha: 1, scale: 1, duration: 0.3, ease: 'power3.out' }, def.t);
+    tl.fromTo(val, { v: def.de }, {
+      v: def.la, duration: dur, ease: def.ease || EASE.contor,
+      onUpdate: () => { span.textContent = format(Math.round(val.v)); },
+    }, def.t);
+    // „pop” când cifra se oprește: marchează momentul-cheie
+    tl.to(box, { scale: 1.08, duration: 0.12, ease: 'power2.out', yoyo: true, repeat: 1 }, def.t + dur);
+    return { def, tinta: () => cutie };
   }
 
-  function marcajNou(def, strat, elemente) {
+  function marcaj(def, strat, tl, elemente) {
     const tinta = elemente[def.tinta];
     const svg = svgEl('svg', { class: 'marcaj', width: 1080, height: 1920, viewBox: '0 0 1080 1920' }, strat);
-    svg.style.left = '0'; svg.style.top = '0';
-    let forma = null;
+    Object.assign(svg.style, { left: '0', top: '0' });
     return {
-      def, nod: svg,
+      def,
+      // Forma se calculează după încărcarea fonturilor, din caseta reală a țintei.
       masoara() {
         const r = tinta.tinta();
         const culoare = CULORI[def.culoare] || CULORI.verde;
+        let forma;
         if (def.forma === 'cerc') {
           const cx = (r.l + r.r) / 2, cy = (r.t + r.b) / 2;
-          forma = svgEl('ellipse', { cx, cy, rx: (r.r - r.l) / 2 + 46, ry: (r.b - r.t) / 2 + 30,
+          forma = svgEl('ellipse', { cx, cy, rx: (r.r - r.l) / 2 + 50, ry: (r.b - r.t) / 2 + 42,
             stroke: culoare, 'stroke-width': 10, pathLength: 1, 'stroke-dasharray': 1,
             transform: `rotate(-4 ${cx} ${cy})` }, svg);
         } else {
@@ -131,48 +123,52 @@
           forma = svgEl('path', { d: `M ${r.l - 10} ${y} Q ${(r.l + r.r) / 2} ${y + 16} ${r.r + 10} ${y - 4}`,
             stroke: culoare, 'stroke-width': 12, pathLength: 1, 'stroke-dasharray': 1 }, svg);
         }
-      },
-      update(a) {
-        const s = a - def.t;
-        svg.style.visibility = s < 0 ? 'hidden' : 'visible';
-        if (forma) forma.setAttribute('stroke-dashoffset', 1 - prog(s, 0, 0.45, ease.inOutCubic));
+        tl.fromTo(forma, { attr: { 'stroke-dashoffset': 1 }, autoAlpha: 0 },
+          { attr: { 'stroke-dashoffset': 0 }, autoAlpha: 1, duration: 0.45, ease: def.ease || EASE.marcaj }, def.t);
       },
     };
   }
 
-  function bareNou(def, strat) {
+  function bare(def, strat, tl) {
     const zona = el('div', '', strat);
     Object.assign(zona.style, { position: 'absolute', left: '60px', top: def.y + 'px', width: '960px', height: def.inaltime + 'px' });
     const max = Math.max(...def.bare.map((b) => b.valoare));
     const latime = 200, etichetaH = 100;
     const centre = def.bare.map((_, i) => 200 + i * 240);
+    const hUtil = def.inaltime - etichetaH;
     const items = def.bare.map((b, i) => {
       const bar = el('div', `bara ${b.culoare || 'gri'}`, zona);
-      const hMax = (def.inaltime - etichetaH) * (b.valoare / max);
-      Object.assign(bar.style, { left: centre[i] - latime / 2 + 'px', width: latime + 'px', bottom: etichetaH + 'px' });
+      const h = hUtil * (b.valoare / max);
+      Object.assign(bar.style, { left: centre[i] - latime / 2 + 'px', width: latime + 'px', height: h + 'px', bottom: etichetaH + 'px', transformOrigin: '50% 100%' });
       const et = el('div', 'text c-gri', zona);
       et.dataset.text = b.eticheta;
-      Object.assign(et.style, { left: centre[i] - 150 + 'px', width: '300px', top: def.inaltime - etichetaH + 22 + 'px', fontSize: '52px', fontWeight: 700 });
+      Object.assign(et.style, { left: centre[i] - 150 + 'px', width: '300px', top: hUtil + 22 + 'px', fontSize: '52px', fontWeight: 700 });
       el('span', 'bucata', et).textContent = b.eticheta;
-      return { b, bar, et, hMax };
+      // scaleY, nu height: animăm doar transformări
+      tl.fromTo(bar, { autoAlpha: 0, scaleY: 0 }, { autoAlpha: 1, scaleY: 1, duration: 0.9, ease: b.ease || EASE.bara }, b.t);
+      tl.fromTo(et, { autoAlpha: 0, y: 30 }, { autoAlpha: 1, y: 0, duration: 0.3, ease: 'power3.out' }, b.t);
+      return { h, x: centre[i] };
     });
-    return {
-      def, nod: zona,
-      update(a) {
-        zona.style.visibility = a < def.t ? 'hidden' : 'visible';
-        for (const it of items) {
-          const s = a - it.b.t;
-          const p = prog(s, 0, 0.8, ease.outExpo);
-          it.bar.style.height = Math.max(0, it.hMax * p) + 'px';
-          it.bar.style.opacity = s < 0 ? 0 : 1;
-          it.et.style.opacity = clamp(s / 0.25);
-          it.et.style.transform = `translateY(${lerp(30, 0, prog(s, 0, 0.3))}px)`;
-        }
-      },
-    };
+    // Diferența: linie punctată la nivelul primei bare + paranteză galbenă care măsoară scăderea.
+    if (def.diferenta && items.length >= 2) {
+      const [a, b] = items;
+      const svg = svgEl('svg', { width: 960, height: def.inaltime, viewBox: `0 0 960 ${def.inaltime}` }, zona);
+      Object.assign(svg.style, { position: 'absolute', left: 0, top: 0, overflow: 'visible' });
+      const yA = hUtil - a.h, yB = hUtil - b.h;
+      const xB = b.x + latime / 2 + 34;
+      const linie = svgEl('path', { d: `M ${a.x - latime / 2} ${yA} H ${xB}`, stroke: CULORI.alb, 'stroke-width': 4,
+        'stroke-dasharray': '14 12', fill: 'none', opacity: 0.7 }, svg);
+      const paranteza = svgEl('path', { d: `M ${xB - 16} ${yA} H ${xB} V ${yB} H ${xB - 16}`, stroke: CULORI.galben,
+        'stroke-width': 8, fill: 'none', 'stroke-linejoin': 'round', pathLength: 1, 'stroke-dasharray': 1 }, svg);
+      const t = def.diferenta.t;
+      tl.fromTo(linie, { autoAlpha: 0, clipPath: 'inset(0 100% 0 0)' }, { autoAlpha: 1, clipPath: 'inset(0 0% 0 0)', duration: 0.5, ease: 'power2.out' }, t);
+      tl.fromTo(paranteza, { autoAlpha: 0, attr: { 'stroke-dashoffset': 1 } }, { autoAlpha: 1, attr: { 'stroke-dashoffset': 0 }, duration: 0.45, ease: 'power2.inOut' }, t + 0.25);
+    }
+    return { def };
   }
 
-  function listaNou(def, strat) {
+  function lista(def, strat, tl) {
+    const texte = [];
     const items = def.puncte.map((p, i) => {
       const y = def.y + i * def.marime * 1.7;
       const dot = el('div', 'punct-lista', strat);
@@ -181,65 +177,51 @@
       tx.dataset.text = p.text;
       Object.assign(tx.style, { left: '220px', width: '760px', textAlign: 'left', top: y + 'px', fontSize: def.marime + 'px', fontWeight: 700 });
       el('span', 'bucata', tx).textContent = p.text;
+      texte.push(tx.firstChild);
+      // Cercurile goale apar odată cu lista și se umplu când e spus punctul: arată progresul, nu decorează.
+      tl.fromTo(dot, { autoAlpha: 0 }, { autoAlpha: 0.35, duration: 0.2 }, def.t);
+      tl.fromTo(dot, { backgroundColor: 'rgba(34,197,94,0)', scale: 1 },
+        { backgroundColor: 'rgba(34,197,94,1)', autoAlpha: 1, scale: 1.5, duration: 0.12, ease: 'power2.out', immediateRender: false }, p.t);
+      tl.to(dot, { scale: 1, duration: 0.2, ease: 'power2.in' }, p.t + 0.12);
       return { p, dot, tx };
     });
-    return {
-      def, nod: null,
-      tinta: () => caseta(items.map((i) => i.tx.firstChild)),
-      update(a) {
-        for (const it of items) {
-          const s = a - it.p.t;
-          const vizibil = a >= def.t;
-          it.dot.style.visibility = vizibil ? 'visible' : 'hidden';
-          const aprins = s >= 0;
-          it.dot.style.background = aprins ? '#22c55e' : 'transparent';
-          it.dot.style.transform = `scale(${aprins ? 1 + 0.5 * Math.max(0, 1 - s / 0.2) : 1})`;
-          it.dot.style.opacity = vizibil ? (aprins ? 1 : 0.35) : 0;
-          it.tx.style.visibility = aprins ? 'visible' : 'hidden';
-          it.tx.style.opacity = clamp(s / 0.15);
-          it.tx.style.transform = `translateX(${lerp(-50, 0, prog(s, 0, 0.3))}px)`;
-        }
-      },
-    };
+    const cutie = caseta(texte);
+    for (const { p, tx } of items) tl.fromTo(tx, { autoAlpha: 0, x: -50 }, { autoAlpha: 1, x: 0, duration: 0.32, ease: 'power3.out' }, p.t);
+    return { def, tinta: () => cutie };
   }
 
-  function punctNou(def, strat, durata) {
+  function punct(def, strat, tl, durata) {
     const d = el('div', 'punct-lumina', strat);
-    return {
-      def, nod: d,
-      update(a) {
-        const s = a - def.t;
-        d.style.visibility = s < 0 ? 'hidden' : 'visible';
-        const x = lerp(430, 650, s / durata);
-        d.style.left = x - 13 + 'px';
-        d.style.top = def.y - 13 + 'px';
-        d.style.opacity = clamp(s / 0.3) * (0.75 + 0.25 * Math.sin(s * 6));
-      },
-    };
+    Object.assign(d.style, { left: '417px', top: def.y - 13 + 'px' });
+    const rest = durata - def.t;
+    tl.fromTo(d, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.3 }, def.t);
+    tl.fromTo(d, { x: 0 }, { x: 220, duration: rest, ease: 'none' }, def.t);
+    tl.fromTo(d, { scale: 1 }, { scale: 1.35, duration: 0.5, ease: 'sine.inOut', yoyo: true, repeat: Math.max(1, Math.floor(rest / 0.5) - 1) }, def.t);
+    return { def };
   }
 
-  function logoNou(def, strat) {
+  // Logo: fișierul oficial (media/brand/logo.svg, injectat de randare) dacă există, altfel doar wordmark tipografic.
+  function logo(def, strat, tl) {
     const box = el('div', 'logo', strat);
     box.style.top = def.y + 'px';
-    const svg = svgEl('svg', { width: 110, height: 110, viewBox: '0 0 100 100' }, box);
-    svgEl('path', { d: 'M12 48 L50 16 L88 48 L88 88 L12 88 Z', fill: 'none', stroke: '#22c55e', 'stroke-width': 8, 'stroke-linejoin': 'round' }, svg);
-    const bifa = svgEl('path', { d: 'M32 60 L45 73 L70 46', fill: 'none', stroke: '#f8fafc', 'stroke-width': 9, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', pathLength: 1, 'stroke-dasharray': 1 }, svg);
-    const nume = el('div', 'nume', box);
-    nume.innerHTML = 'Verifi<b>Casa</b>';
-    nume.dataset.text = 'VerifiCasa';
-    return {
-      def, nod: box,
-      update(a) {
-        const s = a - def.t;
-        box.style.visibility = s < 0 ? 'hidden' : 'visible';
-        box.style.opacity = clamp(s / 0.2);
-        box.style.transform = `scale(${lerp(0.8, 1, prog(s, 0, 0.35, ease.outBack))})`;
-        bifa.setAttribute('stroke-dashoffset', 1 - prog(s, 0.2, 0.4));
-      },
-    };
+    if (window.__LOGO) {
+      const img = el('img', '', box);
+      img.src = window.__LOGO;
+      img.style.height = (def.inaltime || 120) + 'px';
+    } else {
+      const nume = el('div', 'nume', box);
+      nume.innerHTML = 'Verifi<b>Casa</b>';
+      nume.dataset.text = 'VerifiCasa';
+    }
+    tl.fromTo(box, { autoAlpha: 0, scale: 0.8 }, { autoAlpha: 1, scale: 1, duration: 0.4, ease: 'back.out(1.7)' }, def.t);
+    return { def };
   }
 
+  const FABRICI = { text, contor, marcaj, bare, lista, punct, logo };
+
   // ---------- scenă ----------
+
+  const stare = { scene: [], total: 0 };
 
   async function construieste(radacina, scenariu) {
     await Promise.all([500, 600, 700, 800, 900].map((w) => document.fonts.load(`${w} 100px "VC Display"`)));
@@ -252,30 +234,26 @@
       wrap.dataset.scena = sc.id;
       const fundal = el('div', `fundal ${sc.fundal || 'inchis'}`, wrap);
       const strat = el('div', 'strat' + (sc.fundal === 'galben' ? ' pe-galben' : ''), wrap);
+      const tl = gsap.timeline({ paused: true });
       const elemente = [];
       for (const def of sc.elemente) {
-        let e;
-        if (def.tip === 'text') e = textNou(def, strat);
-        else if (def.tip === 'contor') e = contorNou(def, strat);
-        else if (def.tip === 'marcaj') e = marcajNou(def, strat, elemente);
-        else if (def.tip === 'bare') e = bareNou(def, strat);
-        else if (def.tip === 'lista') e = listaNou(def, strat);
-        else if (def.tip === 'punct') e = punctNou(def, strat, sc.durata);
-        else if (def.tip === 'logo') e = logoNou(def, strat);
-        else throw new Error(`Tip de element necunoscut: ${def.tip}`);
-        elemente.push(e);
+        const f = FABRICI[def.tip];
+        if (!f) throw new Error(`Tip de element necunoscut: ${def.tip}`);
+        elemente.push(f(def, strat, tl, def.tip === 'marcaj' ? elemente : sc.durata));
       }
-      scene.push({ sc, wrap, fundal, strat, elemente, start });
+      scene.push({ sc, wrap, fundal, strat, elemente, tl, start, slam: sc.elemente.filter((e) => e.intrare === 'slam').map((e) => e.t) });
       start += sc.durata;
     }
-    // Măsurăm marcajele după ce fonturile și layout-ul sunt gata, cu toate scenele vizibile și fără transformări.
+    // Formele marcajelor se construiesc din casetele măsurate la crearea elementelor (fonturi încărcate, fără transformări).
     for (const s of scene) for (const e of s.elemente) if (e.masoara) e.masoara();
+    for (const s of scene) s.tl.set({}, {}, s.sc.durata); // timeline-ul acoperă toată scena
     stare.scene = scene;
     stare.total = start;
     render(0);
   }
 
-  const stare = { scene: [], total: 0 };
+  const easeCam = gsap.parseEase('power3.out');
+  const easeRevenire = gsap.parseEase('expo.out');
 
   function render(t) {
     const { scene } = stare;
@@ -287,7 +265,7 @@
     const sr = s.sc.speed_ramp;
     const a = T.warp(u, sr);
 
-    // Fundal în mișcare continuă.
+    // Fundal în mișcare continuă, lent, ca să nu concureze cu textul.
     s.fundal.style.setProperty('--gx', `${50 + 12 * Math.sin(t * 0.7)}%`);
     s.fundal.style.setProperty('--gy', `${35 + 6 * Math.cos(t * 0.5)}%`);
     s.fundal.style.setProperty('--grila', `${(t * 36) % 120}px`);
@@ -299,25 +277,22 @@
     let blur = tr.blur;
     if (sr) {
       const d = sr.la - sr.de;
-      if (u >= sr.de && u < sr.la) zoom *= 1 + 0.12 * ease.outCubic((u - sr.de) / d);
-      else if (u >= sr.la) zoom *= 1 + 0.12 * (1 - prog(u, sr.la, 0.35, ease.outExpo));
+      if (u >= sr.de && u < sr.la) zoom *= 1 + 0.12 * easeCam((u - sr.de) / d);
+      else if (u >= sr.la) zoom *= 1 + 0.12 * (1 - easeRevenire(clamp((u - sr.la) / 0.35)));
       blur += 7 * T.faza_rapida(u, sr);
     }
     let sx = 0, sy = 0;
-    for (const e of s.elemente) {
-      if (e.def.intrare !== 'slam') continue;
-      const k = a - e.def.t;
+    for (const ts of s.slam) {
+      const k = a - ts;
       if (k >= 0 && k < 0.28) {
         const amp = 16 * (1 - k / 0.28);
         sx += amp * Math.sin(k * 95);
         sy += amp * Math.cos(k * 77);
       }
     }
-    s.strat.style.transform = `translate(${tr.x + sx}px, ${sy}px) scale(${tr.scale * zoom})`;
-    s.strat.style.opacity = tr.opacity;
-    s.strat.style.filter = blur > 0.2 ? `blur(${blur.toFixed(2)}px)` : 'none';
+    gsap.set(s.strat, { x: tr.x + sx, y: sy, scale: tr.scale * zoom, opacity: tr.opacity, filter: blur > 0.2 ? `blur(${blur.toFixed(2)}px)` : 'none' });
 
-    for (const e of s.elemente) e.update(a);
+    s.tl.time(a, false);
   }
 
   window.Motor = { construieste };
