@@ -66,3 +66,29 @@ deci Reel-ul se înțelege fără sunet.
 - **Logo oficial:** de pus în `media/brand/logo.svg`.
 - **Buclă la final:** outro-ul nu se leagă vizual de primul cadru. O variantă: ultimul cadru trece în galbenul din hook. De decis după prima vizionare.
 - **Neaplicate, intenționat:** dark/light mode, `prefers-reduced-motion` și regulile de layout pentru site-uri din `design-taste-frontend` țin de pagini web, nu de un video randat. Validarea de publicare din `platform-specs-and-validation` ține de WoopSocial; aici nu se publică nimic.
+
+## v3: voce nouă și mai mult motion
+
+Feedback Andrei: vocea suna artificial, prea puține efecte vizuale.
+
+- **Voce:** Madie (făcută pentru Reels) pe `eleven_v4`, cu indicații de interpretare, la tempo natural.
+  v1 era accelerată 8% și cu pauzele tăiate, ceea ce o făcea să sune mecanic.
+- **Sincronizare pe cuvinte:** transcriere Scribe cu timp per cuvânt; textul apare exact când e rostit.
+- **Efecte noi, din referințele din ghid:**
+
+| Efect | Unde | Referință |
+|---|---|---|
+| Fundal galben → albastru, tăietură cu flash | hook | Matt Lou (galben și albastru, contrast puternic) |
+| Typewriter cu cursor | „De la atacul de la”, „Fără extras…”, „Cere extras…”, „@verificasaro” | kinetic type |
+| Undă de șoc + tremur la slam | ATENȚIE, CADASTRU, ANCPI, actualizat | impact pe beat |
+| Cifra își schimbă culoarea galben → roșu pe „scăzut” | −33% | Matt Lou (cuvinte care își schimbă culoarea) |
+| Highlight de marker, rând cu rând | „peste o treime”, „Cere extras…”, „Date: SVN România” | marcaje pe elementele-cheie |
+| Glitch RGB | RANSOMWARE | atacul cibernetic |
+| Diagramă orbitală: ANCPI în centru, notari / bănci / cumpărători primesc X roșu | scena „notari” | Pooya Taheri (diagrame orbitale) |
+| Cuvinte care se întorc 3D | „Rezultatul?”, „întârzieri” | tranziții de text |
+| Mască | „București-Ilfov”, „piața a stat pe loc”, surse | PartoMotion (text care apare elegant) |
+| Ieșiri kinetice (textul pleacă înainte de tăietură) | 7 din 11 scene | text kinetic: intrare, ieșire |
+| Particule care plutesc | fundalurile închise și albastre | grafică în mișcare continuă |
+
+- **Sunet:** 9 efecte sintetizate (inclusiv riser + boom pe cifră și taste la typewriter) și un fundal de 100 BPM
+  care coboară sub voce. Loudness final -15 LUFS.

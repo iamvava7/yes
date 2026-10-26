@@ -69,6 +69,15 @@
         const e = ease.outExpo(p);
         return { scale: 1, x: lerp(1080, 0, e), opacity: 1, blur: lerp(14, 0, e) };
       }
+      case 'flash': {
+        // tăietură cu un cadru alb care se stinge rapid
+        const e = ease.outExpo(p);
+        return { scale: lerp(1.15, 1, e), x: 0, opacity: 1, blur: 0, flash: clamp(1 - u / 0.18) * 0.85 };
+      }
+      case 'rotire': {
+        const e = ease.outExpo(p);
+        return { scale: lerp(1.5, 1, e), x: 0, opacity: clamp(p * 3), blur: lerp(8, 0, e), rotatie: lerp(-10, 0, e) };
+      }
       case 'estompare': {
         const q = clamp(u / 0.45);
         return { scale: lerp(1.04, 1, q), x: 0, opacity: q, blur: 0 };
@@ -86,13 +95,16 @@
       out.push({ t: start, scena: sc.id, ce: 'scena' });
       for (const el of sc.elemente || []) {
         const timpi = [el.t];
-        for (const sub of el.bare || el.puncte || []) timpi.push(sub.t);
+        for (const sub of el.bare || el.puncte || el.noduri || []) { timpi.push(sub.t); if (sub.blocat != null) timpi.push(sub.blocat); }
+        for (const c of el.culori || []) timpi.push(c.t);
         if (el.diferenta) timpi.push(el.diferenta.t);
+        if (el.alerta != null) timpi.push(el.alerta);
         for (const tt of new Set(timpi)) {
           if (typeof tt !== 'number') continue;
           out.push({ t: start + unwarp(tt, sc.speed_ramp), scena: sc.id, ce: el.tip });
         }
       }
+      if (sc.iesire) out.push({ t: start + sc.durata - 0.32, scena: sc.id, ce: 'iesire' });
       start += sc.durata;
     }
     return out.sort((a, b) => a.t - b.t);
@@ -103,11 +115,29 @@
     const out = [];
     let start = 0;
     for (const sc of scenariu.scene) {
-      if (start > 0) out.push({ t: Math.max(0, start - 0.12), sunet: 'whoosh' });
+      if (start > 0) out.push({ t: Math.max(0, start - 0.12), sunet: sc.tranzitie === 'flash' ? 'impact' : 'whoosh' });
       for (const el of sc.elemente || []) {
         const t = (x) => start + unwarp(x, sc.speed_ramp);
         if (el.tip === 'text' && el.intrare === 'slam') out.push({ t: t(el.t), sunet: 'impact' });
-        if (el.tip === 'contor') out.push({ t: t(el.t + (el.durata_anim ?? 1.2)), sunet: 'impact' });
+        if (el.tip === 'text' && el.intrare === 'masina') {
+          // un clic de tastă la fiecare a doua literă, ca să nu devină zgomot
+          const n = el.text.length, cps = el.viteza || 22;
+          for (let i = 0; i < n; i += 2) out.push({ t: t(el.t + i / cps), sunet: 'tasta' });
+        }
+        if (el.tip === 'text' && (el.intrare === 'masca' || el.intrare === 'rotire')) out.push({ t: t(el.t), sunet: 'swish' });
+        if (el.efect === 'glitch') out.push({ t: t(el.t), sunet: 'glitch' });
+        for (const c of el.culori || []) out.push({ t: t(c.t), sunet: 'click' });
+        if (el.tip === 'contor') {
+          out.push({ t: t(el.t), sunet: 'riser' });
+          out.push({ t: t(el.t + (el.durata_anim ?? 1.2)), sunet: 'boom' });
+        }
+        if (el.tip === 'orbita') {
+          out.push({ t: t(el.t), sunet: 'whoosh' });
+          for (const nd of el.noduri || []) {
+            out.push({ t: t(nd.t), sunet: 'pop' });
+            if (nd.blocat != null) out.push({ t: t(nd.blocat), sunet: 'glitch' });
+          }
+        }
         if (el.tip === 'marcaj') out.push({ t: t(el.t), sunet: 'click' });
         for (const p of el.puncte || []) out.push({ t: t(p.t), sunet: 'click' });
         for (const b of el.bare || []) out.push({ t: t(b.t), sunet: 'whoosh' });

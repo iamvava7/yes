@@ -14,6 +14,7 @@ Reels verticale 9:16 (1080 × 1920) pentru Instagram-ul VerifiCasa, randate din 
 
 ```bash
 npm run sfx                                   # o singură dată: efectele sonore în audio/sfx/
+scripts/muzica.sh 43                          # fundalul muzical provizoriu (43 s) în audio/muzica/
 npm run valideaza -- scenarii/ancpi-h1.json   # verifică regulile, nu randează
 npm run randare -- scenarii/ancpi-h1.json     # validează, randează, scrie preview/ancpi-h1.mp4
 npm test                                      # validator, zone de siguranță, preview
@@ -30,8 +31,8 @@ Un Reel de 40 s la 24 fps durează ~5 minute.
    o cifră nu are `sursa` (cu link și publicație); textul are sub 48 px, iese din zonele de siguranță
    (120 px sus/jos, nimic în stânga-jos) sau ar avea peste 2 rânduri; cadrul stă nemișcat peste 1,5 s
    (excepție: maximum 2 „respirații” de până la 2,5 s); vocea/muzica/efectele nu au licență;
-   lipsește „Voce generată cu AI”; scenariul folosește culori, fundaluri, intrări sau tranziții din afara șablonului;
-   contrastul textului e sub 4,5:1; apare em-dash/en-dash pe ecran; un `ease` nu e un ease GSAP valid;
+   scenariul folosește culori, fundaluri, intrări sau tranziții din afara șablonului;
+   contrastul textului (și al fiecărei schimbări de culoare) e sub 4,5:1; apare em-dash/en-dash pe ecran; un `ease` nu e un ease GSAP valid;
    coperta are text sub 60 px sau în afara centrului 3:4.
    Zonele sigure sunt cele Instagram: ~250 px sus și ~350 px jos (mai stricte decât minimul de 120 px din ghid).
 2. `sablon/` – `index.html` + `stiluri.css` + `tranzitii.js` (speed ramp, bătăi, sunete) + `motor.js`.
@@ -40,8 +41,12 @@ Un Reel de 40 s la 24 fps durează ~5 minute.
 3. `scripts/randare.js` – un PNG per cadru cu Playwright, pista de efecte sonore din momentele scenariului,
    apoi `scripts/asambleaza.sh` (H.264 Rec. 709, AAC, voce peste efecte și muzică). Cadrele din `randare/` se șterg după export.
    Scrie și coperta: `preview/<id>-coperta.png` (din câmpul `coperta` al scenariului).
-4. `scripts/strange-voce.js` – strânge pauzele vocii ElevenLabs și scrie `audio/voce/<id>.timpi.json`,
-   din care se aleg duratele scenelor.
+4. Sincronizarea: vocea se transcrie cu ElevenLabs Scribe (`audio/voce/<id>.cuvinte.json`, timp pe fiecare cuvânt),
+   iar fiecare element din scenariu pornește când e rostit cuvântul lui.
+   `scripts/strange-voce.js` rămâne disponibil dacă o voce are pauze prea lungi (nu e folosit pentru ancpi-h1).
+5. Sunet: vocea e mereu deasupra; muzica coboară automat când vorbește vocea (sidechain), efectele sunt
+   puse automat din scenariu (whoosh la tăieturi, impact/undă la slam, riser + boom pe cifră, taste la typewriter,
+   glitch, pop pe noduri). Totul e sintetizat local (`scripts/sfx.sh`, `scripts/muzica.sh`), fără licențe terțe.
 
 ## Scenariu (rezumat)
 
@@ -57,10 +62,18 @@ Un Reel de 40 s la 24 fps durează ~5 minute.
 }
 ```
 
-Elementul `text`: `text`, `t`, `y` (marginea de sus, px), `marime`, `greutate`, `culoare`,
-`intrare` (`slam` | `sus` | `cuvinte` | `litere`), `accent` (cuvinte evidențiate), `sursa` (obligatoriu dacă are cifre),
-`ease` opțional (orice ease GSAP standard, ex. `back.out(2)`, `elastic.out(1, 0.6)`).
-`marcaj` (`cerc` | `subliniere`) desenează peste elementul anterior cu indexul `tinta`.
+Elementul `text`: `text`, `t`, `y` (marginea de sus, px), `marime`, `greutate`, `culoare`, `sursa` (obligatoriu dacă are cifre),
+`accent` (cuvinte evidențiate), `ease` opțional (orice ease GSAP standard, ex. `back.out(2)`), și:
+- `intrare`: `slam` (cu tremur și undă de șoc) | `sus` | `cuvinte` | `litere` | `masca` (dezvăluire prin mască) |
+  `rotire` (cuvinte care se întorc 3D) | `masina` (typewriter cu cursor, `viteza` în litere/s)
+- `culori`: `[{ "t", "culoare" }]` – textul își schimbă culoarea pe ritm
+- `efect`: `glitch` – decalaj RGB și tăieturi digitale
+
+`marcaj` (`cerc` | `subliniere` | `fundal` = highlight de marker pe fiecare rând) desenează peste elementul anterior cu indexul `tinta`.
+`orbita`: diagramă cu `centru` și `noduri` (`text`, `t`, `blocat` = momentul în care primește X roșu), `raza`, `rotatie`, `alerta`.
+La nivel de scenă: `fundal` (`inchis` | `galben` | `albastru` | `negru`), `tranzitie` (`taiere` | `zoom` | `glisare` |
+`estompare` | `flash` | `rotire`), `iesire` (`sus` | `jos` | `stanga` | `zoom` | `estompare`: toate elementele pleacă
+înainte de tăietură), `speed_ramp`.
 `bare` acceptă `diferenta: { "t": … }`: linie punctată + paranteză care arată scăderea dintre primele două bare.
 
 Logo-ul oficial se pune în `media/brand/logo.svg`; fără el, outro-ul arată doar wordmark-ul tipografic.

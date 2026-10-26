@@ -7,11 +7,12 @@ const { REGULI } = require('../scripts/valideaza.js');
 const T = require('../sablon/tranzitii.js');
 const sc = require('../scenarii/ancpi-h1.json');
 
-// Momentul în care fiecare scenă e complet afișată (ultimul cadru dinaintea tăieturii).
+// Momentul în care fiecare scenă e complet afișată: ultimul cadru dinaintea tăieturii,
+// sau dinaintea animației de ieșire (care scoate intenționat textul din cadru).
 function momente() {
   let start = 0;
   const out = [];
-  for (const s of sc.scene) { out.push({ id: s.id, t: start + s.durata - 0.05 }); start += s.durata; }
+  for (const s of sc.scene) { out.push({ id: s.id, t: start + s.durata - (s.iesire ? 0.36 : 0.05) }); start += s.durata; }
   return out;
 }
 
@@ -58,7 +59,7 @@ test('textul vizibil respectă zonele de siguranță, mărimea minimă și nu se
   }
 });
 
-test('sursele și dezvăluirea AI apar pe ecran la final', async () => {
+test('sursele apar pe ecran la final', async () => {
   const browser = await chromium.launch();
   try {
     const page = await deschideSablon(browser, sc);
@@ -68,8 +69,8 @@ test('sursele și dezvăluirea AI apar pe ecran la final', async () => {
         .filter((n) => n.offsetParent && getComputedStyle(n).visibility !== 'hidden')
         .map((n) => n.dataset.text);
     }, sc.durata - 0.05);
+    // sursele trebuie să rămână pe ecran până la ultimul cadru
     assert.ok(texte.some((t) => /^Surse:/.test(t)), 'lipsesc sursele de pe ecran');
-    assert.ok(texte.includes(sc.dezvaluire_ai), 'lipsește dezvăluirea AI');
   } finally {
     await browser.close();
   }

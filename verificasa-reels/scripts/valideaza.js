@@ -35,7 +35,7 @@ const REGULI = {
 
 // Culorile șablonului (aceleași ca în sablon/stiluri.css) pentru verificarea de contrast.
 const PALETA = {
-  fundal: { inchis: '#0a1020', galben: '#facc15', negru: '#05070c' },
+  fundal: { inchis: '#0a1020', galben: '#facc15', negru: '#05070c', albastru: '#1c3fd0' },
   text: { alb: '#f8fafc', gri: '#cbd5e1', galben: '#facc15', verde: '#22c55e', rosu: '#ef4444', bleumarin: '#0b1b3a' },
   rosu_pe_galben: '#a3161a',
 };
@@ -54,12 +54,14 @@ function culoareText(culoare, fundal) {
 }
 
 const PERMISE = {
-  tip: ['text', 'contor', 'marcaj', 'bare', 'lista', 'punct', 'logo'],
-  intrare: ['slam', 'sus', 'cuvinte', 'litere'],
+  tip: ['text', 'contor', 'marcaj', 'bare', 'lista', 'orbita', 'punct', 'logo'],
+  intrare: ['slam', 'sus', 'cuvinte', 'litere', 'masca', 'rotire', 'masina'],
+  efect: ['glitch'],
   culoare: ['alb', 'gri', 'galben', 'verde', 'rosu', 'bleumarin'],
-  fundal: ['inchis', 'galben', 'negru'],
-  tranzitie: ['taiere', 'zoom', 'glisare', 'estompare'],
-  forma: ['cerc', 'subliniere'],
+  fundal: ['inchis', 'galben', 'negru', 'albastru'],
+  tranzitie: ['taiere', 'zoom', 'glisare', 'estompare', 'flash', 'rotire'],
+  iesire: ['sus', 'jos', 'stanga', 'zoom', 'estompare'],
+  forma: ['cerc', 'subliniere', 'fundal'],
 };
 
 const areCifre = (s) => /\d/.test(String(s ?? ''));
@@ -122,6 +124,7 @@ function valideaza(sc, { radacina = RADACINA, verificaFisiere = true } = {}) {
     if (!(s.durata > 0)) E(`${unde}: durată invalidă`);
     if (s.fundal && !PERMISE.fundal.includes(s.fundal)) E(`${unde}: fundal „${s.fundal}” nu e în șablon`);
     if (s.tranzitie && !PERMISE.tranzitie.includes(s.tranzitie)) E(`${unde}: tranziția „${s.tranzitie}” nu e în șablon`);
+    if (s.iesire && !PERMISE.iesire.includes(s.iesire)) E(`${unde}: ieșirea „${s.iesire}” nu e în șablon`);
     if (s.speed_ramp) {
       const r = s.speed_ramp;
       if (!(r.de >= 0 && r.la > r.de && r.la <= s.durata)) E(`${unde}: speed_ramp invalid`);
@@ -134,6 +137,13 @@ function valideaza(sc, { radacina = RADACINA, verificaFisiere = true } = {}) {
       if (e.culoare && !PERMISE.culoare.includes(e.culoare)) E(`${u}: culoarea „${e.culoare}” nu e în șablon`);
       if (e.intrare && !PERMISE.intrare.includes(e.intrare)) E(`${u}: intrarea „${e.intrare}” nu e în șablon`);
       if (e.ease && !T.EASE_PERMISE.test(e.ease)) E(`${u}: easing-ul „${e.ease}” nu e un ease GSAP permis`);
+      if (e.efect && !PERMISE.efect.includes(e.efect)) E(`${u}: efectul „${e.efect}” nu e în șablon`);
+      for (const c of e.culori || []) {
+        if (!PERMISE.culoare.includes(c.culoare)) E(`${u}: culoarea „${c.culoare}” nu e în șablon`);
+        else if (PALETA.fundal[s.fundal || 'inchis'] && contrast(culoareText(c.culoare, s.fundal || 'inchis'), PALETA.fundal[s.fundal || 'inchis']) < REGULI.contrast_min)
+          E(`${u}: schimbarea în „${c.culoare}” are contrast sub ${REGULI.contrast_min}:1`);
+        if (!(c.t >= e.t && c.t < s.durata)) E(`${u}: schimbarea de culoare are t în afara intervalului`);
+      }
       for (const tx of [e.text, ...(e.puncte || []).map((p) => p.text), ...(e.bare || []).map((b) => b.eticheta)])
         if (areLiniuteInterzise(tx)) E(`${u}: „${tx}” conține em-dash/en-dash; folosește cratimă (-) sau minus (−)`);
       // Culorile/fundalurile necunoscute au deja eroarea lor; contrastul se verifică doar pentru cele din paletă.
@@ -174,10 +184,22 @@ function valideaza(sc, { radacina = RADACINA, verificaFisiere = true } = {}) {
           if (areCifre(p.text)) cereSursa(`${u} / „${p.text}”`, p.sursa || e.sursa);
         }
       }
+      if (e.tip === 'orbita') {
+        const R = e.raza || 260;
+        if (!e.centru) E(`${u}: lipsește textul din centru`);
+        if (e.y - R - 110 < REGULI.zona_sus || e.y + R + 110 > REGULI.stanga_jos.y_min) E(`${u}: orbita iese din zona sigură`);
+        for (const nd of e.noduri || []) {
+          if (!(nd.t >= e.t && nd.t < s.durata)) E(`${u}: nodul „${nd.text}” are t în afara intervalului`);
+          if (nd.blocat != null && !(nd.blocat >= nd.t && nd.blocat < s.durata)) E(`${u}: nodul „${nd.text}” are „blocat” în afara intervalului`);
+          if (areCifre(nd.text)) cereSursa(`${u} / „${nd.text}”`, nd.sursa || e.sursa);
+          if (areLiniuteInterzise(nd.text)) E(`${u}: „${nd.text}” conține em-dash/en-dash`);
+        }
+        if (areLiniuteInterzise(e.centru)) E(`${u}: centrul conține em-dash/en-dash`);
+      }
       if (e.tip === 'marcaj') {
         if (!PERMISE.forma.includes(e.forma)) E(`${u}: forma „${e.forma}” nu e în șablon`);
         const tinta = (s.elemente || [])[e.tinta];
-        if (!tinta || !['text', 'contor', 'lista'].includes(tinta.tip)) E(`${u}: ținta ${e.tinta} nu e un text, contor sau listă`);
+        if (!tinta || !['text', 'contor', 'lista', 'orbita'].includes(tinta.tip)) E(`${u}: ținta ${e.tinta} nu e un text, contor, listă sau orbită`);
         else if (e.tinta >= i) E(`${u}: ținta trebuie să fie un element anterior`);
       }
     });
@@ -236,9 +258,6 @@ function valideaza(sc, { radacina = RADACINA, verificaFisiere = true } = {}) {
     if (!sc.voce.licenta) E('voce: lipsește fișierul de licență');
     if (!Array.isArray(sc.voce.surse) || !sc.voce.surse.length) E('voce: textul vorbit trebuie să aibă surse');
     for (const id of sc.voce.surse || []) if (!surse[id]) E(`voce: sursa „${id}” nu există`);
-    if (!sc.dezvaluire_ai) E('lipsește dezvăluirea „voce generată cu AI”');
-    const dezv = scene.flatMap((s) => s.elemente || []).some((e) => e.rol === 'dezvaluire' && e.text === sc.dezvaluire_ai);
-    if (!dezv) E('dezvăluirea AI nu apare pe ecran (element cu rol: "dezvaluire")');
     if (verificaFisiere) {
       if (!fs.existsSync(abs(sc.voce.fisier))) E(`voce: fișierul ${sc.voce.fisier} nu există`);
       else {

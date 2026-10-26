@@ -8,26 +8,30 @@
     1080,
     1920
   ],
-  "durata": 40.0,
+  "durata": 42.0,
   "voce": {
     "fisier": "audio/voce/ancpi-h1.wav",
-    "original": "audio/voce/ancpi-h1_takeA.mp3",
+    "original": "audio/voce/ancpi-h1_madie_A.mp3",
+    "cuvinte": "audio/voce/ancpi-h1.cuvinte.json",
     "licenta": "audio/voce/LICENTA.md",
     "furnizor": "ElevenLabs",
-    "voice_id": "EpCJUPBmxaSIYf1mZp3t",
-    "voce_nume": "Eva - Calm, Warm and Friendly",
-    "model": "eleven_multilingual_v2",
-    "text": "Atenție: de la atacul de la cadastru, vânzările de locuințe din București și Ilfov au scăzut cu peste o treime. Pe paisprezece iulie, un atac ransomware a oprit sistemele ANCPI. Fără extras de carte funciară, notarii nu au mai putut autentifica acte. Aproape o lună, piața a stat pe loc. În trimestrul trei, vânzările au scăzut cu treizeci și trei la sută față de anul trecut, arată datele SVN România. Pentru cumpărători, asta înseamnă întârzieri la acte și la credite. Dacă ești în plină tranzacție, cere un extras de carte funciară actualizat înainte să semnezi. Urmărește VerifiCasa pentru ce urmează.",
+    "voice_id": "QGk6UMZazFYyWEsvSHfA",
+    "voce_nume": "Madie - Romanian ads & shortform content",
+    "model": "eleven_v4",
+    "text": "[serious] Atenție! De la atacul de la cadastru, vânzările de locuințe din București și Ilfov au scăzut cu peste o treime. Pe 14 iulie, un atac ransomware a oprit sistemele ANCPI. Fără extras de carte funciară, notarii nu au mai putut autentifica acte... aproape o lună. Rezultatul? În trimestrul trei, vânzările au scăzut cu 33% față de anul trecut, arată datele SVN România. Pentru cumpărători, asta înseamnă întârzieri la acte și la credite. [curious] Ești în plină tranzacție? [warmly] Cere un extras de carte funciară actualizat, înainte să semnezi. Urmărește VerifiCasa pentru ce urmează.",
     "surse": [
       "svn-cotidianul",
       "ancpi-atac"
     ]
   },
-  "muzica": null,
+  "muzica": {
+    "fisier": "audio/muzica/puls-100bpm.wav",
+    "licenta": "audio/muzica/puls-100bpm.LICENTA.md",
+    "nota": "fundal provizoriu sintetizat local; se înlocuiește cu o piesă licențiată"
+  },
   "sfx": {
     "licenta": "audio/sfx/LICENTA.md"
   },
-  "dezvaluire_ai": "Voce generată cu AI",
   "surse": {
     "svn-cotidianul": {
       "publicatie": "Cotidianul (date SVN România)",
@@ -46,10 +50,10 @@
       "titlu": "Atac cibernetic la ANCPI: e-Terra blocată din 14 iulie 2026",
       "url": "https://extrasul.ro/carte-funciara/atac-cibernetic-ancpi-eterra-blocaj-iulie-2026",
       "confirmari": [
-        "https://hotnews.ro/atacul-cibernetic-asupra-ancpi-cine-plateste-factura-pietei-imobiliare-blocate-2319549",
-        "https://blog.napocaimobiliare.ro/2026/07/27/atacul-cibernetic-asupra-ancpi-ce-trebuie-sa-stie-proprietarii-si-cumparatorii-de-imobile/"
+        "https://blog.napocaimobiliare.ro/2026/07/27/atacul-cibernetic-asupra-ancpi-ce-trebuie-sa-stie-proprietarii-si-cumparatorii-de-imobile/",
+        "https://hotnews.ro/atacul-cibernetic-asupra-ancpi-cine-plateste-factura-pietei-imobiliare-blocate-2319549"
       ],
-      "afirmatie": "Atac ransomware asupra ANCPI pe 14 iulie 2026; e-Terra și emiterea extraselor de carte funciară oprite; e-Terra repornită etapizat pe 11-12 august, după 28 de zile.",
+      "afirmatie": "Atac ransomware asupra ANCPI pe 14 iulie 2026; e-Terra și emiterea extraselor de carte funciară oprite; e-Terra repornită etapizat pe 11-12 august, după 28 de zile. Notarii nu au putut autentifica acte, iar băncile nu au putut acorda credite ipotecare (HotNews).",
       "verificat": "partial",
       "nota": "Data confirmată de mai multe surse în rezultatele căutării; paginile nu au putut fi deschise direct din container."
     }
@@ -110,8 +114,8 @@
   },
   "scene": [
     {
-      "id": "hook",
-      "durata": 2.0,
+      "id": "hook-a",
+      "durata": 1.1,
       "fundal": "galben",
       "tranzitie": "taiere",
       "elemente": [
@@ -119,45 +123,56 @@
           "tip": "text",
           "text": "ATENȚIE",
           "t": 0.0,
-          "y": 600,
-          "marime": 210,
+          "y": 780,
+          "marime": 220,
           "greutate": 900,
           "intrare": "slam",
           "culoare": "bleumarin"
+        }
+      ]
+    },
+    {
+      "id": "hook-b",
+      "durata": 1.8,
+      "fundal": "albastru",
+      "tranzitie": "flash",
+      "iesire": "zoom",
+      "elemente": [
+        {
+          "tip": "text",
+          "text": "De la atacul de la",
+          "t": 0.06,
+          "y": 640,
+          "marime": 76,
+          "greutate": 700,
+          "intrare": "masina",
+          "viteza": 24,
+          "culoare": "alb"
         },
         {
           "tip": "text",
-          "text": "Cadastrul",
-          "t": 0.75,
-          "y": 870,
-          "marime": 140,
-          "greutate": 800,
-          "intrare": "sus",
-          "culoare": "bleumarin"
-        },
-        {
-          "tip": "text",
-          "text": "s-a blocat",
-          "t": 1.25,
-          "y": 1030,
-          "marime": 140,
+          "text": "CADASTRU",
+          "t": 0.92,
+          "y": 760,
+          "marime": 180,
           "greutate": 900,
           "intrare": "slam",
-          "culoare": "rosu"
+          "culoare": "galben"
         }
       ]
     },
     {
       "id": "cifra",
-      "durata": 4.8,
+      "durata": 4.9,
       "fundal": "inchis",
       "tranzitie": "zoom",
+      "iesire": "sus",
       "elemente": [
         {
           "tip": "text",
           "text": "Vânzări de locuințe",
-          "t": 0.0,
-          "y": 520,
+          "t": 0.02,
+          "y": 470,
           "marime": 72,
           "greutate": 700,
           "intrare": "cuvinte",
@@ -169,57 +184,68 @@
           "la": 33,
           "prefix": "−",
           "sufix": "%",
-          "t": 0.2,
+          "t": 0.1,
           "durata_anim": 1.0,
-          "y": 650,
+          "y": 600,
           "marime": 250,
           "culoare": "galben",
-          "sursa": "svn-cotidianul"
+          "sursa": "svn-cotidianul",
+          "culori": [
+            {
+              "t": 2.84,
+              "culoare": "rosu"
+            }
+          ]
         },
         {
           "tip": "marcaj",
           "forma": "cerc",
           "tinta": 1,
-          "t": 1.6,
+          "t": 1.2,
           "culoare": "verde"
         },
         {
           "tip": "text",
-          "text": "București-Ilfov · trimestrul III 2026",
-          "t": 2.6,
-          "y": 1010,
-          "marime": 56,
+          "text": "București-Ilfov · T3 2026",
+          "t": 1.38,
+          "y": 990,
+          "marime": 64,
           "greutate": 600,
-          "intrare": "sus",
+          "intrare": "masca",
           "culoare": "gri",
           "sursa": "svn-cotidianul"
         },
         {
           "tip": "text",
           "text": "peste o treime",
-          "t": 3.7,
+          "t": 3.48,
           "y": 1120,
-          "marime": 100,
-          "greutate": 800,
+          "marime": 110,
+          "greutate": 900,
           "intrare": "slam",
-          "culoare": "alb",
-          "accent": [
-            "treime"
-          ]
+          "culoare": "alb"
+        },
+        {
+          "tip": "marcaj",
+          "forma": "fundal",
+          "tinta": 4,
+          "t": 3.98,
+          "culoare": "galben"
         }
       ]
     },
     {
       "id": "atac",
-      "durata": 5.6,
+      "durata": 5.1,
       "fundal": "inchis",
       "tranzitie": "glisare",
+      "iesire": "zoom",
       "elemente": [
         {
           "tip": "text",
           "text": "14 iulie 2026",
-          "t": 0.1,
-          "y": 540,
+          "t": 0.18,
+          "y": 450,
           "marime": 150,
           "greutate": 900,
           "intrare": "slam",
@@ -228,46 +254,52 @@
         },
         {
           "tip": "text",
-          "text": "atac ransomware",
-          "t": 1.1,
-          "y": 760,
-          "marime": 110,
-          "greutate": 800,
-          "intrare": "cuvinte",
-          "culoare": "alb",
-          "accent": [
-            "ransomware"
-          ]
+          "text": "atac",
+          "t": 1.6,
+          "y": 660,
+          "marime": 80,
+          "greutate": 700,
+          "intrare": "masina",
+          "viteza": 18,
+          "culoare": "gri"
         },
         {
           "tip": "text",
-          "text": "pe sistemele ANCPI",
-          "t": 2.3,
-          "y": 940,
-          "marime": 90,
+          "text": "RANSOMWARE",
+          "t": 1.98,
+          "y": 760,
+          "marime": 130,
+          "greutate": 900,
+          "intrare": "slam",
+          "culoare": "rosu",
+          "efect": "glitch"
+        },
+        {
+          "tip": "text",
+          "text": "a oprit sistemele",
+          "t": 2.86,
+          "y": 990,
+          "marime": 76,
           "greutate": 700,
-          "intrare": "sus",
-          "culoare": "gri",
-          "accent": [
-            "ANCPI"
-          ]
+          "intrare": "cuvinte",
+          "culoare": "alb"
+        },
+        {
+          "tip": "text",
+          "text": "ANCPI",
+          "t": 3.88,
+          "y": 1090,
+          "marime": 160,
+          "greutate": 900,
+          "intrare": "slam",
+          "culoare": "galben"
         },
         {
           "tip": "marcaj",
           "forma": "subliniere",
-          "tinta": 2,
-          "t": 3.2,
-          "culoare": "verde"
-        },
-        {
-          "tip": "text",
-          "text": "e-Terra: oprită",
+          "tinta": 4,
           "t": 4.2,
-          "y": 1150,
-          "marime": 84,
-          "greutate": 700,
-          "intrare": "litere",
-          "culoare": "rosu"
+          "culoare": "verde"
         }
       ]
     },
@@ -276,49 +308,50 @@
       "durata": 4.7,
       "fundal": "inchis",
       "tranzitie": "zoom",
+      "iesire": "estompare",
       "elemente": [
         {
           "tip": "text",
           "text": "Fără extras de carte funciară",
           "t": 0.1,
-          "y": 560,
-          "marime": 92,
+          "y": 320,
+          "marime": 80,
           "greutate": 800,
-          "intrare": "litere",
+          "intrare": "masina",
+          "viteza": 24,
           "culoare": "alb"
         },
         {
-          "tip": "text",
-          "text": "notarii nu pot lucra",
-          "t": 1.4,
-          "y": 830,
-          "marime": 80,
-          "greutate": 600,
-          "intrare": "cuvinte",
-          "culoare": "gri"
-        },
-        {
-          "tip": "text",
-          "text": "tranzacții blocate",
-          "t": 2.7,
-          "y": 1010,
-          "marime": 120,
-          "greutate": 900,
-          "intrare": "slam",
-          "culoare": "rosu"
-        },
-        {
-          "tip": "marcaj",
-          "forma": "cerc",
-          "tinta": 2,
-          "t": 3.8,
-          "culoare": "verde"
+          "tip": "orbita",
+          "t": 1.2,
+          "y": 1000,
+          "raza": 300,
+          "centru": "ANCPI",
+          "rotatie": 20,
+          "alerta": 4.12,
+          "noduri": [
+            {
+              "text": "notari",
+              "t": 2.0,
+              "blocat": 3.3
+            },
+            {
+              "text": "bănci",
+              "t": 2.5,
+              "blocat": 3.6
+            },
+            {
+              "text": "cumpărători",
+              "t": 3.0,
+              "blocat": 3.9
+            }
+          ]
         }
       ]
     },
     {
       "id": "o-luna",
-      "durata": 2.4,
+      "durata": 1.5,
       "fundal": "negru",
       "tranzitie": "estompare",
       "elemente": [
@@ -330,7 +363,7 @@
         {
           "tip": "text",
           "text": "aproape o lună",
-          "t": 0.1,
+          "t": 0.16,
           "y": 880,
           "marime": 120,
           "greutate": 500,
@@ -340,26 +373,45 @@
         {
           "tip": "text",
           "text": "piața a stat pe loc",
-          "t": 1.2,
+          "t": 0.8,
           "y": 1060,
-          "marime": 72,
+          "marime": 64,
           "greutate": 500,
-          "intrare": "sus",
+          "intrare": "masca",
           "culoare": "gri"
         }
       ]
     },
     {
+      "id": "rezultat",
+      "durata": 1.3,
+      "fundal": "galben",
+      "tranzitie": "flash",
+      "elemente": [
+        {
+          "tip": "text",
+          "text": "Rezultatul?",
+          "t": 0.16,
+          "y": 820,
+          "marime": 140,
+          "greutate": 900,
+          "intrare": "rotire",
+          "culoare": "bleumarin"
+        }
+      ]
+    },
+    {
       "id": "grafic",
-      "durata": 7.0,
+      "durata": 7.3,
       "fundal": "inchis",
       "tranzitie": "glisare",
+      "iesire": "stanga",
       "elemente": [
         {
           "tip": "text",
           "text": "Vânzări locuințe · București-Ilfov",
-          "t": 0.0,
-          "y": 420,
+          "t": 0.06,
+          "y": 400,
           "marime": 64,
           "greutate": 700,
           "intrare": "cuvinte",
@@ -367,144 +419,172 @@
         },
         {
           "tip": "bare",
-          "t": 0.6,
-          "y": 560,
+          "t": 0.2,
+          "y": 540,
           "inaltime": 760,
           "sursa": "svn-cotidianul",
+          "diferenta": {
+            "t": 2.6
+          },
           "bare": [
             {
               "eticheta": "T3 2025",
               "valoare": 100,
-              "t": 0.6,
+              "t": 0.2,
               "culoare": "gri"
             },
             {
               "eticheta": "T3 2026",
               "valoare": 67,
-              "t": 1.8,
+              "t": 1.2,
               "culoare": "rosu"
             }
-          ],
-          "diferenta": {
-            "t": 2.8
-          }
+          ]
         },
         {
           "tip": "text",
           "text": "−33%",
-          "t": 3.1,
-          "y": 600,
+          "t": 2.6,
+          "y": 580,
           "x": 830,
           "marime": 130,
           "greutate": 900,
           "intrare": "slam",
           "culoare": "galben",
-          "sursa": "svn-cotidianul"
+          "sursa": "svn-cotidianul",
+          "culori": [
+            {
+              "t": 4.5,
+              "culoare": "rosu"
+            }
+          ]
         },
         {
           "tip": "text",
           "text": "schematic · T3 2025 = 100",
-          "t": 4.3,
-          "y": 1350,
+          "t": 3.8,
+          "y": 1330,
           "marime": 48,
           "greutate": 500,
-          "intrare": "sus",
+          "intrare": "masca",
           "culoare": "gri",
           "sursa": "svn-cotidianul"
         },
         {
           "tip": "text",
           "text": "Date: SVN România",
-          "t": 5.6,
-          "y": 1420,
+          "t": 5.96,
+          "y": 1400,
           "marime": 52,
-          "greutate": 600,
-          "intrare": "sus",
+          "greutate": 700,
+          "intrare": "masca",
+          "culoare": "verde"
+        },
+        {
+          "tip": "marcaj",
+          "forma": "fundal",
+          "tinta": 4,
+          "t": 6.3,
           "culoare": "verde"
         }
       ]
     },
     {
       "id": "cumparatori",
-      "durata": 4.5,
+      "durata": 4.3,
       "fundal": "inchis",
       "tranzitie": "zoom",
+      "iesire": "sus",
       "elemente": [
         {
           "tip": "text",
           "text": "Pentru cumpărători",
-          "t": 0.0,
-          "y": 620,
+          "t": 0.12,
+          "y": 470,
           "marime": 96,
           "greutate": 800,
           "intrare": "slam",
           "culoare": "alb"
         },
         {
+          "tip": "text",
+          "text": "întârzieri",
+          "t": 1.34,
+          "y": 640,
+          "marime": 140,
+          "greutate": 900,
+          "intrare": "rotire",
+          "culoare": "rosu"
+        },
+        {
           "tip": "lista",
-          "t": 0.6,
-          "y": 840,
-          "marime": 72,
+          "t": 2.78,
+          "y": 900,
+          "marime": 64,
           "puncte": [
             {
               "text": "acte amânate",
-              "t": 0.6
+              "t": 2.78
             },
             {
               "text": "credite întârziate",
-              "t": 1.6
-            },
-            {
-              "text": "mutare amânată",
-              "t": 2.6
+              "t": 3.46
             }
           ]
-        },
-        {
-          "tip": "marcaj",
-          "forma": "subliniere",
-          "tinta": 0,
-          "t": 3.6,
-          "culoare": "verde"
         }
       ]
     },
     {
       "id": "ce-faci",
-      "durata": 5.6,
+      "durata": 5.7,
       "fundal": "inchis",
-      "tranzitie": "glisare",
+      "tranzitie": "rotire",
       "speed_ramp": {
-        "de": 0.9,
-        "la": 2.0,
+        "de": 0.5,
+        "la": 1.0,
         "lent": 0.3
       },
       "elemente": [
         {
           "tip": "text",
           "text": "Ești în plină tranzacție?",
-          "t": 0.05,
-          "y": 560,
+          "t": 0.14,
+          "y": 470,
           "marime": 84,
           "greutate": 700,
           "intrare": "cuvinte",
           "culoare": "alb"
         },
         {
+          "tip": "marcaj",
+          "forma": "subliniere",
+          "tinta": 0,
+          "t": 0.9,
+          "culoare": "galben"
+        },
+        {
           "tip": "text",
           "text": "Cere extras de carte funciară",
-          "t": 1.0,
-          "y": 740,
-          "marime": 92,
+          "t": 1.82,
+          "y": 680,
+          "marime": 80,
           "greutate": 800,
-          "intrare": "sus",
+          "intrare": "masina",
+          "viteza": 20,
           "culoare": "alb"
+        },
+        {
+          "tip": "marcaj",
+          "forma": "fundal",
+          "tinta": 2,
+          "t": 3.2,
+          "culoare": "verde"
         },
         {
           "tip": "text",
           "text": "actualizat",
-          "t": 2.0,
-          "y": 990,
+          "t": 3.5,
+          "y": 920,
           "marime": 170,
           "greutate": 900,
           "intrare": "slam",
@@ -513,9 +593,9 @@
         {
           "tip": "text",
           "text": "înainte să semnezi",
-          "t": 3.2,
-          "y": 1220,
-          "marime": 96,
+          "t": 4.3,
+          "y": 1160,
+          "marime": 92,
           "greutate": 800,
           "intrare": "cuvinte",
           "culoare": "alb",
@@ -526,29 +606,29 @@
         {
           "tip": "marcaj",
           "forma": "subliniere",
-          "tinta": 3,
-          "t": 4.3,
+          "tinta": 5,
+          "t": 4.96,
           "culoare": "galben"
         }
       ]
     },
     {
       "id": "outro",
-      "durata": 3.4,
+      "durata": 4.3,
       "fundal": "inchis",
       "tranzitie": "zoom",
       "elemente": [
         {
           "tip": "logo",
-          "t": 0.05,
-          "y": 500,
+          "t": 0.14,
+          "y": 480,
           "inaltime": 170
         },
         {
           "tip": "text",
           "text": "Urmărește pentru ce urmează",
-          "t": 0.05,
-          "y": 740,
+          "t": 0.66,
+          "y": 720,
           "marime": 80,
           "greutate": 800,
           "intrare": "cuvinte",
@@ -557,33 +637,30 @@
         {
           "tip": "text",
           "text": "@verificasaro",
-          "t": 0.9,
-          "y": 960,
+          "t": 1.5,
+          "y": 940,
           "marime": 64,
           "greutate": 700,
-          "intrare": "sus",
+          "intrare": "masina",
+          "viteza": 16,
           "culoare": "verde"
         },
         {
           "tip": "text",
           "text": "Surse: SVN România (via Cotidianul), ANCPI, extrasul.ro",
-          "t": 1.6,
+          "t": 2.3,
           "y": 1150,
           "marime": 48,
           "greutate": 500,
-          "intrare": "sus",
+          "intrare": "masca",
           "culoare": "gri"
         },
         {
-          "tip": "text",
-          "text": "Voce generată cu AI",
-          "t": 2.4,
-          "y": 1330,
-          "marime": 48,
-          "greutate": 500,
-          "intrare": "sus",
-          "culoare": "gri",
-          "rol": "dezvaluire"
+          "tip": "marcaj",
+          "forma": "subliniere",
+          "tinta": 2,
+          "t": 3.2,
+          "culoare": "verde"
         }
       ]
     }
