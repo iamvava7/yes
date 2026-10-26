@@ -200,20 +200,28 @@
     return { def };
   }
 
-  // Logo: fișierul oficial (media/brand/logo.svg, injectat de randare) dacă există, altfel doar wordmark tipografic.
+  // Logo: simbolul oficial din media/brand/ (injectat de randare) + numele „VerifiCasa”.
+  // "doar_simbol": true afișează doar simbolul. Fără fișierul oficial rămâne doar wordmark-ul tipografic.
   function logo(def, strat, tl) {
     const box = el('div', 'logo', strat);
     box.style.top = def.y + 'px';
-    if (window.__LOGO) {
-      const img = el('img', '', box);
-      img.src = window.__LOGO;
-      img.style.height = (def.inaltime || 120) + 'px';
-    } else {
-      const nume = el('div', 'nume', box);
+    const peGalben = strat.classList.contains('pe-galben');
+    const src = window.__LOGO && (peGalben ? window.__LOGO.inchis : window.__LOGO.deschis);
+    let simbol = null;
+    if (src) {
+      simbol = el('img', 'simbol', box);
+      simbol.src = src;
+      simbol.alt = 'VerifiCasa';
+      simbol.style.height = (def.inaltime || 150) + 'px';
+    }
+    if (!src || !def.doar_simbol) {
+      const nume = el('div', 'nume' + (peGalben ? ' c-bleumarin' : ''), box);
       nume.innerHTML = 'Verifi<b>Casa</b>';
       nume.dataset.text = 'VerifiCasa';
     }
-    tl.fromTo(box, { autoAlpha: 0, scale: 0.8 }, { autoAlpha: 1, scale: 1, duration: 0.4, ease: 'back.out(1.7)' }, def.t);
+    tl.fromTo(box, { autoAlpha: 0, scale: 0.85 }, { autoAlpha: 1, scale: 1, duration: 0.4, ease: 'back.out(1.7)' }, def.t);
+    // simbolul intră puțin rotit și se așază, ca o ștampilă de „verificat”
+    if (simbol) tl.fromTo(simbol, { rotation: -12, scale: 0.6 }, { rotation: 0, scale: 1, duration: 0.55, ease: 'back.out(2.2)' }, def.t);
     return { def };
   }
 

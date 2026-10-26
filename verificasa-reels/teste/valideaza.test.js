@@ -88,7 +88,10 @@ test('easing-ul trebuie să fie un ease GSAP valid', () => {
 });
 
 test('coperta: text sub 60 px sau în afara centrului 3:4 e respins', () => {
-  const sc = copie(); sc.coperta.elemente[0].marime = 50; sc.coperta.elemente[1].y = 1600;
+  const sc = copie();
+  const dupaText = (t) => sc.coperta.elemente.find((e) => e.text === t);
+  dupaText('ATENȚIE').marime = 50;
+  dupaText('Cadastrul s-a blocat').y = 1600;
   const e = erori(sc);
   assert.match(e, /coperta „ATENȚIE”: 50px/);
   assert.match(e, /centrul 3:4/);

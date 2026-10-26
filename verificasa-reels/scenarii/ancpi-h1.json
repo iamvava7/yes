@@ -59,10 +59,17 @@
     "nota": "Copertă custom (nu un cadru din video): Instagram nu o mai lasă schimbată după publicare; textul stă în centrul 3:4 al grilei.",
     "elemente": [
       {
+        "tip": "logo",
+        "t": 0,
+        "y": 280,
+        "inaltime": 130,
+        "doar_simbol": true
+      },
+      {
         "tip": "text",
         "text": "ATENȚIE",
         "t": 0,
-        "y": 420,
+        "y": 460,
         "marime": 150,
         "greutate": 900,
         "intrare": "sus",
@@ -72,7 +79,7 @@
         "tip": "text",
         "text": "Cadastrul s-a blocat",
         "t": 0,
-        "y": 620,
+        "y": 660,
         "marime": 120,
         "greutate": 900,
         "intrare": "sus",
@@ -82,7 +89,7 @@
         "tip": "text",
         "text": "−33%",
         "t": 0,
-        "y": 930,
+        "y": 970,
         "marime": 260,
         "greutate": 900,
         "intrare": "sus",
@@ -93,7 +100,7 @@
         "tip": "text",
         "text": "vânzări de locuințe în București-Ilfov",
         "t": 0,
-        "y": 1240,
+        "y": 1280,
         "marime": 64,
         "greutate": 700,
         "intrare": "sus",
@@ -534,7 +541,8 @@
         {
           "tip": "logo",
           "t": 0.05,
-          "y": 560
+          "y": 500,
+          "inaltime": 170
         },
         {
           "tip": "text",

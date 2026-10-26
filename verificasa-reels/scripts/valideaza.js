@@ -223,6 +223,11 @@ function valideaza(sc, { radacina = RADACINA, verificaFisiere = true } = {}) {
     }
   }
 
+  // Logo: dacă scenariul îl folosește, fișierul oficial trebuie să existe (altfel apare doar wordmark-ul).
+  const folosesteLogo = [...scene.flatMap((x) => x.elemente || []), ...((sc.coperta || {}).elemente || [])].some((e) => e.tip === 'logo');
+  if (folosesteLogo && verificaFisiere && !fs.existsSync(path.join(radacina, 'media', 'brand', 'logo.svg')))
+    W('logo-ul oficial lipsește din media/brand/logo.svg; se afișează doar numele „VerifiCasa”');
+
   // Audio și licențe
   const abs = (p) => path.resolve(radacina, p);
   if (!sc.voce || !sc.voce.fisier) E('lipsește vocea (voce.fisier)');

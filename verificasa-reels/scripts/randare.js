@@ -24,10 +24,15 @@ function argumente(argv) {
   return a;
 }
 
-// Logo-ul oficial, dacă a fost pus în media/brand/; altfel șablonul folosește doar wordmark-ul tipografic.
+// Logo-ul oficial din media/brand/: varianta deschisă (fundal închis) și cea închisă (fundal galben).
+// Fără fișiere, șablonul folosește doar wordmark-ul tipografic.
 function logoOficial() {
-  const f = path.join(RADACINA, 'media', 'brand', 'logo.svg');
-  return fs.existsSync(f) ? 'data:image/svg+xml;base64,' + fs.readFileSync(f).toString('base64') : null;
+  const citeste = (nume) => {
+    const f = path.join(RADACINA, 'media', 'brand', nume);
+    return fs.existsSync(f) ? 'data:image/svg+xml;base64,' + fs.readFileSync(f).toString('base64') : null;
+  };
+  const deschis = citeste('logo.svg');
+  return deschis ? { deschis, inchis: citeste('logo-inchis.svg') || deschis } : null;
 }
 
 // Deschide șablonul cu scenariul injectat; folosit și de teste.

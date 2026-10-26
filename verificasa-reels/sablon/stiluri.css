@@ -84,4 +84,5 @@ body { width: 1080px; height: 1920px; overflow: hidden; }
 .logo { position: absolute; left: 0; width: 1080px; display: flex; justify-content: center; align-items: center; gap: 26px; }
 .logo .nume { font-weight: 900; font-size: 96px; letter-spacing: -0.03em; }
 .logo .nume b { color: var(--verde); font-weight: 900; }
-.logo img { display: block; }
+.logo .simbol { display: block; width: auto; }
+.pe-galben .logo .nume b { color: var(--bleumarin); }
