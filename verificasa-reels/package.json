@@ -1,0 +1,11 @@
+{
+  "name": "verificasa-reels",
+  "private": true,
+  "description": "Reels verticale VerifiCasa: scenarii JSON → MP4 cu Playwright și FFmpeg. Nu publică nimic.",
+  "scripts": {
+    "valideaza": "node scripts/valideaza.js",
+    "randare": "node scripts/randare.js",
+    "sfx": "scripts/sfx.sh",
+    "test": "node --test teste/*.test.js"
+  }
+}

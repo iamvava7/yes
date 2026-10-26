@@ -1,0 +1,73 @@
+{
+  "sursa": "ancpi-h1_takeA.mp3",
+  "iesire": "ancpi-h1.wav",
+  "tempo": 1.08,
+  "durata": 38.981,
+  "repere": [
+    {
+      "eticheta": "hook",
+      "original": 0,
+      "nou": 0
+    },
+    {
+      "eticheta": null,
+      "original": 5.75,
+      "nou": 4.972
+    },
+    {
+      "eticheta": "atac",
+      "original": 8.13,
+      "nou": 6.824
+    },
+    {
+      "eticheta": "notari",
+      "original": 14.58,
+      "nou": 12.463
+    },
+    {
+      "eticheta": "o-luna",
+      "original": 19.91,
+      "nou": 17.093
+    },
+    {
+      "eticheta": "trimestru",
+      "original": 22.96,
+      "nou": 19.5
+    },
+    {
+      "eticheta": "33-la-suta",
+      "original": 24.3,
+      "nou": 20.648
+    },
+    {
+      "eticheta": "svn",
+      "original": 28.83,
+      "nou": 24.333
+    },
+    {
+      "eticheta": "cumparatori",
+      "original": 31.15,
+      "nou": 26.472
+    },
+    {
+      "eticheta": null,
+      "original": 32.81,
+      "nou": 27.167
+    },
+    {
+      "eticheta": null,
+      "original": 34.19,
+      "nou": 28.259
+    },
+    {
+      "eticheta": "ce-faci",
+      "original": 37.45,
+      "nou": 31.009
+    },
+    {
+      "eticheta": "outro",
+      "original": 43.79,
+      "nou": 36.611
+    }
+  ]
+}

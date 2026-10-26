@@ -1,0 +1,85 @@
+/* Șablonul VerifiCasa: fonturi, culori, fundaluri. Doar valorile de aici sunt permise în scenarii. */
+@font-face { font-family: 'VC Display'; src: url('fonturi/InterDisplay-Medium.otf'); font-weight: 500; }
+@font-face { font-family: 'VC Display'; src: url('fonturi/InterDisplay-Bold.otf'); font-weight: 600 700; }
+@font-face { font-family: 'VC Display'; src: url('fonturi/InterDisplay-ExtraBold.otf'); font-weight: 800; }
+@font-face { font-family: 'VC Display'; src: url('fonturi/InterDisplay-Black.otf'); font-weight: 900; }
+
+:root {
+  --bleumarin: #0b1b3a;
+  --inchis: #0a1020;
+  --negru: #000000;
+  --galben: #facc15;
+  --verde: #22c55e;
+  --rosu: #ef4444;
+  --rosu-pe-galben: #b91c1c;
+  --alb: #f8fafc;
+  --gri: #cbd5e1;
+  --zona: 120px; /* marginea de siguranță sus și jos */
+}
+
+html, body { margin: 0; padding: 0; background: #000; }
+body { width: 1080px; height: 1920px; overflow: hidden; }
+
+#scena {
+  position: relative; width: 1080px; height: 1920px; overflow: hidden;
+  font-family: 'VC Display', sans-serif;
+  -webkit-font-smoothing: antialiased; color: var(--alb);
+}
+
+.fundal { position: absolute; inset: -80px; }
+.fundal.inchis {
+  background:
+    radial-gradient(900px 900px at var(--gx, 50%) var(--gy, 35%), rgba(34, 197, 94, 0.16), transparent 60%),
+    radial-gradient(700px 700px at calc(100% - var(--gx, 50%)) 85%, rgba(56, 89, 160, 0.25), transparent 60%),
+    var(--inchis);
+}
+.fundal.inchis::after {
+  content: ''; position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.045) 2px, transparent 2px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 2px, transparent 2px);
+  background-size: 120px 120px;
+  background-position: var(--grila, 0px) var(--grila, 0px);
+}
+.fundal.galben {
+  background: repeating-linear-gradient(-45deg, #facc15 0 70px, #f5c400 70px 140px);
+  background-position: var(--dungi, 0px) 0;
+}
+.fundal.negru { background: radial-gradient(500px 500px at 50% 40%, rgba(255, 255, 255, 0.05), transparent 70%), #000; }
+
+.strat { position: absolute; inset: 0; transform-origin: 50% 45%; will-change: transform; }
+
+.text {
+  position: absolute; left: 60px; width: 960px; text-align: center;
+  line-height: 1.06; letter-spacing: -0.02em; white-space: normal;
+}
+.text .rand { display: inline-block; }
+.text.cifre { font-feature-settings: 'tnum' 1; }
+.text .bucata { display: inline-block; white-space: pre; transform-origin: 50% 70%; }
+.c-alb { color: var(--alb); } .c-gri { color: var(--gri); } .c-galben { color: var(--galben); }
+.c-verde { color: var(--verde); } .c-rosu { color: var(--rosu); } .c-bleumarin { color: var(--bleumarin); }
+.pe-galben .c-rosu { color: var(--rosu-pe-galben); }
+.accent { color: var(--galben); }
+.c-galben .accent, .pe-galben .accent { color: var(--alb); }
+
+.marcaj { position: absolute; overflow: visible; pointer-events: none; }
+.marcaj path, .marcaj ellipse { fill: none; stroke-linecap: round; }
+
+.bara { position: absolute; bottom: 0; border-radius: 18px 18px 6px 6px; }
+.bara.gri { background: linear-gradient(#94a3b8, #64748b); }
+.bara.rosu { background: linear-gradient(#f87171, #dc2626); }
+.bara.verde { background: linear-gradient(#4ade80, #16a34a); }
+
+.punct-lista {
+  position: absolute; width: 30px; height: 30px; border-radius: 50%;
+  border: 4px solid var(--verde); box-sizing: border-box;
+}
+
+.punct-lumina {
+  position: absolute; width: 26px; height: 26px; border-radius: 50%; background: #fff;
+  box-shadow: 0 0 30px 10px rgba(255, 255, 255, 0.55), 0 0 120px 40px rgba(34, 197, 94, 0.25);
+}
+
+.logo { position: absolute; left: 0; width: 1080px; display: flex; justify-content: center; align-items: center; gap: 26px; }
+.logo .nume { font-weight: 900; font-size: 96px; letter-spacing: -0.03em; }
+.logo .nume b { color: var(--verde); font-weight: 900; }

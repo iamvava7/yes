@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8">
+  <title>VerifiCasa Reel</title>
+  <link rel="stylesheet" href="stiluri.css">
+  <script src="tranzitii.js"></script>
+  <script src="motor.js"></script>
+</head>
+<body>
+  <div id="scena"></div>
+  <script>
+    // Scenariul e injectat de scripts/randare.js (window.__SCENARIU). render(t) desenează cadrul de la secunda t.
+    if (window.__SCENARIU) {
+      Motor.construieste(document.getElementById('scena'), window.__SCENARIU).then(() => { window.__gata = true; });
+    } else {
+      document.getElementById('scena').textContent = 'Lipsește scenariul: rulează scripts/randare.js';
+    }
+  </script>
+</body>
+</html>
