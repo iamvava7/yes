@@ -334,7 +334,6 @@ svg{overflow:visible}
     <div class="abs" id="endH" style="inset:0;background:rgba(13,19,28,.0);z-index:25"></div>
     <div class="abs" id="logoH" style="left:0;right:0;top:560px;display:flex;justify-content:center;opacity:0;z-index:26"><div class="lock" style="font-size:110px"><img src="assets/mark_light.png"><span>Verifi<b>Casa</b></span></div></div>
     <div class="abs" id="urlH" style="left:0;right:0;top:800px;text-align:center;font-size:44px;font-weight:800;opacity:0;z-index:26">verificasa.ro</div>
-    <div class="abs" id="ilH" style="left:0;right:0;top:880px;text-align:center;font-size:30px;color:var(--muted);opacity:0;z-index:26">Scenariu ilustrativ · personaj fictiv</div>
   </div>
 
   <div class="wipe" id="wipe"></div>
@@ -572,7 +571,7 @@ function te(id,t,t1){ A(id,[{opacity:0,letterSpacing:'14px',filter:'blur(8px)'},
   const tl=W(8,'transparența')-.3;
   A('#endH',[{background:'rgba(13,19,28,0)'},{background:'rgba(13,19,28,.82)'}],tl,1.0,{fill:'both'});
   A('#logoH',[{opacity:0,transform:'translateY(30px)',filter:'blur(10px)'},{opacity:1,transform:'none',filter:'blur(0)'}],tl+.3,1.0,{fill:'both'});
-  A('#urlH',[{opacity:0},{opacity:1}],tl+.9,.6,{fill:'both'}); A('#ilH',[{opacity:0},{opacity:1}],tl+1.2,.6,{fill:'both'});
+  A('#urlH',[{opacity:0},{opacity:1}],tl+.9,.6,{fill:'both'});
   A('#logo',[{opacity:1},{opacity:0}],tl+.2,.5);
   sfx('chime',tl+.3,.8);
 })();
